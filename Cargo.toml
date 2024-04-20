@@ -1,0 +1,12 @@
+[workspace]
+members = ["crates/controller", "crates/planner", "crates/iterator"]
+
+[package]
+name = "robot_platform"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+"controller" = { path = "crates/controller" }
+"planner" = { path = "crates/planner" }
+"iterator" = { path = "crates/iterator" }
