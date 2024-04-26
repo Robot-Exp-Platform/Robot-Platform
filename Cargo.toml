@@ -1,5 +1,10 @@
 [workspace]
-members = ["crates/controller", "crates/planner", "crates/iterator"]
+members = [
+    "crates/controller",
+    "crates/planner",
+    "crates/iterator",
+    "crates/solver",
+]
 
 [package]
 name = "robot_platform"
@@ -8,5 +13,8 @@ edition = "2021"
 
 [dependencies]
 "controller" = { path = "crates/controller" }
-"planner" = { path = "crates/planner" }
-"iterator" = { path = "crates/iterator" }
+# "planner" = { path = "crates/planner" }
+# "iterator" = { path = "crates/iterator" }
+# "solver" = { path = "crates/solver" }
+
+rosrust = '*'

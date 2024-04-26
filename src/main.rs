@@ -4,6 +4,8 @@ fn get_state() -> String {
     state.push_str(&controller::get_contoller_state());
     state.push('\n');
     state.push_str(&planner::get_planner_state());
+    state.push('\n');
+    state.push_str(&iterator::get_iterator_state());
     state
 }
 fn main() {
