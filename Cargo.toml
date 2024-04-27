@@ -14,6 +14,7 @@ edition = "2021"
 
 [dependencies]
 controller = { path = "crates/controller" }
+planner = { path = "crates/planner" }
 recoder = { path = "crates/recoder" }
 
 

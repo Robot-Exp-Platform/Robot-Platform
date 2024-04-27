@@ -1,11 +1,13 @@
 use crate::exp::Exp;
 use controller::config::{init_controller, ControllerConfig};
+use planner::config::{init_planner, PlannerConfig};
 use serde::{Deserialize, Serialize};
 use std::fs;
 
 #[derive(Serialize, Deserialize)]
 struct Config {
     controller: Option<ControllerConfig>,
+    planner: Option<PlannerConfig>,
 }
 
 impl Exp {
@@ -19,13 +21,20 @@ impl Exp {
             Ok(config) => config,
             Err(_) => return Err("parse config error".to_string()),
         };
+
         let controller_exp = match init_controller(config.controller) {
             Ok(controller_exp) => controller_exp,
             Err(e) => return Err(e),
         };
 
+        let planner_exp = match init_planner(config.planner) {
+            Ok(planner_exp) => planner_exp,
+            Err(e) => return Err(e),
+        };
+
         Ok(Exp {
             controller_exp: controller_exp.unwrap(),
+            planner_exp: planner_exp.unwrap(),
         })
     }
 }
