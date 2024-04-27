@@ -12,4 +12,6 @@ pub trait Controller {
     fn get_contoller_state(&self) -> ControllerState {
         ControllerState::Unknow
     }
+
+    fn get_params(&self) -> Vec<f64>;
 }

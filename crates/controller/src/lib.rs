@@ -1,6 +1,5 @@
-pub mod bin;
-use bin::control_trait::Controller;
+pub mod config;
+pub mod controller_trait;
+pub mod controllers;
 
-fn control(cont: Box<dyn Controller>) {
-    cont.get_contoller_state();
-}
+pub use controller_trait::{Controller, ControllerState};
