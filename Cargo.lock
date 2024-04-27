@@ -256,6 +256,7 @@ dependencies = [
 name = "controller"
 version = "0.1.0"
 dependencies = [
+ "recoder",
  "serde",
  "serde_json",
 ]
@@ -807,6 +808,11 @@ checksum = "e3148f5046208a5d56bcfc03053e3ca6334e51da8dfb19b6cdc8b306fae3283e"
 [[package]]
 name = "planner"
 version = "0.1.0"
+dependencies = [
+ "recoder",
+ "serde",
+ "serde_json",
+]
 
 [[package]]
 name = "powerfmt"
@@ -943,6 +949,7 @@ name = "robot_platform"
 version = "0.1.0"
 dependencies = [
  "controller",
+ "recoder",
  "rosrust",
  "serde",
  "serde_json",

@@ -10,7 +10,7 @@ struct Config {
 
 impl Exp {
     pub fn init() -> Result<Exp, String> {
-        let data = match fs::read_to_string("config.json") {
+        let data = match fs::read_to_string("../config.json") {
             Ok(data) => data,
             Err(_) => return Err("read config error".to_string()),
         };
