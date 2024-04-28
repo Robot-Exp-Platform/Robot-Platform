@@ -4,7 +4,7 @@ members = [
     "crates/iterator",
     "crates/planner",
     "crates/recoder", "crates/simulator",
-    "crates/solver",
+    "crates/solver", "crates/temp",
 ]
 
 [package]
