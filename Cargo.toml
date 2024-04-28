@@ -3,7 +3,7 @@ members = [
     "crates/controller",
     "crates/iterator",
     "crates/planner",
-    "crates/recoder",
+    "crates/recoder", "crates/simulator",
     "crates/solver",
 ]
 
@@ -21,3 +21,4 @@ recoder = { path = "crates/recoder" }
 rosrust = '*'
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+nalgebra = "*"

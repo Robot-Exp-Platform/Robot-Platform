@@ -4,5 +4,5 @@ mod init;
 use exp::Exp;
 
 fn main() {
-    let exp = Exp::init();
+    let _exp = Exp::init();
 }

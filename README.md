@@ -14,3 +14,5 @@
         - pid.rs
         - mod.rs
         - control_trait.rs
+
+@import "crates/controller/readme.md"
