@@ -12,14 +12,14 @@ pub struct PidParams {
 
 pub struct Pid {
     state: ControllerState,
-    params: PidParams,
+    _params: PidParams,
 }
 
 impl Pid {
-    pub fn new(params: PidParams) -> Pid {
+    pub fn new(_params: PidParams) -> Pid {
         Pid {
             state: ControllerState::Uninit,
-            params,
+            _params,
         }
     }
     pub fn init(params: PidParams) -> Box<dyn Controller> {
@@ -30,10 +30,6 @@ impl Pid {
 impl Controller for Pid {
     fn get_contoller_state(&self) -> ControllerState {
         self.state
-    }
-
-    fn get_params(&self) -> Vec<f64> {
-        vec![self.params.kp, self.params.ki, self.params.kd]
     }
 }
 

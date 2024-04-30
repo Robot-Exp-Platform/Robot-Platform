@@ -1,8 +1,6 @@
 use crate::plants::plant_trait::Plant;
 use nalgebra as na;
 
-use super::first_order_lti::FirstOrderLTI;
-
 pub struct LSParams<const N: usize, const I: usize, const O: usize> {
     a: na::SMatrix<f64, N, N>,
     b: na::SMatrix<f64, N, I>,
