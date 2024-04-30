@@ -7,5 +7,7 @@ edition = "2021"
 
 [dependencies]
 nalgebra = "*"
+
+[target.'cfg(unix)'.dependencies]
 rosrust = "*"
 rosrust_msg = "*"

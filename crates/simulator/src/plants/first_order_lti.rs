@@ -28,7 +28,7 @@ impl<const N: usize> FirstOrderLTI<N> {
     }
 }
 
-impl<const N: usize> Plant<N> for FirstOrderLTI<N> {
+impl<const N: usize> Plant<N, N, N> for FirstOrderLTI<N> {
     fn get_state(&self) -> (na::SVector<f64, N>, na::SVector<f64, N>) {
         (self.q.clone(), self.q_dot.clone())
     }
@@ -38,16 +38,10 @@ impl<const N: usize> Plant<N> for FirstOrderLTI<N> {
         self.q_dot = q_dot;
     }
 
-    fn update(&mut self, u: na::SVector<f64, N>) {
+    fn update(&mut self, u: na::SVector<f64, N>) -> na::SVector<f64, N> {
         // Update the state of the plant for 1 temp_step
         self.q_dot = self.params.tau.try_inverse().unwrap() * (self.params.k * u - self.q);
         self.q += self.q_dot * self.params.time_step;
+        self.q.clone()
     }
-
-    // fn publish_state(&self, pub_robot_state: &rosrust::Publisher) {
-    //     let msg = ros::std_msgs::msg::Float64MultiArray {
-    //         data: self.q.iter().cloned().collect(),
-    //     };
-    //     pub_robot_state.send(msg).unwrap();
-    // }
 }
