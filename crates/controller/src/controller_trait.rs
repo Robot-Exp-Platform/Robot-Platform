@@ -10,7 +10,5 @@ pub trait Controller {
         ControllerState::Unknow
     }
 
-    fn get_params(&self) -> Vec<f64>;
-
     // TODO add control function
 }

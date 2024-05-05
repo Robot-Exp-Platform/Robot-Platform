@@ -3,8 +3,11 @@ members = [
     "crates/controller",
     "crates/iterator",
     "crates/planner",
-    "crates/recoder", "crates/simulator",
-    "crates/solver", "crates/temp",
+    "crates/recoder", 
+    "crates/robot",
+    "crates/simulator",
+    "crates/solver",
+    "crates/temp",
 ]
 
 [package]
