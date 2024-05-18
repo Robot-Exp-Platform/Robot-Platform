@@ -12,6 +12,7 @@ struct Config {
 
 impl Exp {
     pub fn init() -> Result<Exp, String> {
+        // 从 `config.json` 获取字符串
         let data = match fs::read_to_string("../config.json") {
             Ok(data) => data,
             Err(_) => return Err("read config error".to_string()),
