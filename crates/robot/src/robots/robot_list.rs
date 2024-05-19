@@ -37,10 +37,18 @@ impl Robot for RobotList {
         RobotParams::RobotListParams(apply_closure_to_iter!(self.robots, |robot| robot.get_params()))
     }
     fn get_joint_positions(&self) -> na::DVector<f64> {
-        na::DVector::from_vec(vec![0.0])
+        let mut joint_positions = Vec::new();
+        self.robots.iter().for_each(|robot| {
+            joint_positions.extend_from_slice(&robot.get_joint_positions().as_slice())
+        });
+        na::DVector::from_column_slice(&joint_positions)
     }
     fn get_joint_velocities(&self) -> na::DVector<f64> {
-        na::DVector::from_vec(vec![0.0])
+        let mut joint_velocities = Vec::new();
+        self.robots.iter().for_each(|robot| {
+            joint_velocities.extend_from_slice(&robot.get_joint_velocities().as_slice())
+        });
+        na::DVector::from_column_slice(&joint_velocities)
     }
     fn get_end_effector_pose(&self) -> Vec<crate::robot_trait::Pose> {
         self.robots
@@ -49,7 +57,9 @@ impl Robot for RobotList {
             .collect()
     }
 
-    fn reset_state(&mut self) {}
+    fn reset_state(&mut self) {
+        self.robots.iter_mut().for_each(|robot| robot.reset_state())
+    }
 
     fn update_state(&mut self, new_state: RobotState) {
         if let RobotState::RobotListState(robot_list_state) = new_state {
