@@ -1,12 +1,14 @@
+use crate::controllers::pid::PidState;
+
 #[derive(Clone, Copy)]
-pub enum ControllerState {
+pub enum ControllerState<const N: usize> {
     Unknow,
-    Uninit,
-    Running,
+    ControllerList,
+    PidState(PidState<N>),
 }
 
-pub trait Controller {
-    fn get_contoller_state(&self) -> ControllerState {
+pub trait Controller<const N: usize> {
+    fn get_contoller_state(&self) -> ControllerState<N> {
         ControllerState::Unknow
     }
 
