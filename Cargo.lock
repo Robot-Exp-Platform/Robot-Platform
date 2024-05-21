@@ -1271,6 +1271,7 @@ dependencies = [
  "nalgebra",
  "rosrust",
  "rosrust_msg",
+ "typenum",
 ]
 
 [[package]]

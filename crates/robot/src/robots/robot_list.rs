@@ -20,6 +20,10 @@ impl RobotList {
     pub fn new_with_robots(name: String, robots: Vec<Box<dyn Robot>>) -> RobotList {
         RobotList { name, robots }
     }
+
+    pub fn add_robot(&mut self, robot: Box<dyn Robot>) {
+        self.robots.push(robot)
+    }
 }
 
 impl Robot for RobotList {

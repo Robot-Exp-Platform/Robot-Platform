@@ -2,6 +2,10 @@ use crate::robot_trait::{Pose, Robot, RobotParams, RobotState, RobotType};
 use nalgebra as na;
 use std::f64::consts::PI;
 
+pub const PANDA_DOF: usize = 7;
+const PANDA_DH_ROW: usize = PANDA_DOF + 1;
+const PANDA_DH_COL: usize = 4;
+
 #[derive(Clone)]
 pub struct Panda {
     name: String,
@@ -11,20 +15,20 @@ pub struct Panda {
 
 #[derive(Clone, Copy)]
 pub struct PandaState {
-    q: na::SVector<f64, 7>,
-    q_dot: na::SVector<f64, 7>,
+    q: na::SVector<f64, PANDA_DOF>,
+    q_dot: na::SVector<f64, PANDA_DOF>,
     base_pose: Pose,
 }
 
 #[derive(Clone, Copy)]
 pub struct PandaParams {
     _nlink: usize,
-    _q_up_bound: na::SVector<f64, 7>,
-    _q_done_bound: na::SVector<f64, 7>,
-    _q_dot_bound: na::SVector<f64, 7>,
-    _q_ddot_bound: na::SVector<f64, 7>,
-    _q_jerk_bound: na::SVector<f64, 7>,
-    _denavit_hartenberg: na::SMatrix<f64, 8, 4>,
+    _q_up_bound: na::SVector<f64, PANDA_DOF>,
+    _q_done_bound: na::SVector<f64, PANDA_DOF>,
+    _q_dot_bound: na::SVector<f64, PANDA_DOF>,
+    _q_ddot_bound: na::SVector<f64, PANDA_DOF>,
+    _q_jerk_bound: na::SVector<f64, PANDA_DOF>,
+    _denavit_hartenberg: na::SMatrix<f64, PANDA_DH_ROW, PANDA_DH_COL>,
 }
 
 impl PandaParams {
