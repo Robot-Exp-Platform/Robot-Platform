@@ -9,6 +9,8 @@ const PANDA_DH_COL: usize = 4;
 #[derive(Clone)]
 pub struct Panda {
     name: String,
+    path: String,
+
     state: PandaState,
     params: PandaParams,
 }
@@ -34,7 +36,7 @@ pub struct PandaParams {
 impl PandaParams {
     fn new() -> PandaParams {
         PandaParams {
-            _nlink: 7,
+            _nlink: PANDA_DOF,
             _q_up_bound: na::SVector::from_vec(vec![
                 -2.8973, -1.7628, -2.8973, -3.0718, -2.8973, -0.0175, -2.8973,
             ]),
@@ -57,16 +59,22 @@ impl PandaParams {
                 0.0,      0.384,  -0.0825,  -PI * 0.5,
                 0.0,      0.0,    0.0,      PI * 0.5,
                 0.0,      0.0,    0.088,    PI * 0.5,
-                -0.7854,  0.107,  0.0,      0.0,
+                -PI*0.25,  0.107,  0.0,      0.0,
             ]),
         }
     }
 }
 
 impl Panda {
-    pub fn new() -> Panda {
+    pub fn new(path: String) -> Panda {
+        Panda::new_with_name("panda".to_string(), path)
+    }
+
+    pub fn new_with_name(name: String, path: String) -> Panda {
         Panda {
-            name: "Panda".to_string(),
+            path: path + &name,
+            name,
+
             state: PandaState {
                 q: na::SVector::from_element(0.0),
                 q_dot: na::SVector::from_element(0.0),
@@ -81,14 +89,17 @@ impl Robot for Panda {
     fn get_name(&self) -> String {
         self.name.clone()
     }
+    fn get_path(&self) -> String {
+        self.path.clone()
+    }
     fn get_type(&self) -> RobotType {
         RobotType::PandaType
     }
     fn get_state(&self) -> RobotState {
-        RobotState::PandaState(self.state)
+        RobotState::PandaState(Box::new(self.state))
     }
     fn get_params(&self) -> RobotParams {
-        RobotParams::PandaParams(self.params)
+        RobotParams::PandaParams(Box::new(self.params))
     }
     fn get_joint_positions(&self) -> na::DVector<f64> {
         na::DVector::from_column_slice(self.state.q.as_slice())
@@ -109,7 +120,7 @@ impl Robot for Panda {
     // }
     fn update_state(&mut self, new_state: RobotState) {
         if let RobotState::PandaState(panda_state) = new_state {
-            self.state = panda_state;
+            self.state = *panda_state;
         }
     }
 

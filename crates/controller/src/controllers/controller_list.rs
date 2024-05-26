@@ -41,7 +41,6 @@ impl Controller for ControllerList {
             apply_closure_to_iter!(self.controllers, |controller| controller.get_name()).join(", ");
         format!("{}:{{{}}}", self.name, names)
     }
-
     fn get_path(&self) -> String {
         self.path.clone()
     }

@@ -1,15 +1,18 @@
 use crate::controllers::pid::{PidParams, PidState};
+use robot::robots::panda::PANDA_DOF;
 
-#[derive(Clone, Copy)]
-pub enum ControllerState<const N: usize> {
+#[derive(Clone)]
+pub enum ControllerState {
     Unknow,
     ControllerList,
-    PidState(PidState<N>),
+    // PidState(PidState<N>),
+    PidStateForPanda(Box<PidState<PANDA_DOF>>),
 }
 
-pub enum ControllerParams<const N: usize> {
-    ControllerList(Vec<ControllerParams<N>>),
-    PidParams(PidParams<N>),
+pub enum ControllerParams {
+    ControllerList(Vec<ControllerParams>),
+    // PidParams(PidParams<N>),
+    PidParamsForPanda(Box<PidParams<PANDA_DOF>>),
 }
 
 pub trait Controller {

@@ -9,16 +9,17 @@ pub enum RobotType {
 }
 pub enum RobotState {
     RobotListState(Vec<RobotState>),
-    PandaState(PandaState),
+    PandaState(Box<PandaState>),
 }
 pub enum RobotParams {
     RobotListParams(Vec<RobotParams>),
-    PandaParams(PandaParams),
+    PandaParams(Box<PandaParams>),
 }
 pub type Pose = na::SVector<f64, 6>;
 
 pub trait Robot {
     fn get_name(&self) -> String;
+    fn get_path(&self) -> String;
     fn get_type(&self) -> RobotType;
     fn get_state(&self) -> RobotState;
     fn get_params(&self) -> RobotParams;
