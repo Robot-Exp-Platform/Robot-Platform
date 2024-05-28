@@ -66,6 +66,13 @@ impl Robot for RobotList {
             .collect()
     }
 
+    fn set_name(&mut self, name: String) {
+        self.name = name
+    }
+    fn set_path(&mut self, path: String) {
+        self.path = path
+    }
+
     fn reset_state(&mut self) {
         self.robots.iter_mut().for_each(|robot| robot.reset_state())
     }

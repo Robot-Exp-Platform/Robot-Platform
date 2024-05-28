@@ -28,6 +28,9 @@ pub trait Robot {
     fn get_joint_velocities(&self) -> na::DVector<f64>;
     fn get_end_effector_pose(&self) -> Vec<Pose>;
 
+    fn set_name(&mut self, name: String);
+    fn set_path(&mut self, path: String);
+
     fn update_state(&mut self, new_state: RobotState);
     fn reset_state(&mut self);
 }

@@ -111,6 +111,13 @@ impl Robot for Panda {
         vec![self.state.base_pose]
     }
 
+    fn set_name(&mut self, name: String) {
+        self.name = name
+    }
+    fn set_path(&mut self, path: String) {
+        self.path = path
+    }
+
     // fn update_state(&mut self, new_state: RS) {
     //     self.state = new_state.into()
     // }
