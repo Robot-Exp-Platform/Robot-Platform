@@ -3,6 +3,8 @@ use nalgebra as na;
 
 pub struct RobotList {
     name: String,
+    path: String,
+
     pub robots: Vec<Box<dyn Robot>>,
 }
 
@@ -13,12 +15,16 @@ macro_rules! apply_closure_to_iter {
 }
 
 impl RobotList {
-    pub fn new(name: String) -> RobotList {
-        RobotList::new_with_robots(name, Vec::new())
+    pub fn new(name: String, path: String) -> RobotList {
+        RobotList::new_with_robots(name, path, Vec::new())
     }
 
-    pub fn new_with_robots(name: String, robots: Vec<Box<dyn Robot>>) -> RobotList {
-        RobotList { name, robots }
+    pub fn new_with_robots(name: String, path: String, robots: Vec<Box<dyn Robot>>) -> RobotList {
+        RobotList { name, path, robots }
+    }
+
+    pub fn add_robot(&mut self, robot: Box<dyn Robot>) {
+        self.robots.push(robot)
     }
 }
 
@@ -26,6 +32,9 @@ impl Robot for RobotList {
     fn get_name(&self) -> String {
         let names = apply_closure_to_iter!(self.robots, |robot| robot.get_name()).join(", ");
         format!("{}:{{{}}}", self.name, names)
+    }
+    fn get_path(&self) -> String {
+        self.path.clone()
     }
     fn get_type(&self) -> RobotType {
         RobotType::RobotListType(apply_closure_to_iter!(self.robots, |robot| robot.get_type()))
@@ -39,14 +48,14 @@ impl Robot for RobotList {
     fn get_joint_positions(&self) -> na::DVector<f64> {
         let mut joint_positions = Vec::new();
         self.robots.iter().for_each(|robot| {
-            joint_positions.extend_from_slice(&robot.get_joint_positions().as_slice())
+            joint_positions.extend_from_slice(robot.get_joint_positions().as_slice())
         });
         na::DVector::from_column_slice(&joint_positions)
     }
     fn get_joint_velocities(&self) -> na::DVector<f64> {
         let mut joint_velocities = Vec::new();
         self.robots.iter().for_each(|robot| {
-            joint_velocities.extend_from_slice(&robot.get_joint_velocities().as_slice())
+            joint_velocities.extend_from_slice(robot.get_joint_velocities().as_slice())
         });
         na::DVector::from_column_slice(&joint_velocities)
     }
@@ -55,6 +64,13 @@ impl Robot for RobotList {
             .iter()
             .flat_map(|robot| robot.get_end_effector_pose())
             .collect()
+    }
+
+    fn set_name(&mut self, name: String) {
+        self.name = name
+    }
+    fn set_path(&mut self, path: String) {
+        self.path = path
     }
 
     fn reset_state(&mut self) {

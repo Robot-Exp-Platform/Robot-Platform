@@ -1,0 +1,32 @@
+{
+  //   "name": "panda_1",
+  //   "type": "Panda",
+  //   "simulatior": "linear_system",
+  //   "controller": "pid",
+  //   "planner": "linear"
+
+  "name": "system_1",
+  "type": "RobotList",
+  "robots": [
+    {
+      "name": "panda_1",
+      "type": "Panda",
+      "simulatior": {
+        "type": "plant",
+        "plant": "linear_system"
+      },
+      "controller": "pid",
+      "planner": "linear"
+    },
+    {
+      "name": "panda_2",
+      "type": "Panda",
+      "simulatior": {
+        "type": "simulator",
+        "simulator": "gazebo"
+      },
+      "controller": "pid",
+      "planner": "linear"
+    }
+  ]
+}

@@ -273,6 +273,7 @@ version = "0.1.0"
 dependencies = [
  "nalgebra",
  "recoder",
+ "robot",
  "serde",
  "serde_json",
 ]
@@ -1271,6 +1272,7 @@ dependencies = [
  "nalgebra",
  "rosrust",
  "rosrust_msg",
+ "typenum",
 ]
 
 [[package]]

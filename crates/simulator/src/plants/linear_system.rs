@@ -6,6 +6,7 @@ pub struct LSParams<const N: usize, const I: usize, const O: usize> {
     b: na::SMatrix<f64, N, I>,
     c: na::SMatrix<f64, O, N>,
     d: na::SMatrix<f64, O, I>,
+    // weight: na::SMatrix<f64, N + O, N + I>,
     time_step: f64,
 }
 
