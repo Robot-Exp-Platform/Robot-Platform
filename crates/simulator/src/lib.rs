@@ -1,3 +1,4 @@
+pub mod plant_trait;
 pub mod plants;
 
 #[cfg(test)]

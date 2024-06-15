@@ -1,4 +1,4 @@
-use crate::plants::plant_trait::Plant;
+use crate::plant_trait::Plant;
 use nalgebra as na;
 
 pub struct LSParams<const N: usize, const I: usize, const O: usize> {
