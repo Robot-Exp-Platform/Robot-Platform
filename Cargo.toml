@@ -18,6 +18,7 @@ edition = "2021"
 build = "build.rs"
 
 [dependencies]
+robot = { path = "crates/robot" }
 controller = { path = "crates/controller" }
 planner = { path = "crates/planner" }
 recoder = { path = "crates/recoder" }

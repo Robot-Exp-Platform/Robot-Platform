@@ -1,7 +1,9 @@
+mod plant_trait;
 mod plants;
-use crate::plants::plant_trait::Plant;
+
 use crate::plants::{first_order_lti::FirstOrderLTI, linear_system::LinearSystem};
 use nalgebra as na;
+use plant_trait::Plant;
 
 #[cfg(target_os = "unix")]
 use rosrust as ros;
