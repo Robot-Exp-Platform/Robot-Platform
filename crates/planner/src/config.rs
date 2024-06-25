@@ -1,22 +1,26 @@
+use std::sync::{Arc, RwLock};
+
 use crate::planner_trait::Planner;
-use crate::planners::linear::{Linear, LinearParams};
-use serde::{Deserialize, Serialize};
+use crate::planners::linear::Linear;
+use robot::robot_trait::Robot;
+use robot::robots::panda;
 
-#[derive(Serialize, Deserialize)]
-pub struct PlannerConfig {
-    pub planner_type: String,
-    pub params: serde_json::Value, // 使用 serde_json::Value 来灵活处理不同的参数
-}
-
-pub fn init_planner(config: Option<PlannerConfig>) -> Result<Option<Box<dyn Planner>>, String> {
-    match config {
-        Some(planner_config) => match planner_config.planner_type.as_str() {
-            "linear" => match serde_json::from_value::<LinearParams>(planner_config.params) {
-                Ok(linear_params) => Ok(Some(Box::new(Linear::new(linear_params)))),
-                Err(_) => Err("Failed to parse Linear parameters".to_string()),
-            },
-            _ => Err("unknow planner".to_string()),
+pub fn build_planner<R: Robot + 'static>(
+    planner_type: String,
+    robot_type: String,
+    path: String,
+    robot: Arc<RwLock<R>>,
+) -> Box<dyn Planner> {
+    match planner_type.as_str() {
+        "linear" => match robot_type.as_str() {
+            "panda" => Box::new(Linear::<R, { panda::PANDA_DOF + 1 }>::new_without_params(
+                robot_type + "_linear",
+                path,
+                robot,
+            )),
+            _ => panic!("linear planner does not support this kind of robot"),
         },
-        None => Ok(None),
+        // "planner_list" => Box::new(PlannerList::new(robot_type + "_planners", path)),
+        _ => panic!("Planner type not found"),
     }
 }

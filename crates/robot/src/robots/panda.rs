@@ -3,7 +3,6 @@ use nalgebra as na;
 use std::f64::consts::PI;
 
 pub const PANDA_DOF: usize = 7;
-const PANDA_DH_ROW: usize = PANDA_DOF + 1;
 const PANDA_DH_COL: usize = 4;
 
 #[derive(Clone)]
@@ -30,7 +29,7 @@ pub struct PandaParams {
     _q_dot_bound: na::SVector<f64, PANDA_DOF>,
     _q_ddot_bound: na::SVector<f64, PANDA_DOF>,
     _q_jerk_bound: na::SVector<f64, PANDA_DOF>,
-    _denavit_hartenberg: na::SMatrix<f64, PANDA_DH_ROW, PANDA_DH_COL>,
+    _denavit_hartenberg: na::SMatrix<f64, { PANDA_DOF + 1 }, PANDA_DH_COL>,
 }
 
 impl PandaParams {

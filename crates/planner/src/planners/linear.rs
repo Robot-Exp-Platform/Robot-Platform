@@ -1,6 +1,9 @@
-use crate::planner_trait::{Planner, PlannerState};
-use recoder::recoder_trait::Recoder;
 use serde::{Deserialize, Serialize};
+use std::sync::{Arc, RwLock};
+
+use crate::planner_trait::Planner;
+use recoder::recoder_trait::Recoder;
+use robot::robot_trait::Robot;
 
 #[derive(Serialize, Deserialize)]
 pub struct LinearParams {
@@ -8,34 +11,70 @@ pub struct LinearParams {
     interpolation: i32,
 }
 
-pub struct Linear {
-    state: PlannerState,
-    params: LinearParams,
+pub struct LinearNode {
+    #[cfg(target_os = "unix")]
+    sub_list: Vec<String>,
+    #[cfg(target_os = "unix")]
+    pub_list: Vec<String>,
 }
 
-impl Linear {
-    pub fn new(params: LinearParams) -> Linear {
+pub struct Linear<R: Robot + 'static, const N: usize> {
+    name: String,
+    path: String,
+
+    params: LinearParams,
+
+    _rosnode: LinearNode,
+
+    #[allow(dead_code)]
+    robot: Arc<RwLock<R>>,
+}
+
+impl<R: Robot + 'static, const N: usize> Linear<R, N> {
+    pub fn new(
+        name: String,
+        path: String,
+        params: LinearParams,
+        robot: Arc<RwLock<R>>,
+    ) -> Linear<R, N> {
         Linear {
-            state: PlannerState::Uninit,
+            name,
+            path,
+
             params,
+
+            _rosnode: LinearNode {
+                #[cfg(target_os = "unix")]
+                sub_list: Vec::new(),
+                #[cfg(target_os = "unix")]
+                pub_list: Vec::new(),
+            },
+            robot,
         }
     }
-    pub fn init(params: LinearParams) -> Box<dyn Planner> {
-        Box::new(Linear::new(params))
+
+    pub fn new_without_params(name: String, path: String, robot: Arc<RwLock<R>>) -> Linear<R, N> {
+        Linear::new(name, path, LinearParams { interpolation: 0 }, robot)
     }
 }
 
-impl Planner for Linear {
-    fn get_planner_state(&self) -> PlannerState {
-        self.state
-    }
+impl<R: Robot + 'static, const N: usize> Planner for Linear<R, N> {
+    // fn get_planner_state(&self) -> PlannerState {
+    //     self.state
+    // }
 
+    fn get_name(&self) -> String {
+        self.name.clone()
+    }
+    fn get_path(&self) -> String {
+        self.path.clone()
+    }
     fn get_params(&self) -> Vec<f64> {
         vec![self.params.interpolation as f64]
     }
 }
 
-impl Recoder for Linear {
+impl<R: Robot + 'static, const N: usize> Recoder for Linear<R, N> {
     fn recoder() {
         // TODO Recoder for Linear
     }

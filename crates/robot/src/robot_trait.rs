@@ -7,6 +7,7 @@ pub enum RobotType {
     RobotListType(Vec<RobotType>),
     PandaType,
 }
+
 pub enum RobotState {
     RobotListState(Vec<RobotState>),
     PandaState(Box<PandaState>),

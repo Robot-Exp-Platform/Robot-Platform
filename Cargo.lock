@@ -899,6 +899,7 @@ name = "planner"
 version = "0.1.0"
 dependencies = [
  "recoder",
+ "robot",
  "serde",
  "serde_json",
 ]
@@ -1054,6 +1055,7 @@ dependencies = [
  "nalgebra",
  "planner",
  "recoder",
+ "robot",
  "rosrust",
  "serde",
  "serde_json",

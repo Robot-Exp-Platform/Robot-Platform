@@ -1,9 +1,11 @@
-use crate::controller_trait::Controller;
 use nalgebra as na;
+use std::sync::{Arc, RwLock};
+
+use crate::controller_trait::Controller;
 use recoder::recoder_trait::Recoder;
 use robot::robot_trait::Robot;
 
-pub struct Pid<'a, R: Robot, const N: usize> {
+pub struct Pid<R: Robot + 'static, const N: usize> {
     name: String,
     path: String,
 
@@ -11,7 +13,7 @@ pub struct Pid<'a, R: Robot, const N: usize> {
     params: PidParams<N>,
 
     _rosnode: PidNode,
-    robot: &'a R,
+    robot: Arc<RwLock<R>>,
 }
 #[derive(Clone, Copy)]
 pub struct PidState<const N: usize> {
@@ -34,8 +36,13 @@ pub struct PidNode {
     pub_list: Vec<ros::Publisher>,
 }
 
-impl<'a, R: Robot, const N: usize> Pid<'a, R, N> {
-    pub fn new(name: String, path: String, params: PidParams<N>, robot: &'a R) -> Pid<'a, R, N> {
+impl<R: Robot + 'static, const N: usize> Pid<R, N> {
+    pub fn new(
+        name: String,
+        path: String,
+        params: PidParams<N>,
+        robot: Arc<RwLock<R>>,
+    ) -> Pid<R, N> {
         Pid {
             name,
             path,
@@ -58,18 +65,31 @@ impl<'a, R: Robot, const N: usize> Pid<'a, R, N> {
         }
     }
 
-    fn set_kp(&mut self, kp: na::SMatrix<f64, N, N>) {
-        self.params.kp = kp;
+    pub fn new_without_params(name: String, path: String, robot: Arc<RwLock<R>>) -> Pid<R, N> {
+        Pid::new(
+            name,
+            path,
+            PidParams {
+                kp: na::SMatrix::from_element(0.0),
+                ki: na::SMatrix::from_element(0.0),
+                kd: na::SMatrix::from_element(0.0),
+            },
+            robot,
+        )
     }
-    fn set_ki(&mut self, ki: na::SMatrix<f64, N, N>) {
-        self.params.ki = ki;
-    }
-    fn set_kd(&mut self, kd: na::SMatrix<f64, N, N>) {
-        self.params.kd = kd;
-    }
+
+    // fn set_kp(&mut self, kp: na::SMatrix<f64, N, N>) {
+    //     self.params.kp = kp;
+    // }
+    // fn set_ki(&mut self, ki: na::SMatrix<f64, N, N>) {
+    //     self.params.ki = ki;
+    // }
+    // fn set_kd(&mut self, kd: na::SMatrix<f64, N, N>) {
+    //     self.params.kd = kd;
+    // }
 }
 
-impl<'a, R: Robot, const N: usize> Controller for Pid<'a, R, N> {
+impl<R: Robot + 'static, const N: usize> Controller for Pid<R, N> {
     fn get_name(&self) -> String {
         self.name.clone()
     }
@@ -93,7 +113,8 @@ impl<'a, R: Robot, const N: usize> Controller for Pid<'a, R, N> {
         }
     }
     fn update(&mut self, period: f64) {
-        let new_error = self.state.target - self.robot.get_joint_positions();
+        let robot_read = self.robot.read().unwrap();
+        let new_error = self.state.target - robot_read.get_joint_positions();
         self.state.integral += new_error * period;
         self.state.derivative = (new_error - self.state.error) / period;
         self.state.error = new_error;
@@ -109,7 +130,7 @@ impl<'a, R: Robot, const N: usize> Controller for Pid<'a, R, N> {
     }
 }
 
-impl<'a, R: Robot, const N: usize> Recoder for Pid<'a, R, N> {
+impl<R: Robot + 'static, const N: usize> Recoder for Pid<R, N> {
     fn recoder() {
         // TODO Recoder for Pid
     }

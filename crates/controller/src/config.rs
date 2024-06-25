@@ -1,24 +1,27 @@
-// use crate::controller_trait::Controller;
-// use crate::controllers::pid::{Pid, PidParams};
-// use serde::{Deserialize, Serialize};
+use std::sync::{Arc, RwLock};
 
-// #[derive(Serialize, Deserialize)]
-// pub struct ControllerConfig {
-//     name: String,
-//     params: serde_json::Value, // 使用 serde_json::Value 来灵活处理不同的参数
-// }
+use crate::controller_trait::Controller;
+use crate::controllers::controller_list::ControllerList;
+use crate::controllers::pid::Pid;
+use robot::robot_trait::Robot;
+use robot::robots::panda;
 
-// pub fn init_controller(
-//     config: Option<ControllerConfig>,
-// ) -> Result<Option<Box<dyn Controller>>, String> {
-//     match config {
-//         Some(controller_config) => match controller_config.name.as_str() {
-//             "pid" => match serde_json::from_value::<PidParams>(controller_config.params) {
-//                 Ok(pid_params) => Ok(Some(Box::new(Pid::new(pid_params)))),
-//                 Err(_) => Err("Failed to parse PID parameters".to_string()),
-//             },
-//             _ => Err("unknow controller".to_string()),
-//         },
-//         None => Ok(None),
-//     }
-// }
+pub fn build_controller<R: Robot + 'static>(
+    controller_type: String,
+    robot_type: String,
+    path: String,
+    robot: Arc<RwLock<R>>,
+) -> Box<dyn Controller> {
+    match controller_type.as_str() {
+        "pid" => match robot_type.as_str() {
+            "panda" => Box::new(Pid::<R, { panda::PANDA_DOF + 1 }>::new_without_params(
+                robot_type + "_pid",
+                path,
+                robot,
+            )),
+            _ => panic!("pid controller does not support this kind of robot"),
+        },
+        "controller_list" => Box::new(ControllerList::new(robot_type + "_controllers", path)),
+        _ => panic!("Controller type not found"),
+    }
+}
