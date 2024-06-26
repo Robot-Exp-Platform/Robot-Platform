@@ -45,6 +45,10 @@ impl Controller for ControllerList {
         self.path.clone()
     }
 
+    fn add_controller(&mut self, controller: Box<dyn Controller>) {
+        self.controllers.push(controller)
+    }
+
     fn init(&self) {
         self.controllers
             .iter()

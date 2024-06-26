@@ -51,13 +51,13 @@ impl Exp {
                     config.name.clone(),
                     path.clone(),
                 )));
-                let controller = build_controller(
+                let mut controller = build_controller(
                     config.controller,
                     config.robot_type.clone(),
                     path.clone(),
                     robot_list.clone(),
                 );
-                let planner = build_planner(
+                let mut planner = build_planner(
                     config.planner,
                     config.robot_type.clone(),
                     path.clone(),
@@ -66,30 +66,32 @@ impl Exp {
 
                 // 递归建立子节点
                 for robot_config in config.robots.unwrap() {
-                    let (robot, _controller, _planner) = Exp::build_exp_tree(
+                    let (robot, child_controller, child_planner) = Exp::build_exp_tree(
                         robot_config,
                         format!("{}{}/", path.clone(), config.name.clone()),
                     );
                     robot_list.write().unwrap().add_robot(robot);
-                    // TODO add controller and planner
+                    controller.add_controller(child_controller);
+                    planner.add_planner(child_planner);
                 }
                 (robot_list, controller, planner)
             }
             "panda" => {
                 let robot = panda::Panda::new_with_name(config.name.clone(), path.clone());
+                let robot = Arc::new(RwLock::new(robot));
                 let controller = build_controller(
                     config.controller,
                     config.robot_type.clone(),
                     path.clone(),
-                    Arc::new(RwLock::new(robot.clone())),
+                    robot.clone(),
                 );
                 let planner = build_planner(
                     config.planner,
                     config.robot_type.clone(),
                     path.clone(),
-                    Arc::new(RwLock::new(robot.clone())),
+                    robot.clone(),
                 );
-                (Arc::new(RwLock::new(robot)), controller, planner)
+                (robot, controller, planner)
             }
             _ => panic!("Unknown robot type: {}", config.robot_type.clone()),
         }

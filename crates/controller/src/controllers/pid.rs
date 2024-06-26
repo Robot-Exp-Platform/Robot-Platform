@@ -105,6 +105,8 @@ impl<R: Robot + 'static, const N: usize> Controller for Pid<R, N> {
     //     }
     // }
 
+    fn add_controller(&mut self, _controller: Box<dyn Controller>) {}
+
     fn init(&self) {
         #[cfg(target_os = "unix")]
         {

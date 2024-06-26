@@ -72,6 +72,8 @@ impl<R: Robot + 'static, const N: usize> Planner for Linear<R, N> {
     fn get_params(&self) -> Vec<f64> {
         vec![self.params.interpolation as f64]
     }
+
+    fn add_planner(&mut self, _planner: Box<dyn Planner>) {}
 }
 
 impl<R: Robot + 'static, const N: usize> Recoder for Linear<R, N> {

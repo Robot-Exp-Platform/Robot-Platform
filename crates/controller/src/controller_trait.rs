@@ -27,6 +27,8 @@ pub trait Controller {
 
     // fn set_params(&mut self, params: ControllerParams<N>);
 
+    fn add_controller(&mut self, controller: Box<dyn Controller>);
+
     fn init(&self) {
         // 在这里进行话题的声明，
         // 新建发布者和接收者，并将他们放入list中去

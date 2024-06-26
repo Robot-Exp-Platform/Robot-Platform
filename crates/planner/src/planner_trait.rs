@@ -14,5 +14,7 @@ pub trait Planner {
 
     fn get_params(&self) -> Vec<f64>;
 
+    fn add_planner(&mut self, planner: Box<dyn Planner>);
+
     // TODO add plan function
 }
