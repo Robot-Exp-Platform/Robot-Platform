@@ -3,7 +3,6 @@ use std::sync::{Arc, RwLock};
 use crate::planner_trait::Planner;
 use crate::planners::linear::Linear;
 use robot::robot_trait::Robot;
-use robot::robots::panda;
 
 pub fn build_planner<R: Robot + 'static, const N: usize>(
     planner_type: String,

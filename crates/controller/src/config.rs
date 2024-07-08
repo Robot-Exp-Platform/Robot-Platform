@@ -4,7 +4,6 @@ use crate::controller_trait::Controller;
 use crate::controllers::controller_list::ControllerList;
 use crate::controllers::pid::Pid;
 use robot::robot_trait::Robot;
-use robot::robots::panda;
 
 pub fn create_controller<R: Robot + 'static, const N: usize>(
     controller_type: String,
