@@ -4,7 +4,7 @@ use std::fs::File;
 use std::sync::{Arc, RwLock};
 
 use crate::config::CONFIG_PATH;
-use controller::config::build_controller;
+use controller::config::create_controller;
 use planner::config::build_planner;
 use robot::robots::{panda, robot_list::RobotList};
 
@@ -45,55 +45,48 @@ impl Exp {
         Box<dyn planner::Planner>,
     ) {
         match config.robot_type.as_str() {
-            "RobotList" => {
-                // 建立该节点的各个模块
-                let robot_list = Arc::new(RwLock::new(RobotList::new(
-                    config.name.clone(),
-                    path.clone(),
-                )));
-                let mut controller = build_controller(
-                    config.controller,
-                    config.robot_type.clone(),
-                    path.clone(),
-                    robot_list.clone(),
-                );
-                let mut planner = build_planner(
-                    config.planner,
-                    config.robot_type.clone(),
-                    path.clone(),
-                    robot_list.clone(),
-                );
-
-                // 递归建立子节点
-                for robot_config in config.robots.unwrap() {
-                    let (robot, child_controller, child_planner) = Exp::build_exp_tree(
-                        robot_config,
-                        format!("{}{}/", path.clone(), config.name.clone()),
-                    );
-                    robot_list.write().unwrap().add_robot(robot);
-                    controller.add_controller(child_controller);
-                    planner.add_planner(child_planner);
-                }
-                (robot_list, controller, planner)
-            }
-            "panda" => {
-                let robot = panda::Panda::new_with_name(config.name.clone(), path.clone());
+            "robot_list" => {
+                let robot = RobotList::new(config.name.clone(), path.clone());
                 let robot = Arc::new(RwLock::new(robot));
-                let controller = build_controller(
-                    config.controller,
+                let mut controller = create_controller::<RobotList, 0>(
+                    config.controller.clone(),
                     config.robot_type.clone(),
                     path.clone(),
                     robot.clone(),
                 );
-                let planner = build_planner(
-                    config.planner,
+                let mut planner = build_planner::<RobotList, 0>(
+                    config.planner.clone(),
+                    config.robot_type.clone(),
+                    path.clone(),
+                    robot.clone(),
+                );
+                for robot_config in config.robots.unwrap() {
+                    let (child_robot, child_controller, child_planner) =
+                        Exp::build_exp_tree(robot_config, path.clone());
+                    robot.write().unwrap().add_robot(child_robot);
+                    controller.add_controller(child_controller);
+                    planner.add_planner(child_planner);
+                }
+                (robot, controller, planner)
+            }
+            "panda" => {
+                let robot = panda::Panda::new(path.clone());
+                let robot = Arc::new(RwLock::new(robot));
+                let controller = create_controller::<panda::Panda, { panda::PANDA_DOF }>(
+                    config.controller.clone(),
+                    config.robot_type.clone(),
+                    path.clone(),
+                    robot.clone(),
+                );
+                let planner = build_planner::<panda::Panda, { panda::PANDA_DOF }>(
+                    config.planner.clone(),
                     config.robot_type.clone(),
                     path.clone(),
                     robot.clone(),
                 );
                 (robot, controller, planner)
             }
-            _ => panic!("Unknown robot type: {}", config.robot_type.clone()),
+            _ => panic!("Unknown robot type"),
         }
     }
 
