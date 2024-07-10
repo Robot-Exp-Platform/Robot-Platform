@@ -1,5 +1,6 @@
 pub mod plant_trait;
 pub mod plants;
+pub mod simlulator_trait;
 
 #[cfg(test)]
 mod tests {
