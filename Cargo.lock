@@ -1119,15 +1119,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rosrust_msg"
-version = "0.1.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a4c509a1798e767aa6360d66ce25e555fdd7b3c9293fd48056f97561e9d14eec"
-dependencies = [
- "rosrust",
-]
-
-[[package]]
 name = "rouille"
 version = "3.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1273,7 +1264,6 @@ version = "0.1.0"
 dependencies = [
  "nalgebra",
  "rosrust",
- "rosrust_msg",
  "typenum",
 ]
 

@@ -4,7 +4,7 @@ use crate::planner_trait::Planner;
 use crate::planners::linear::Linear;
 use robot::robot_trait::Robot;
 
-pub fn build_planner<R: Robot + 'static, const N: usize>(
+pub fn create_planner<R: Robot + 'static, const N: usize>(
     planner_type: String,
     robot_type: String,
     path: String,

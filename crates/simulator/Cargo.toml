@@ -11,4 +11,3 @@ typenum = "*"
 
 [target.'cfg(unix)'.dependencies]
 rosrust = "*"
-rosrust_msg = "*"
