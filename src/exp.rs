@@ -5,7 +5,7 @@ use std::sync::{Arc, RwLock};
 
 use crate::config::CONFIG_PATH;
 use controller::config::create_controller;
-use planner::config::build_planner;
+use planner::config::create_planner;
 use robot::robots::{panda, robot_list::RobotList};
 
 pub struct Exp {
@@ -54,7 +54,7 @@ impl Exp {
                     path.clone(),
                     robot.clone(),
                 );
-                let mut planner = build_planner::<RobotList, 0>(
+                let mut planner = create_planner::<RobotList, 0>(
                     config.planner.clone(),
                     config.robot_type.clone(),
                     path.clone(),
@@ -78,7 +78,7 @@ impl Exp {
                     path.clone(),
                     robot.clone(),
                 );
-                let planner = build_planner::<panda::Panda, { panda::PANDA_DOF }>(
+                let planner = create_planner::<panda::Panda, { panda::PANDA_DOF }>(
                     config.planner.clone(),
                     config.robot_type.clone(),
                     path.clone(),
