@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::controllers::pid::{PidParams, PidState};
 use robot::robots::panda::PANDA_DOF;
 
@@ -27,14 +29,14 @@ pub trait Controller {
 
     // fn set_params(&mut self, params: ControllerParams<N>);
 
-    fn add_controller(&mut self, controller: Box<dyn Controller>);
+    fn add_controller(&mut self, controller: Arc<dyn Controller>);
 
     fn init(&self) {
         // 在这里进行话题的声明，
         // 新建发布者和接收者，并将他们放入list中去
     }
-    fn starting(&self) {}
-    fn update(&mut self, _: f64) {}
+    fn start(&self) {}
+    fn update(&mut self) {}
     fn stopping(&self) {}
     fn waiting(&self) {}
     fn aborting(&self) {}

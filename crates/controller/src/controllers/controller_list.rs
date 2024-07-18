@@ -1,10 +1,12 @@
+use std::sync::Arc;
+
 use crate::controller_trait::Controller;
 
 pub struct ControllerList {
     name: String,
     path: String,
 
-    controllers: Vec<Box<dyn Controller>>,
+    controllers: Vec<Arc<dyn Controller>>,
 }
 
 macro_rules! apply_closure_to_iter {
@@ -21,7 +23,7 @@ impl ControllerList {
     pub fn new_with_controllers(
         name: String,
         path: String,
-        controllers: Vec<Box<dyn Controller>>,
+        controllers: Vec<Arc<dyn Controller>>,
     ) -> ControllerList {
         ControllerList {
             name,
@@ -30,7 +32,7 @@ impl ControllerList {
         }
     }
 
-    pub fn add_controller(&mut self, controller: Box<dyn Controller>) {
+    pub fn add_controller(&mut self, controller: Arc<dyn Controller>) {
         self.controllers.push(controller)
     }
 }
@@ -45,7 +47,7 @@ impl Controller for ControllerList {
         self.path.clone()
     }
 
-    fn add_controller(&mut self, controller: Box<dyn Controller>) {
+    fn add_controller(&mut self, controller: Arc<dyn Controller>) {
         self.controllers.push(controller)
     }
 
@@ -55,16 +57,16 @@ impl Controller for ControllerList {
             .for_each(|controller| controller.init())
     }
 
-    fn starting(&self) {
+    fn start(&self) {
         self.controllers
             .iter()
-            .for_each(|controller| controller.starting())
+            .for_each(|controller| controller.start())
     }
 
-    fn update(&mut self, time: f64) {
+    fn update(&mut self) {
         self.controllers
             .iter_mut()
-            .for_each(|controller| controller.update(time))
+            .for_each(|controller| controller.update())
     }
 
     fn stopping(&self) {
@@ -76,7 +78,7 @@ impl Controller for ControllerList {
     fn waiting(&self) {
         self.controllers
             .iter()
-            .for_each(|controller| controller.waiting())
+            .for_each(|controller: &Arc<dyn Controller>| controller.waiting())
     }
 
     fn aborting(&self) {
