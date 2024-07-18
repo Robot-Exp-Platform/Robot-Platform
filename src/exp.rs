@@ -4,11 +4,14 @@ use std::fs::File;
 use std::sync::{Arc, RwLock};
 
 use crate::config::CONFIG_PATH;
+use crate::thread_manage::{self, ThreadManage};
 use controller::config::create_controller;
 use planner::config::create_planner;
 use robot::robots::{panda, robot_list::RobotList};
 
 pub struct Exp {
+    pub thread_manage: ThreadManage,
+
     pub robot_exp: Arc<RwLock<dyn robot::Robot>>,
     pub controller_exp: Box<dyn controller::Controller>,
     pub planner_exp: Box<dyn planner::Planner>,
@@ -25,11 +28,13 @@ struct Config {
 
 impl Exp {
     pub fn new(
+        thread_manage: ThreadManage,
         robot_exp: Arc<RwLock<dyn robot::Robot>>,
-        controller_exp: Box<dyn controller::Controller>,
-        planner_exp: Box<dyn planner::Planner>,
+        controller_exp: Arc<dyn controller::Controller>,
+        planner_exp: Arc<dyn planner::Planner>,
     ) -> Exp {
         Exp {
+            thread_manage,
             robot_exp,
             controller_exp,
             planner_exp,
@@ -39,6 +44,7 @@ impl Exp {
     fn build_exp_tree(
         config: Config,
         path: String,
+        thread_manage: ThreadManage,
     ) -> (
         Arc<RwLock<dyn robot::Robot>>,
         Box<dyn controller::Controller>,
@@ -62,7 +68,7 @@ impl Exp {
                 );
                 for robot_config in config.robots.unwrap() {
                     let (child_robot, child_controller, child_planner) =
-                        Exp::build_exp_tree(robot_config, path.clone());
+                        Exp::build_exp_tree(robot_config, path.clone(), thread_manage);
                     robot.write().unwrap().add_robot(child_robot);
                     controller.add_controller(child_controller);
                     planner.add_planner(child_planner);
@@ -84,6 +90,16 @@ impl Exp {
                     path.clone(),
                     robot.clone(),
                 );
+                thread_manage.add_thread(
+                    || controller.init(),
+                    || controller.start(),
+                    || controller.update(),
+                );
+                thread_manage.add_thread(
+                    || planner.init(),
+                    || planner.start(),
+                    || planner.update(),
+                );
                 (robot, controller, planner)
             }
             _ => panic!("Unknown robot type"),
@@ -96,7 +112,9 @@ impl Exp {
         let config: Config = from_reader(config_file).expect("Failed to parse config file");
 
         // 根据配置文件生成机器人树
-        let (robot, controller, planner) = Exp::build_exp_tree(config, "".to_string());
-        Exp::new(robot, controller, planner)
+        let thread_manage = ThreadManage::new();
+        let (robot, controller, planner) =
+            Exp::build_exp_tree(config, "".to_string(), thread_manage);
+        Exp::new(thread_manage, robot, controller, planner)
     }
 }

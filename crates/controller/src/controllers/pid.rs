@@ -114,22 +114,22 @@ impl<R: Robot + 'static, const N: usize> Controller for Pid<R, N> {
             // 新建发布者和接收者，并将他们放入list中去
         }
     }
-    fn update(&mut self, period: f64) {
-        let robot_read = self.robot.read().unwrap();
-        let new_error = self.state.target - robot_read.get_joint_positions();
-        self.state.integral += new_error * period;
-        self.state.derivative = (new_error - self.state.error) / period;
-        self.state.error = new_error;
+    // fn update(&mut self, period: f64) {
+    //     let robot_read = self.robot.read().unwrap();
+    //     let new_error = self.state.target - robot_read.get_joint_positions();
+    //     self.state.integral += new_error * period;
+    //     self.state.derivative = (new_error - self.state.error) / period;
+    //     self.state.error = new_error;
 
-        let _control_output = self.params.kp * self.state.error
-            + self.params.ki * self.state.integral
-            + self.params.kd * self.state.derivative;
+    //     let _control_output = self.params.kp * self.state.error
+    //         + self.params.ki * self.state.integral
+    //         + self.params.kd * self.state.derivative;
 
-        #[cfg(target_os = "unix")]
-        {
-            // publish control_output
-        }
-    }
+    //     #[cfg(target_os = "unix")]
+    //     {
+    //         // publish control_output
+    //     }
+    // }
 }
 
 impl<R: Robot + 'static, const N: usize> Recoder for Pid<R, N> {
