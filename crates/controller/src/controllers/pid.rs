@@ -1,5 +1,5 @@
 use nalgebra as na;
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 
 use crate::controller_trait::Controller;
 use recoder::recoder_trait::Recoder;
@@ -105,7 +105,7 @@ impl<R: Robot + 'static, const N: usize> Controller for Pid<R, N> {
     //     }
     // }
 
-    fn add_controller(&mut self, _controller: Box<dyn Controller>) {}
+    fn add_controller(&mut self, _controller: Arc<Mutex<dyn Controller>>) {}
 
     fn init(&self) {
         #[cfg(target_os = "unix")]

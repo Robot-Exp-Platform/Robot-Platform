@@ -1,13 +1,14 @@
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Condvar, Mutex};
 use std::thread;
 pub struct ThreadManage {
     threads: Vec<thread::JoinHandle<()>>,
-    pub condvar: Arc<(Mutex<bool>, Condvar)>,
+    pub condvar: Arc<(AtomicBool, Condvar, Mutex<()>)>,
 }
 
 impl ThreadManage {
     pub fn new() -> Self {
-        let condvar = Arc::new((Mutex::new(false), Condvar::new()));
+        let condvar = Arc::new((AtomicBool::new(false), Condvar::new(), Mutex::new(())));
         ThreadManage {
             threads: Vec::new(),
             condvar,
@@ -23,22 +24,32 @@ impl ThreadManage {
         let condvar = self.condvar.clone();
         let thread = thread::spawn(move || {
             init();
-            let &(ref lock, ref cvar) = &*condvar;
+            let &(ref flag, ref cvar, ref lock) = &*condvar;
             loop {
-                let mut started = lock.lock().unwrap();
-                while !*started {
-                    started = cvar.wait(started).unwrap();
+                let mut locked = lock.lock().unwrap();
+                while !flag.load(Ordering::SeqCst) {
+                    locked = cvar.wait(locked).unwrap();
                 }
+                drop(locked);
 
                 start();
 
-                while *started {
-                    drop(started); // Release the lock before running update
+                while flag.load(Ordering::SeqCst) {
                     update();
-                    started = lock.lock().unwrap();
                 }
             }
         });
         self.threads.push(thread);
+    }
+
+    pub fn start_all(&self) {
+        let &(ref flag, ref cvar, _) = &*self.condvar;
+        flag.store(true, Ordering::SeqCst);
+        cvar.notify_all();
+    }
+
+    pub fn stop_all(&self) {
+        let &(ref flag, _, _) = &*self.condvar;
+        flag.store(false, Ordering::SeqCst);
     }
 }

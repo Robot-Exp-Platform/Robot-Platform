@@ -1,3 +1,5 @@
+use std::sync::{Arc, Mutex};
+
 #[derive(Clone, Copy)]
 pub enum PlannerState {
     Unknow,
@@ -5,7 +7,7 @@ pub enum PlannerState {
     Running,
 }
 
-pub trait Planner {
+pub trait Planner: Send {
     fn get_planner_state(&self) -> PlannerState {
         PlannerState::Unknow
     }
@@ -13,7 +15,7 @@ pub trait Planner {
     fn get_path(&self) -> String;
     fn get_params(&self) -> Vec<f64>;
 
-    fn add_planner(&mut self, planner: Box<dyn Planner>);
+    fn add_planner(&mut self, planner: Arc<Mutex<dyn Planner>>);
 
     fn init(&self) {}
     fn start(&self) {}

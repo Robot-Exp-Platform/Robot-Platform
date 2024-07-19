@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 
 use crate::planner_trait::Planner;
 use recoder::recoder_trait::Recoder;
@@ -73,7 +73,7 @@ impl<R: Robot + 'static, const N: usize> Planner for Linear<R, N> {
         vec![self.params.interpolation as f64]
     }
 
-    fn add_planner(&mut self, _planner: Box<dyn Planner>) {}
+    fn add_planner(&mut self, _planner: Arc<Mutex<dyn Planner>>) {}
 }
 
 impl<R: Robot + 'static, const N: usize> Recoder for Linear<R, N> {

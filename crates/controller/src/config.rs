@@ -1,4 +1,4 @@
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 
 use crate::controller_trait::Controller;
 use crate::controllers::controller_list::ControllerList;
@@ -10,14 +10,17 @@ pub fn create_controller<R: Robot + 'static, const N: usize>(
     robot_type: String,
     path: String,
     robot: Arc<RwLock<R>>,
-) -> Box<dyn Controller> {
+) -> Arc<Mutex<dyn Controller>> {
     match controller_type.as_str() {
-        "pid" => Box::new(Pid::<R, N>::new_without_params(
+        "pid" => Arc::new(Mutex::new(Pid::<R, N>::new_without_params(
             robot_type + "_pid",
             path,
             robot,
-        )),
-        "controller_list" => Box::new(ControllerList::new(robot_type + "_controllers", path)),
+        ))),
+        "controller_list" => Arc::new(Mutex::new(ControllerList::new(
+            robot_type + "_controllers",
+            path,
+        ))),
         _ => panic!("Controller type not found"),
     }
 }

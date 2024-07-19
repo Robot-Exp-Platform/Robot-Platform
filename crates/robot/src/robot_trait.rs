@@ -18,7 +18,7 @@ pub enum RobotParams {
 }
 pub type Pose = na::SVector<f64, 6>;
 
-pub trait Robot {
+pub trait Robot: Send + Sync {
     fn get_name(&self) -> String;
     fn get_path(&self) -> String;
     fn get_type(&self) -> RobotType;

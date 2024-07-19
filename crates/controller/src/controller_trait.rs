@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use crate::controllers::pid::{PidParams, PidState};
 use robot::robots::panda::PANDA_DOF;
@@ -20,7 +20,7 @@ pub enum ControllerParams {
     PidParamsForPanda(Box<PidParamsForPanda>),
 }
 
-pub trait Controller {
+pub trait Controller: Send {
     // fn get_contoller_state(&self) -> ControllerState<N> {
     //     ControllerState::Unknow
     // }
@@ -29,7 +29,7 @@ pub trait Controller {
 
     // fn set_params(&mut self, params: ControllerParams<N>);
 
-    fn add_controller(&mut self, controller: Arc<dyn Controller>);
+    fn add_controller(&mut self, controller: Arc<Mutex<dyn Controller>>);
 
     fn init(&self) {
         // 在这里进行话题的声明，
