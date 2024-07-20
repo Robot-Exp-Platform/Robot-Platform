@@ -1,4 +1,5 @@
 use nalgebra as na;
+use serde::{Deserialize, Deserializer};
 use std::sync::{Arc, Mutex, RwLock};
 
 use crate::controller_trait::Controller;
@@ -30,6 +31,32 @@ pub struct PidParams<const N: usize> {
     kp: na::SMatrix<f64, N, N>,
     ki: na::SMatrix<f64, N, N>,
     kd: na::SMatrix<f64, N, N>,
+}
+
+impl<'de, const N: usize> Deserialize<'de> for PidParams<N> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        struct PidParamsData {
+            kp: Vec<f64>,
+            ki: Vec<f64>,
+            kd: Vec<f64>,
+        }
+
+        let data = PidParamsData::deserialize(deserializer)?;
+
+        if data.kp.len() != N * N || data.ki.len() != N * N || data.kd.len() != N * N {
+            return Err(serde::de::Error::custom("Matrix data has incorrect length"));
+        }
+
+        Ok(PidParams {
+            kp: na::SMatrix::from_vec(data.kp),
+            ki: na::SMatrix::from_vec(data.ki),
+            kd: na::SMatrix::from_vec(data.kd),
+        })
+    }
 }
 
 pub struct PidNode {
@@ -99,16 +126,12 @@ impl<R: Robot + 'static, const N: usize> Controller for Pid<R, N> {
     fn get_path(&self) -> String {
         self.path.clone()
     }
-    // fn get_contoller_state(&self) -> ControllerState<N> {
-    //     ControllerState::PidState(self.state)
-    // }
-    // fn set_params(&mut self, params: ControllerParams<N>) {
-    //     if let ControllerParams::PidParams(pid_params) = params {
-    //         self.params = pid_params;
-    //     }
-    // }
+    fn set_params(&mut self, params: String) {
+        let params: PidParams<N> = serde_json::from_str(&params).unwrap();
+        self.params = params;
+    }
 
-    fn add_controller(&mut self, _controller: Arc<Mutex<dyn Controller>>) {}
+    fn add_controller(&mut self, _: Arc<Mutex<dyn Controller>>) {}
 }
 
 impl<R: Robot + 'static, const N: usize> ROSThread for Pid<R, N> {

@@ -73,6 +73,11 @@ impl<R: Robot + 'static, const N: usize> Planner for Linear<R, N> {
         vec![self.params.interpolation as f64]
     }
 
+    fn set_params(&mut self, params: String) {
+        let params: LinearParams = serde_json::from_str(&params).unwrap();
+        self.params = params;
+    }
+
     fn add_planner(&mut self, _planner: Arc<Mutex<dyn Planner>>) {}
 }
 

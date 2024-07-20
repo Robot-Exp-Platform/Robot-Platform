@@ -28,7 +28,10 @@ pub trait Controller: ROSThread {
     fn get_name(&self) -> String;
     fn get_path(&self) -> String;
 
-    // fn set_params(&mut self, params: ControllerParams<N>);
+    fn set_params(&mut self, params: String);
 
     fn add_controller(&mut self, controller: Arc<Mutex<dyn Controller>>);
+    fn get_controller(&self) -> &Vec<Arc<Mutex<dyn Controller>>> {
+        unimplemented!()
+    }
 }

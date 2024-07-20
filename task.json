@@ -1,0 +1,12 @@
+{
+  "params": [
+    {
+      "node_type": "controller",
+      "path": "/controller/panda_controler"
+    },
+    {
+      "node_type": "planner",
+      "path": "/planner/panda_planner"
+    }
+  ]
+}

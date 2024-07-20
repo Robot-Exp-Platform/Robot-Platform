@@ -1,6 +1,8 @@
+use controller::Controller;
 use serde::Deserialize;
 use serde_json::from_reader;
 use std::fs::File;
+use std::path;
 use std::sync::{Arc, Mutex, RwLock};
 
 use crate::config::CONFIG_PATH;
@@ -25,6 +27,18 @@ struct Config {
     controller: String,
     planner: String,
     robots: Option<Vec<Config>>,
+}
+
+#[derive(Debug, Deserialize)]
+struct TaskParam {
+    node_type: String,
+    path: String,
+    param: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct Task {
+    params: Vec<TaskParam>,
 }
 
 impl Exp {
@@ -114,5 +128,63 @@ impl Exp {
         }
     }
 
-    pub fn update_tesk(&self) {}
+    pub fn get_controller_by_path(
+        controller: &Arc<Mutex<dyn Controller>>,
+        path: String,
+    ) -> Option<Arc<Mutex<dyn controller::Controller>>> {
+        let parts: Vec<&str> = path.trim_start_matches("/").split('/').collect();
+
+        if parts.len() == 1 {
+            return Some(controller.clone());
+        }
+
+        for child in controller.lock().unwrap().get_controller().iter() {
+            if child.lock().unwrap().get_name() == parts[0] {
+                return Exp::get_controller_by_path(controller, parts[1..].join("/"));
+            }
+        }
+
+        None
+    }
+
+    pub fn get_planner_by_path(
+        planner: &Arc<Mutex<dyn planner::Planner>>,
+        path: String,
+    ) -> Option<Arc<Mutex<dyn planner::Planner>>> {
+        let parts: Vec<&str> = path.trim_start_matches("/").split('/').collect();
+
+        if parts.len() == 1 {
+            return Some(planner.clone());
+        }
+
+        for child in planner.lock().unwrap().get_planner().iter() {
+            if child.lock().unwrap().get_name() == parts[0] {
+                return Exp::get_planner_by_path(planner, parts[1..].join("/"));
+            }
+        }
+
+        None
+    }
+
+    pub fn update_tesk(&self) {
+        let task_file = File::open(path::Path::new("task.json")).expect("Failed to open task file");
+        let task: Task = from_reader(task_file).expect("Failed to parse task file");
+
+        let controller = self.controller_exp.clone();
+        let planner = self.planner_exp.clone();
+
+        for param in task.params {
+            match param.node_type.as_str() {
+                "controller" => {
+                    let controller = Exp::get_controller_by_path(&controller, param.path).unwrap();
+                    controller.lock().unwrap().set_params(param.param);
+                }
+                "planner" => {
+                    let planner = Exp::get_planner_by_path(&planner, param.path).unwrap();
+                    planner.lock().unwrap().set_params(param.param);
+                }
+                _ => panic!("Unknown node type"),
+            }
+        }
+    }
 }

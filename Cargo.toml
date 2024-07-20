@@ -24,7 +24,6 @@ planner = { path = "crates/planner" }
 recoder = { path = "crates/recoder" }
 
 
-rosrust = '*'
 serde = { version = '*', features = ["derive"] }
 serde_json = "*"
 nalgebra = "*"

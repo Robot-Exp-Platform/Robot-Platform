@@ -51,8 +51,13 @@ impl Controller for ControllerList {
         self.path.clone()
     }
 
+    fn set_params(&mut self, _: String) {}
+
     fn add_controller(&mut self, controller: Arc<Mutex<dyn Controller>>) {
         self.controllers.push(controller)
+    }
+    fn get_controller(&self) -> &Vec<Arc<Mutex<dyn Controller>>> {
+        &self.controllers
     }
 }
 
