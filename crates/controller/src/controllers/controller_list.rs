@@ -1,10 +1,13 @@
+use std::sync::{Arc, Mutex};
+
 use crate::controller_trait::Controller;
+use robot::ros_thread::ROSThread;
 
 pub struct ControllerList {
     name: String,
     path: String,
 
-    controllers: Vec<Box<dyn Controller>>,
+    controllers: Vec<Arc<Mutex<dyn Controller>>>,
 }
 
 macro_rules! apply_closure_to_iter {
@@ -21,7 +24,7 @@ impl ControllerList {
     pub fn new_with_controllers(
         name: String,
         path: String,
-        controllers: Vec<Box<dyn Controller>>,
+        controllers: Vec<Arc<Mutex<dyn Controller>>>,
     ) -> ControllerList {
         ControllerList {
             name,
@@ -30,64 +33,50 @@ impl ControllerList {
         }
     }
 
-    pub fn add_controller(&mut self, controller: Box<dyn Controller>) {
+    pub fn add_controller(&mut self, controller: Arc<Mutex<dyn Controller>>) {
         self.controllers.push(controller)
     }
 }
 
 impl Controller for ControllerList {
     fn get_name(&self) -> String {
-        let names =
-            apply_closure_to_iter!(self.controllers, |controller| controller.get_name()).join(", ");
+        let names = apply_closure_to_iter!(self.controllers, |controller| controller
+            .lock()
+            .unwrap()
+            .get_name())
+        .join(", ");
         format!("{}:{{{}}}", self.name, names)
     }
     fn get_path(&self) -> String {
         self.path.clone()
     }
 
-    fn add_controller(&mut self, controller: Box<dyn Controller>) {
+    fn set_params(&mut self, _: String) {}
+
+    fn add_controller(&mut self, controller: Arc<Mutex<dyn Controller>>) {
         self.controllers.push(controller)
     }
+    fn get_controller(&self) -> &Vec<Arc<Mutex<dyn Controller>>> {
+        &self.controllers
+    }
+}
 
+impl ROSThread for ControllerList {
     fn init(&self) {
         self.controllers
             .iter()
-            .for_each(|controller| controller.init())
+            .for_each(|controller| controller.lock().unwrap().init())
     }
 
-    fn starting(&self) {
+    fn start(&self) {
         self.controllers
             .iter()
-            .for_each(|controller| controller.starting())
+            .for_each(|controller| controller.lock().unwrap().start())
     }
 
-    fn update(&mut self, time: f64) {
-        self.controllers
-            .iter_mut()
-            .for_each(|controller| controller.update(time))
-    }
-
-    fn stopping(&self) {
+    fn update(&self) {
         self.controllers
             .iter()
-            .for_each(|controller| controller.stopping())
-    }
-
-    fn waiting(&self) {
-        self.controllers
-            .iter()
-            .for_each(|controller| controller.waiting())
-    }
-
-    fn aborting(&self) {
-        self.controllers
-            .iter()
-            .for_each(|controller| controller.aborting())
-    }
-
-    fn init_request(&self) {
-        self.controllers
-            .iter()
-            .for_each(|controller| controller.init_request())
+            .for_each(|controller| controller.lock().unwrap().update())
     }
 }

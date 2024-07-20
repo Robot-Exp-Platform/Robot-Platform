@@ -1,5 +1,5 @@
 fn main() {
-    #[cfg(target_os = "unix")]
+    #[cfg(target_os = "linux")]
     {
         // Initialize node
         rosrust::init("talker");

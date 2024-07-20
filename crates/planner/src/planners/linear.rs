@@ -1,9 +1,9 @@
 use serde::{Deserialize, Serialize};
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 
 use crate::planner_trait::Planner;
-use recoder::recoder_trait::Recoder;
 use robot::robot_trait::Robot;
+use robot::ros_thread::ROSThread;
 
 #[derive(Serialize, Deserialize)]
 pub struct LinearParams {
@@ -12,9 +12,9 @@ pub struct LinearParams {
 }
 
 pub struct LinearNode {
-    #[cfg(target_os = "unix")]
+    #[cfg(target_os = "linux")]
     sub_list: Vec<String>,
-    #[cfg(target_os = "unix")]
+    #[cfg(target_os = "linux")]
     pub_list: Vec<String>,
 }
 
@@ -44,9 +44,9 @@ impl<R: Robot + 'static, const N: usize> Linear<R, N> {
             params,
 
             _rosnode: LinearNode {
-                #[cfg(target_os = "unix")]
+                #[cfg(target_os = "linux")]
                 sub_list: Vec::new(),
-                #[cfg(target_os = "unix")]
+                #[cfg(target_os = "linux")]
                 pub_list: Vec::new(),
             },
             robot,
@@ -73,11 +73,16 @@ impl<R: Robot + 'static, const N: usize> Planner for Linear<R, N> {
         vec![self.params.interpolation as f64]
     }
 
-    fn add_planner(&mut self, _planner: Box<dyn Planner>) {}
+    fn set_params(&mut self, params: String) {
+        let params: LinearParams = serde_json::from_str(&params).unwrap();
+        self.params = params;
+    }
+
+    fn add_planner(&mut self, _planner: Arc<Mutex<dyn Planner>>) {}
 }
 
-impl<R: Robot + 'static, const N: usize> Recoder for Linear<R, N> {
-    fn recoder() {
-        // TODO Recoder for Linear
-    }
+impl<R: Robot + 'static, const N: usize> ROSThread for Linear<R, N> {
+    fn init(&self) {}
+    fn start(&self) {}
+    fn update(&self) {}
 }

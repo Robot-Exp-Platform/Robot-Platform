@@ -1,5 +1,8 @@
+use std::sync::{Arc, Mutex};
+
 use crate::controllers::pid::{PidParams, PidState};
 use robot::robots::panda::PANDA_DOF;
+use robot::ros_thread::ROSThread;
 
 pub type PidParamsForPanda = PidParams<PANDA_DOF>;
 pub type PidStateForPanda = PidState<PANDA_DOF>;
@@ -18,25 +21,17 @@ pub enum ControllerParams {
     PidParamsForPanda(Box<PidParamsForPanda>),
 }
 
-pub trait Controller {
+pub trait Controller: ROSThread {
     // fn get_contoller_state(&self) -> ControllerState<N> {
     //     ControllerState::Unknow
     // }
     fn get_name(&self) -> String;
     fn get_path(&self) -> String;
 
-    // fn set_params(&mut self, params: ControllerParams<N>);
+    fn set_params(&mut self, params: String);
 
-    fn add_controller(&mut self, controller: Box<dyn Controller>);
-
-    fn init(&self) {
-        // 在这里进行话题的声明，
-        // 新建发布者和接收者，并将他们放入list中去
+    fn add_controller(&mut self, controller: Arc<Mutex<dyn Controller>>);
+    fn get_controller(&self) -> &Vec<Arc<Mutex<dyn Controller>>> {
+        unimplemented!()
     }
-    fn starting(&self) {}
-    fn update(&mut self, _: f64) {}
-    fn stopping(&self) {}
-    fn waiting(&self) {}
-    fn aborting(&self) {}
-    fn init_request(&self) {}
 }
