@@ -1,4 +1,5 @@
 use std::sync::{Arc, Mutex};
+use robot::ros_thread::ROSThread;
 
 #[derive(Clone, Copy)]
 pub enum PlannerState {
@@ -7,7 +8,7 @@ pub enum PlannerState {
     Running,
 }
 
-pub trait Planner: Send {
+pub trait Planner: ROSThread {
     fn get_planner_state(&self) -> PlannerState {
         PlannerState::Unknow
     }
@@ -16,10 +17,6 @@ pub trait Planner: Send {
     fn get_params(&self) -> Vec<f64>;
 
     fn add_planner(&mut self, planner: Arc<Mutex<dyn Planner>>);
-
-    fn init(&self) {}
-    fn start(&self) {}
-    fn update(&mut self) {}
 
     // TODO add plan function
 }

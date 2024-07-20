@@ -1,5 +1,7 @@
 pub mod robot_trait;
 pub mod robots;
+pub mod ros_thread;
+
 pub use robot_trait::{Robot, RobotState};
 
 #[cfg(test)]

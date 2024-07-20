@@ -5,7 +5,7 @@ use crate::plants::{first_order_lti::FirstOrderLTI, linear_system::LinearSystem}
 use nalgebra as na;
 use plant_trait::Plant;
 
-#[cfg(target_os = "unix")]
+#[cfg(target_os = "linux")]
 use rosrust as ros;
 
 fn main() {
@@ -18,7 +18,7 @@ fn main() {
         // 做想做的事情
     }
 
-    #[cfg(target_os = "unix")]
+    #[cfg(target_os = "linux")]
     {
         ros::init("simuator");
 

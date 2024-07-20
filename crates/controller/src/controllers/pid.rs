@@ -2,9 +2,10 @@ use nalgebra as na;
 use std::sync::{Arc, Mutex, RwLock};
 
 use crate::controller_trait::Controller;
-use recoder::recoder_trait::Recoder;
 use robot::robot_trait::Robot;
+use robot::ros_thread::ROSThread;
 
+#[allow(dead_code)]
 pub struct Pid<R: Robot + 'static, const N: usize> {
     name: String,
     path: String,
@@ -15,6 +16,7 @@ pub struct Pid<R: Robot + 'static, const N: usize> {
     _rosnode: PidNode,
     robot: Arc<RwLock<R>>,
 }
+#[allow(dead_code)]
 #[derive(Clone, Copy)]
 pub struct PidState<const N: usize> {
     target: na::SVector<f64, N>,
@@ -23,6 +25,7 @@ pub struct PidState<const N: usize> {
     derivative: na::SVector<f64, N>,
 }
 
+#[allow(dead_code)]
 pub struct PidParams<const N: usize> {
     kp: na::SMatrix<f64, N, N>,
     ki: na::SMatrix<f64, N, N>,
@@ -30,9 +33,9 @@ pub struct PidParams<const N: usize> {
 }
 
 pub struct PidNode {
-    #[cfg(target_os = "unix")]
+    #[cfg(target_os = "linux")]
     sub_list: Vec<ros::Subscriber>,
-    #[cfg(target_os = "unix")]
+    #[cfg(target_os = "linux")]
     pub_list: Vec<ros::Publisher>,
 }
 
@@ -56,9 +59,9 @@ impl<R: Robot + 'static, const N: usize> Pid<R, N> {
             params,
 
             _rosnode: PidNode {
-                #[cfg(target_os = "unix")]
+                #[cfg(target_os = "linux")]
                 sub_list: Vec::new(),
-                #[cfg(target_os = "unix")]
+                #[cfg(target_os = "linux")]
                 pub_list: Vec::new(),
             },
             robot,
@@ -106,14 +109,24 @@ impl<R: Robot + 'static, const N: usize> Controller for Pid<R, N> {
     // }
 
     fn add_controller(&mut self, _controller: Arc<Mutex<dyn Controller>>) {}
+}
 
+impl<R: Robot + 'static, const N: usize> ROSThread for Pid<R, N> {
     fn init(&self) {
-        #[cfg(target_os = "unix")]
+        #[cfg(target_os = "linux")]
         {
             // 在这里进行话题的声明，
             // 新建发布者和接收者，并将他们放入list中去
         }
     }
+    fn start(&self) {
+        #[cfg(target_os = "linux")]
+        {
+            // 在这里进行话题的发布和订阅
+        }
+    }
+
+    fn update(&self) {}
     // fn update(&mut self, period: f64) {
     //     let robot_read = self.robot.read().unwrap();
     //     let new_error = self.state.target - robot_read.get_joint_positions();
@@ -130,10 +143,4 @@ impl<R: Robot + 'static, const N: usize> Controller for Pid<R, N> {
     //         // publish control_output
     //     }
     // }
-}
-
-impl<R: Robot + 'static, const N: usize> Recoder for Pid<R, N> {
-    fn recoder() {
-        // TODO Recoder for Pid
-    }
 }

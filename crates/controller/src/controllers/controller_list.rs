@@ -1,6 +1,7 @@
 use std::sync::{Arc, Mutex};
 
 use crate::controller_trait::Controller;
+use robot::ros_thread::ROSThread;
 
 pub struct ControllerList {
     name: String,
@@ -53,7 +54,9 @@ impl Controller for ControllerList {
     fn add_controller(&mut self, controller: Arc<Mutex<dyn Controller>>) {
         self.controllers.push(controller)
     }
+}
 
+impl ROSThread for ControllerList {
     fn init(&self) {
         self.controllers
             .iter()
@@ -66,33 +69,9 @@ impl Controller for ControllerList {
             .for_each(|controller| controller.lock().unwrap().start())
     }
 
-    fn update(&mut self) {
+    fn update(&self) {
         self.controllers
-            .iter_mut()
+            .iter()
             .for_each(|controller| controller.lock().unwrap().update())
-    }
-
-    fn stopping(&self) {
-        self.controllers
-            .iter()
-            .for_each(|controller| controller.lock().unwrap().stopping())
-    }
-
-    fn waiting(&self) {
-        self.controllers
-            .iter()
-            .for_each(|controller| controller.lock().unwrap().waiting())
-    }
-
-    fn aborting(&self) {
-        self.controllers
-            .iter()
-            .for_each(|controller| controller.lock().unwrap().aborting())
-    }
-
-    fn init_request(&self) {
-        self.controllers
-            .iter()
-            .for_each(|controller| controller.lock().unwrap().init_request())
     }
 }

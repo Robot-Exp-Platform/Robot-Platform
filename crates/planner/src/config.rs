@@ -16,7 +16,6 @@ pub fn create_planner<R: Robot + 'static, const N: usize>(
             path,
             robot,
         ))),
-        // "planner_list" => Box::new(PlannerList::new(robot_type + "_planners", path)),
         _ => panic!("Planner type not found"),
     }
 }

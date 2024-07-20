@@ -9,6 +9,7 @@ use controller::config::create_controller;
 use planner::config::create_planner;
 use robot::robots::{panda, robot_list::RobotList};
 
+#[allow(dead_code)]
 pub struct Exp {
     pub thread_manage: ThreadManage,
 
@@ -41,6 +42,19 @@ impl Exp {
         }
     }
 
+    pub fn init() -> Exp {
+        // 加载配置文件
+        let config_file = File::open(CONFIG_PATH).expect("Failed to open config file");
+        let config: Config = from_reader(config_file).expect("Failed to parse config file");
+
+        // 根据配置文件生成机器人树
+        let mut thread_manage = ThreadManage::new();
+        let (robot, controller, planner) =
+            Exp::build_exp_tree(config, "".to_string(), &mut thread_manage);
+        Exp::new(thread_manage, robot, controller, planner)
+    }
+
+    #[allow(clippy::type_complexity)]
     fn build_exp_tree(
         config: Config,
         path: String,
@@ -54,13 +68,13 @@ impl Exp {
             "robot_list" => {
                 let robot = RobotList::new(config.name.clone(), path.clone());
                 let robot = Arc::new(RwLock::new(robot));
-                let mut controller = create_controller::<RobotList, 0>(
+                let controller = create_controller::<RobotList, 0>(
                     config.controller.clone(),
                     config.robot_type.clone(),
                     path.clone(),
                     robot.clone(),
                 );
-                let mut planner = create_planner::<RobotList, 0>(
+                let planner = create_planner::<RobotList, 0>(
                     config.planner.clone(),
                     config.robot_type.clone(),
                     path.clone(),
@@ -91,52 +105,14 @@ impl Exp {
                     robot.clone(),
                 );
 
-                let controller_lock = controller.clone();
-                thread_manage.add_thread(
-                    {
-                        let controller_lock = controller_lock.clone();
-                        move || controller_lock.lock().unwrap().init()
-                    },
-                    {
-                        let controller_lock = controller_lock.clone();
-                        move || controller_lock.lock().unwrap().start()
-                    },
-                    {
-                        let controller_lock = controller_lock.clone();
-                        move || controller_lock.lock().unwrap().update()
-                    },
-                );
+                thread_manage.add_thread(controller.clone());
+                thread_manage.add_thread(planner.clone());
 
-                let planner_lock = planner.clone();
-                thread_manage.add_thread(
-                    {
-                        let planner_lock = planner_lock.clone();
-                        move || planner_lock.lock().unwrap().init()
-                    },
-                    {
-                        let planner_lock = planner_lock.clone();
-                        move || planner_lock.lock().unwrap().start()
-                    },
-                    {
-                        let planner_lock = planner_lock.clone();
-                        move || planner_lock.lock().unwrap().update()
-                    },
-                );
                 (robot, controller, planner)
             }
             _ => panic!("Unknown robot type"),
         }
     }
 
-    pub fn init() -> Exp {
-        // 加载配置文件
-        let config_file = File::open(CONFIG_PATH).expect("Failed to open config file");
-        let config: Config = from_reader(config_file).expect("Failed to parse config file");
-
-        // 根据配置文件生成机器人树
-        let mut thread_manage = ThreadManage::new();
-        let (robot, controller, planner) =
-            Exp::build_exp_tree(config, "".to_string(), &mut thread_manage);
-        Exp::new(thread_manage, robot, controller, planner)
-    }
+    pub fn update_tesk(&self) {}
 }
