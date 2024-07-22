@@ -41,13 +41,13 @@ impl ThreadManage {
         self.threads.push(thread);
     }
 
-    pub fn _start_all(&self) {
+    pub fn start_all(&self) {
         let (flag, cvar, _) = &*self.condvar;
         flag.store(true, Ordering::SeqCst);
         cvar.notify_all();
     }
 
-    pub fn _stop_all(&self) {
+    pub fn stop_all(&self) {
         let (flag, _, _) = &*self.condvar;
         flag.store(false, Ordering::SeqCst);
     }
