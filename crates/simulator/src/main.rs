@@ -6,7 +6,7 @@ use nalgebra as na;
 use plant_trait::Plant;
 
 #[cfg(target_os = "linux")]
-use rosrust as ros;
+// use rosrust as ros;
 
 fn main() {
     const N: usize = 7;
@@ -20,20 +20,20 @@ fn main() {
 
     #[cfg(target_os = "linux")]
     {
-        ros::init("simuator");
+        // ros::init("simuator");
 
-        let pub_robot_state = ros::publish("robot_state", 100).unwrap();
+        // let pub_robot_state = ros::publish("robot_state", 100).unwrap();
 
-        let mut plant = FirstOrderLTI::<7>::new();
+        // let mut plant = FirstOrderLTI::<7>::new();
 
-        let rate = ros::rate(10.0);
-        print!("ros is ok");
-        while ros::is_ok() {
-            let mut msg = ros_msg::std_msgs::String::default();
+        // let rate = ros::rate(10.0);
+        // print!("ros is ok");
+        // while ros::is_ok() {
+        //     let mut msg = ros_msg::std_msgs::String::default();
 
-            plant.update(na::SVector::from_element(1.0));
-            // plant.publish_state(&pub_robot_state);
-            rate.sleep();
-        }
+        //     plant.update(na::SVector::from_element(1.0));
+        //     // plant.publish_state(&pub_robot_state);
+        //     rate.sleep();
+        // }
     }
 }

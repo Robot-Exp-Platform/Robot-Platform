@@ -60,10 +60,10 @@ impl<'de, const N: usize> Deserialize<'de> for PidParams<N> {
 }
 
 pub struct PidNode {
-    #[cfg(target_os = "linux")]
-    sub_list: Vec<ros::Subscriber>,
-    #[cfg(target_os = "linux")]
-    pub_list: Vec<ros::Publisher>,
+    // #[cfg(target_os = "linux")]
+    // sub_list: Vec<ros::Subscriber>,
+    // #[cfg(target_os = "linux")]
+    // pub_list: Vec<ros::Publisher>,
 }
 
 impl<R: Robot + 'static, const N: usize> Pid<R, N> {
@@ -86,10 +86,10 @@ impl<R: Robot + 'static, const N: usize> Pid<R, N> {
             params,
 
             _rosnode: PidNode {
-                #[cfg(target_os = "linux")]
-                sub_list: Vec::new(),
-                #[cfg(target_os = "linux")]
-                pub_list: Vec::new(),
+                // #[cfg(target_os = "linux")]
+                // sub_list: Vec::new(),
+                // #[cfg(target_os = "linux")]
+                // pub_list: Vec::new(),
             },
             robot,
         }
