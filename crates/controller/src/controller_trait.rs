@@ -22,9 +22,6 @@ pub enum ControllerParams {
 }
 
 pub trait Controller: ROSThread {
-    // fn get_contoller_state(&self) -> ControllerState<N> {
-    //     ControllerState::Unknow
-    // }
     fn get_name(&self) -> String;
     fn get_path(&self) -> String;
 
