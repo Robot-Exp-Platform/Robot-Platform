@@ -1,0 +1,11 @@
+[package]
+name = "task_manager"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde = { version = '*', features = ["derive"] }
+serde_json = "*"
+nalgebra = "*"
+
+robot = { path = "../robot" }

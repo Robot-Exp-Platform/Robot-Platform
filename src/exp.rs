@@ -10,6 +10,7 @@ use crate::thread_manage::ThreadManage;
 use controller::config::create_controller;
 use planner::config::create_planner;
 use robot::robots::{panda, robot_list::RobotList};
+use task_manager::task::{Task, TaskParam};
 
 #[allow(dead_code)]
 pub struct Exp {
@@ -27,18 +28,6 @@ struct Config {
     controller: String,
     planner: String,
     robots: Option<Vec<Config>>,
-}
-
-#[derive(Debug, Deserialize)]
-struct TaskParam {
-    node_type: String,
-    path: String,
-    param: String,
-}
-
-#[derive(Debug, Deserialize)]
-struct Task {
-    params: Vec<TaskParam>,
 }
 
 impl Exp {

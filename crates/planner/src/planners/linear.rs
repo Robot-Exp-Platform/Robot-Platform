@@ -12,10 +12,10 @@ pub struct LinearParams {
 }
 
 pub struct LinearNode {
-    #[cfg(target_os = "linux")]
-    sub_list: Vec<String>,
-    #[cfg(target_os = "linux")]
-    pub_list: Vec<String>,
+    // #[cfg(target_os = "linux")]
+    // sub_list: Vec<String>,
+    // #[cfg(target_os = "linux")]
+    // pub_list: Vec<String>,
 }
 
 pub struct Linear<R: Robot + 'static, const N: usize> {
@@ -44,10 +44,10 @@ impl<R: Robot + 'static, const N: usize> Linear<R, N> {
             params,
 
             _rosnode: LinearNode {
-                #[cfg(target_os = "linux")]
-                sub_list: Vec::new(),
-                #[cfg(target_os = "linux")]
-                pub_list: Vec::new(),
+                // #[cfg(target_os = "linux")]
+                // sub_list: Vec::new(),
+                // #[cfg(target_os = "linux")]
+                // pub_list: Vec::new(),
             },
             robot,
         }
