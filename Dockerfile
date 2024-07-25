@@ -23,8 +23,8 @@ RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh &
 # 将 Conda 添加到 PATH
 ENV PATH="/opt/conda/bin:${PATH}"
 
-# 创建一个包含 Python 3.11 的 Conda 环境
-RUN conda create -y --name myenv python=3.11
+# 创建一个包含 Python 3.12 的 Conda 环境
+RUN conda create -y --name myenv python=3.12
 
 # 默认激活 Conda 环境
 RUN echo "source activate myenv" >> ~/.bashrc

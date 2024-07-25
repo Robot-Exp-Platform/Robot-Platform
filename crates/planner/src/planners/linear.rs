@@ -3,7 +3,7 @@ use std::sync::{Arc, Mutex, RwLock};
 
 use crate::planner_trait::Planner;
 use robot::robot_trait::Robot;
-use robot::ros_thread::ROSThread;
+use task_manager::ros_thread::ROSThread;
 
 #[derive(Serialize, Deserialize)]
 pub struct LinearParams {
@@ -83,6 +83,6 @@ impl<R: Robot + 'static, const N: usize> Planner for Linear<R, N> {
 
 impl<R: Robot + 'static, const N: usize> ROSThread for Linear<R, N> {
     fn init(&self) {}
-    fn start(&self) {}
+    fn start(&mut self) {}
     fn update(&self) {}
 }

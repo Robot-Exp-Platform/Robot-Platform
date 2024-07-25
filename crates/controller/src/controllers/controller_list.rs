@@ -1,7 +1,7 @@
 use std::sync::{Arc, Mutex};
 
 use crate::controller_trait::Controller;
-use robot::ros_thread::ROSThread;
+use task_manager::ros_thread::ROSThread;
 
 pub struct ControllerList {
     name: String,
@@ -68,7 +68,7 @@ impl ROSThread for ControllerList {
             .for_each(|controller| controller.lock().unwrap().init())
     }
 
-    fn start(&self) {
+    fn start(&mut self) {
         self.controllers
             .iter()
             .for_each(|controller| controller.lock().unwrap().start())
