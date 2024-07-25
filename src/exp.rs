@@ -174,6 +174,10 @@ impl Exp {
         }
         self.task_manage = Some(task);
     }
+
+    pub fn is_running(&self) -> bool {
+        unimplemented!();
+    }
 }
 
 impl ROSThread for Exp {

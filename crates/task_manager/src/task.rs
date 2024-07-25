@@ -1,8 +1,6 @@
 use serde::de;
 use serde::{Deserialize, Deserializer};
 
-use crate::ros_thread::ROSThread;
-
 #[derive(Debug, Deserialize)]
 pub enum TaskType {
     #[serde(rename = "targets")]

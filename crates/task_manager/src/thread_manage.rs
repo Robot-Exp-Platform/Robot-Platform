@@ -52,3 +52,9 @@ impl ThreadManage {
         flag.store(false, Ordering::SeqCst);
     }
 }
+
+impl Default for ThreadManage {
+    fn default() -> Self {
+        Self::new()
+    }
+}

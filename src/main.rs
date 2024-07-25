@@ -15,6 +15,8 @@ fn main() {
         // ! 更新任务，将从 ${TASK_PATH}/task.json 中读取任务文件和参数信息文件，并生成对应的任务树
         exp.start();
 
-        // TODO: 获取任务结束或者异常的信号
+        while exp.is_running() {
+            exp.update();
+        }
     }
 }
