@@ -2,6 +2,8 @@ import pybullet as p
 import time
 import pybullet_data
 
+print(p.getConnectionInfo())
+
 # 连接物理引擎
 physicsCilent = p.connect(p.GUI)
 
@@ -23,7 +25,7 @@ boxId = p.loadURDF("samurai.urdf", startPos, startOrientation)
 p.resetBasePositionAndOrientation(boxId, startPos, startOrientation)
 
 # 开始一千次迭代，也就是一千次交互，每次交互后停顿1/240
-for i in range(10000):
+for i in range(1000):
     p.stepSimulation()
     time.sleep(1 / 240)
 
