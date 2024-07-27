@@ -1,5 +1,5 @@
-use robot::ros_thread::ROSThread;
 use std::sync::{Arc, Mutex};
+use task_manager::ros_thread::ROSThread;
 
 #[derive(Clone, Copy)]
 pub enum PlannerState {
