@@ -56,7 +56,7 @@ RUN git clone https://github.com/Robot-Exp-Platform/Robot-Platform.git
 
 # 设置容器启动时默认执行的命令
 # CMD ["/usr/local/bin/start-vnc.sh"]
-CMD [ "sh", "-c", "export DISPLAY=:1 && startxfce4 & x11vnc -display :1 -forever -shared -rfbport 5900" ]
+CMD ["sh", "-c", "service dbus start && Xvfb :1 -screen 0 1024x768x16 & sleep 2 && export DISPLAY=:1 && startxfce4 & sleep 2 && x11vnc -display :1 -forever -shared -rfbport 5900 -auth /root/.Xauthority"]
 # CMD ["bash"]
 
 # FROM ubuntu:latest
