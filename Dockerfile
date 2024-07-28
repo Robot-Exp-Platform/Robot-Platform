@@ -2,7 +2,6 @@
 FROM ros:noetic
 # FROM ubuntu:20.04
 
-# 设置环境变量以避免安装包时的提示
 ENV DEBIAN_FRONTEND=noninteractive
 
 # 更新包列表并安装必要的包
@@ -12,45 +11,75 @@ RUN apt-get update && \
     build-essential \
     git \
     ca-certificates \
-    wget && \
+    wget \
+    x11vnc \
+    xfce4 \
+    xfce4-goodies \
+    tightvncserver \
+    dbus-x11 \
+    xvfb \
+    xauth \
+    dbus && \
     rm -rf /var/lib/apt/lists/*
 
-# 安装 Miniconda
+# 设置 VNC 服务器密码
+RUN mkdir -p ~/.vnc && echo "yixing312" | vncpasswd -f > ~/.vnc/passwd && chmod 600 ~/.vnc/passwd
+
+# 安装 Miniconda/rust
 RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh && \
     bash Miniconda3-latest-Linux-x86_64.sh -b -p /opt/conda && \
-    rm Miniconda3-latest-Linux-x86_64.sh
+    rm Miniconda3-latest-Linux-x86_64.sh && \
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain nightly -y && \
+    touch /root/.Xauthority
 
-# 将 Conda 添加到 PATH
-ENV PATH="/opt/conda/bin:${PATH}"
 
-# 创建一个包含 Python 3.11 的 Conda 环境
-RUN conda create -y --name myenv python=3.11
-
-# 默认激活 Conda 环境
-RUN echo "source activate myenv" >> ~/.bashrc
-ENV CONDA_DEFAULT_ENV=myenv
-ENV PATH="/opt/conda/envs/myenv/bin:${PATH}"
-
-# 使用 rustup 安装 Rust
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-
-# 将 Rust 添加到 PATH 环境变量
+# 添加到 PATH
+ENV PATH="/opt/conda/bin:${PATH}" 
+ENV CONDA_DEFAULT_ENV=myenv 
+ENV PATH="/opt/conda/envs/myenv/bin:${PATH}" 
 ENV PATH="/root/.cargo/bin:${PATH}"
 
-# 安装并切换到 Rust 的 nightly 版本
-RUN rustup install nightly && rustup default nightly
+# 复制文件到镜像中
+COPY scripts/requirements.txt /root/
+COPY scripts/start-vnc.sh /usr/local/bin/start-vnc.sh
 
-# 验证安装
-# RUN rustc --version && cargo --version && python --version && pip --version && rosversion -d
+RUN conda create -y --name myenv python=3.12 && \
+    /opt/conda/bin/conda run -n myenv pip install -r /root/requirements.txt && \
+    echo "source activate myenv" >> ~/.bashrc && \
+    dbus-uuidgen > /etc/machine-id
 
 # 设置工作目录
-WORKDIR /usr/src/app
+WORKDIR /root
 
 # # 克隆指定的仓库
-# RUN git clone https://github.com/Robot-Exp-Platform/Robot-Platform.git
+RUN git clone https://github.com/Robot-Exp-Platform/Robot-Platform.git
 
-# # 将工作目录设置为克隆的仓库
-# WORKDIR /usr/src/app/Robot-Platform
+# 设置容器启动时默认执行的命令
+# CMD ["/usr/local/bin/start-vnc.sh"]
+CMD ["sh", "-c", "service dbus start && Xvfb :1 -screen 0 1024x768x16 & sleep 2 && export DISPLAY=:1 && startxfce4 & sleep 2 && x11vnc -display :1 -forever -shared -rfbport 5900 -auth /root/.Xauthority"]
+# CMD ["bash"]
 
-# 默认情况下不执行任何操作
-CMD ["bash"]
+# FROM ubuntu:latest
+
+# # 安装必要的工具和 VNC 服务器
+# RUN apt-get update && apt-get install -y \
+#     x11vnc \
+#     xfce4 \
+#     xfce4-goodies \
+#     tightvncserver \
+#     dbus-x11 \
+#     xvfb \
+#     xauth \
+#     dbus
+
+# # 设置 VNC 服务器密码
+# RUN mkdir -p ~/.vnc && echo "your_vnc_password" | vncpasswd -f > ~/.vnc/passwd && chmod 600 ~/.vnc/passwd
+
+# # 创建 .Xauthority 文件
+# RUN touch /root/.Xauthority
+
+# # 启动 dbus 服务
+# RUN dbus-uuidgen > /etc/machine-id
+
+# # 启动 X 虚拟帧缓冲器 (Xvfb)，XFCE 桌面环境和 VNC 服务器
+# CMD ["sh", "-c", "service dbus start && Xvfb :1 -screen 0 1024x768x16 & sleep 2 && export DISPLAY=:1 && startxfce4 & sleep 2 && x11vnc -display :1 -forever -shared -rfbport 5900 -auth /root/.Xauthority"]

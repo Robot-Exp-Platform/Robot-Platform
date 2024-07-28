@@ -2,7 +2,7 @@ use std::sync::{Arc, Mutex};
 
 use crate::controllers::pid::{PidParams, PidState};
 use robot::robots::panda::PANDA_DOF;
-use robot::ros_thread::ROSThread;
+use task_manager::ros_thread::ROSThread;
 
 pub type PidParamsForPanda = PidParams<PANDA_DOF>;
 pub type PidStateForPanda = PidState<PANDA_DOF>;
