@@ -3,6 +3,12 @@ name = "task_manager"
 version = "0.1.0"
 edition = "2021"
 
+# [dependencies.workspace]
+# path = "../../"
+# optional = true
+# features = ["ros"]
+
+
 [dependencies]
 serde = { version = '*', features = ["derive"] }
 serde_json = "*"
