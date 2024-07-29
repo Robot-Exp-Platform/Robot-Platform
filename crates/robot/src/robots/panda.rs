@@ -16,6 +16,7 @@ pub struct Panda {
 
 #[derive(Clone, Copy)]
 pub struct PandaState {
+    // 机器人状态,在运行状态下将会实时改变
     q: na::SVector<f64, PANDA_DOF>,
     q_dot: na::SVector<f64, PANDA_DOF>,
     base_pose: Pose,
@@ -23,6 +24,7 @@ pub struct PandaState {
 
 #[derive(Clone, Copy)]
 pub struct PandaParams {
+    // 机器人参数,在运行状态下一般不会改变
     _nlink: usize,
     _q_up_bound: na::SVector<f64, PANDA_DOF>,
     _q_done_bound: na::SVector<f64, PANDA_DOF>,
@@ -94,18 +96,6 @@ impl Robot for Panda {
     fn get_type(&self) -> RobotType {
         RobotType::PandaType
     }
-    fn get_state(&self) -> RobotState {
-        RobotState::PandaState(Box::new(self.state))
-    }
-    fn get_params(&self) -> RobotParams {
-        RobotParams::PandaParams(Box::new(self.params))
-    }
-    fn get_joint_positions(&self) -> na::DVector<f64> {
-        na::DVector::from_column_slice(self.state.q.as_slice())
-    }
-    fn get_joint_velocities(&self) -> na::DVector<f64> {
-        na::DVector::from_column_slice(self.state.q_dot.as_slice())
-    }
     fn get_end_effector_pose(&self) -> Vec<Pose> {
         vec![self.state.base_pose]
     }
@@ -115,19 +105,6 @@ impl Robot for Panda {
     }
     fn set_path(&mut self, path: String) {
         self.path = path
-    }
-
-    // fn update_state(&mut self, new_state: RS) {
-    //     self.state = new_state.into()
-    // }
-    // fn update_state(&mut self, new_state: Box<dyn Any>) -> Result<(), Box<dyn Any>> {
-    //     self.state = *new_state.downcast::<PandaState>()?;
-    //     Ok(())
-    // }
-    fn update_state(&mut self, new_state: RobotState) {
-        if let RobotState::PandaState(panda_state) = new_state {
-            self.state = *panda_state;
-        }
     }
 
     fn reset_state(&mut self) {

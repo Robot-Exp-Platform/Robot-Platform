@@ -10,6 +10,7 @@ pub fn create_planner<R: Robot + 'static, const N: usize>(
     path: String,
     robot: Arc<RwLock<R>>,
 ) -> Arc<Mutex<dyn Planner>> {
+    // !跟着文家新建 Planner 啦啦啦
     match planner_type.as_str() {
         "linear" => Arc::new(Mutex::new(Linear::<R, N>::new_without_params(
             robot_type + "_linear",
