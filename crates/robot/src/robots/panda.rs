@@ -1,4 +1,4 @@
-use crate::robot_trait::{Pose, Robot, RobotParams, RobotState, RobotType};
+use crate::robot_trait::{Pose, Robot, RobotType};
 use nalgebra as na;
 use std::f64::consts::PI;
 
@@ -11,13 +11,16 @@ pub struct Panda {
     path: String,
 
     state: PandaState,
+    #[allow(dead_code)]
     params: PandaParams,
 }
 
 #[derive(Clone, Copy)]
 pub struct PandaState {
     // 机器人状态,在运行状态下将会实时改变
+    #[allow(dead_code)]
     q: na::SVector<f64, PANDA_DOF>,
+    #[allow(dead_code)]
     q_dot: na::SVector<f64, PANDA_DOF>,
     base_pose: Pose,
 }

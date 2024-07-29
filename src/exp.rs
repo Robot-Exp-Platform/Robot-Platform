@@ -191,7 +191,8 @@ impl Exp {
 
     pub fn is_running(&self) -> bool {
         // ! 一个状态判断函数,如果运行终端或者当前 task 已经运行完成,则返回 false,开始下一轮的任务安排
-        unimplemented!();
+        // unimplemented!();
+        true
     }
 }
 

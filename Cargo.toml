@@ -17,6 +17,13 @@ edition = "2021"
 # edition = "2024"
 build = "build.rs"
 
+[features]
+# default = ["ros"]
+# default = ["ros2"]
+noros = []
+ros = []
+ros2 = []
+
 [dependencies]
 robot = { path = "crates/robot" }
 controller = { path = "crates/controller" }

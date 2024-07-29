@@ -22,6 +22,6 @@ pub fn create_controller<R: Robot + 'static, const N: usize>(
             robot_type + "_controllers",
             path,
         ))),
-        _ => panic!("Controller type not found"),
+        _ => panic!("Controller type not found,{}", controller_type),
     }
 }
