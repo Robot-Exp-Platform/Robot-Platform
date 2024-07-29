@@ -1,8 +1,6 @@
 use serde::de;
 use serde::{Deserialize, Deserializer};
 
-use robot::ros_thread::ROSThread;
-
 #[derive(Debug, Deserialize)]
 pub enum TaskType {
     #[serde(rename = "targets")]
@@ -49,17 +47,5 @@ impl<'de> Deserialize<'de> for Task {
             task_type,
             params: helper.params,
         })
-    }
-}
-
-impl ROSThread for Task {
-    fn init(&self) {
-        unimplemented!()
-    }
-    fn start(&self) {
-        unimplemented!()
-    }
-    fn update(&self) {
-        unimplemented!()
     }
 }

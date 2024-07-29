@@ -4,7 +4,7 @@ use std::sync::{Arc, Mutex, RwLock};
 
 use crate::controller_trait::Controller;
 use robot::robot_trait::Robot;
-use robot::ros_thread::ROSThread;
+use task_manager::ros_thread::ROSThread;
 
 #[allow(dead_code)]
 pub struct Pid<R: Robot + 'static, const N: usize> {
@@ -142,7 +142,7 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Pid<R, N> {
             // 新建发布者和接收者，并将他们放入list中去
         }
     }
-    fn start(&self) {
+    fn start(&mut self) {
         #[cfg(target_os = "linux")]
         {
             // 在这里进行话题的发布和订阅

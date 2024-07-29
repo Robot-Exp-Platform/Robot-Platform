@@ -2,7 +2,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Condvar, Mutex};
 use std::thread;
 
-use robot::ros_thread::ROSThread;
+use crate::ros_thread::ROSThread;
 pub struct ThreadManage {
     threads: Vec<thread::JoinHandle<()>>,
     pub condvar: Arc<(AtomicBool, Condvar, Mutex<()>)>,
@@ -21,7 +21,7 @@ impl ThreadManage {
         let condvar = self.condvar.clone();
         let node = node.clone();
         let thread = thread::spawn(move || {
-            let node = node.lock().unwrap();
+            let mut node = node.lock().unwrap();
             node.init();
             let (flag, cvar, lock) = &*condvar;
             loop {
@@ -50,5 +50,11 @@ impl ThreadManage {
     pub fn stop_all(&self) {
         let (flag, _, _) = &*self.condvar;
         flag.store(false, Ordering::SeqCst);
+    }
+}
+
+impl Default for ThreadManage {
+    fn default() -> Self {
+        Self::new()
     }
 }
