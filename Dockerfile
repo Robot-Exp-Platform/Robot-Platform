@@ -46,6 +46,8 @@ COPY scripts/start-vnc.sh /usr/local/bin/start-vnc.sh
 RUN conda create -y --name myenv python=3.12 && \
     /opt/conda/bin/conda run -n myenv pip install -r /root/requirements.txt && \
     echo "source activate myenv" >> ~/.bashrc && \
+    echo 'export DISPLAY=:1' >> /root/.bashrc && \
+    echo 'export XAUTHORITY=/root/.Xauthority' >> /root/.bashrc && \
     dbus-uuidgen > /etc/machine-id
 
 # 设置工作目录

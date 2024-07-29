@@ -6,8 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+robot = { path = "../robot" }
+task_manager = { path = "../task_manager" }
 nalgebra = "*"
 typenum = "*"
-
-[target.'cfg(unix)'.dependencies]
-rosrust = "*"
