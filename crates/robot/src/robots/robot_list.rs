@@ -1,7 +1,6 @@
-use nalgebra as na;
 use std::sync::{Arc, RwLock};
 
-use crate::robot_trait::{Robot, RobotParams, RobotState, RobotType};
+use crate::robot_trait::{Robot, RobotType};
 
 pub struct RobotList {
     name: String,
@@ -49,34 +48,7 @@ impl Robot for RobotList {
             .unwrap()
             .get_type()))
     }
-    fn get_state(&self) -> RobotState {
-        RobotState::RobotListState(apply_closure_to_iter!(self.robots, |robot| robot
-            .read()
-            .unwrap()
-            .get_state()))
-    }
-    fn get_params(&self) -> RobotParams {
-        RobotParams::RobotListParams(apply_closure_to_iter!(self.robots, |robot| robot
-            .read()
-            .unwrap()
-            .get_params()))
-    }
-    fn get_joint_positions(&self) -> na::DVector<f64> {
-        let mut joint_positions = Vec::new();
-        self.robots.iter().for_each(|robot| {
-            joint_positions
-                .extend_from_slice(robot.read().unwrap().get_joint_positions().as_slice())
-        });
-        na::DVector::from_column_slice(&joint_positions)
-    }
-    fn get_joint_velocities(&self) -> na::DVector<f64> {
-        let mut joint_velocities = Vec::new();
-        self.robots.iter().for_each(|robot| {
-            joint_velocities
-                .extend_from_slice(robot.read().unwrap().get_joint_velocities().as_slice())
-        });
-        na::DVector::from_column_slice(&joint_velocities)
-    }
+
     fn get_end_effector_pose(&self) -> Vec<crate::robot_trait::Pose> {
         self.robots
             .iter()
@@ -95,14 +67,5 @@ impl Robot for RobotList {
         self.robots
             .iter_mut()
             .for_each(|robot| robot.write().unwrap().reset_state());
-    }
-
-    fn update_state(&mut self, new_state: RobotState) {
-        if let RobotState::RobotListState(robot_list_state) = new_state {
-            self.robots
-                .iter_mut()
-                .zip(robot_list_state)
-                .for_each(|(robot, state)| robot.write().unwrap().update_state(state))
-        }
     }
 }

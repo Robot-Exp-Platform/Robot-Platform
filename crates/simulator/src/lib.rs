@@ -1,6 +1,8 @@
 pub mod plant_trait;
 pub mod plants;
 pub mod simlulator_trait;
+// pub mod simulators;
+pub mod config;
 
 #[cfg(test)]
 mod tests {

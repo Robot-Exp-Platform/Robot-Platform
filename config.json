@@ -1,0 +1,20 @@
+{
+  "name": "system_1",
+  "robot_type": "robot_list",
+  "robots": [
+    {
+      "name": "panda_1",
+      "robot_type": "panda",
+      "controller": "pid",
+      "planner": "linear"
+    },
+    {
+      "name": "panda_2",
+      "robot_type": "panda",
+      "controller": "pid",
+      "planner": "linear"
+    }
+  ],
+  "controller": "controller_list",
+  "planner": "linear"
+}

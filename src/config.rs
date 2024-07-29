@@ -1,1 +1,1 @@
-pub const CONFIG_PATH: &str = "./../config.jsonc";
+pub const CONFIG_PATH: &str = "./config.json";

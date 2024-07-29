@@ -23,3 +23,10 @@ docker run -it -p 5900:5900 registry.cn-hangzhou.aliyuncs.com/yixing312/robot_ex
 ![图 0](images/Realvnc%20viewer%20%E7%A4%BA%E4%BE%8B.png)  
 
 建议平常写代码还是直接用 “附加 vscode”
+
+如果希望能够使用 vscode 中的命令行就能运行gui 程序，只需要补充环境变量即可
+‵‵‵shell
+export DISPLAY=:1
+export XAUTHORITY=/root/.Xauthority
+‵‵‵
+然后就可以在 vscode 中运行 gui 程序了，gui 程序的窗口会在 vncviewer 中显示，但是命令行输出还在 vscode 中

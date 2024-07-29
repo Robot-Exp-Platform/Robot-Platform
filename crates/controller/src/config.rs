@@ -11,6 +11,7 @@ pub fn create_controller<R: Robot + 'static, const N: usize>(
     path: String,
     robot: Arc<RwLock<R>>,
 ) -> Arc<Mutex<dyn Controller>> {
+    // !跟着文家新建 Controller 啦啦啦
     match controller_type.as_str() {
         "pid" => Arc::new(Mutex::new(Pid::<R, N>::new_without_params(
             robot_type + "_pid",
@@ -21,6 +22,6 @@ pub fn create_controller<R: Robot + 'static, const N: usize>(
             robot_type + "_controllers",
             path,
         ))),
-        _ => panic!("Controller type not found"),
+        _ => panic!("Controller type not found,{}", controller_type),
     }
 }

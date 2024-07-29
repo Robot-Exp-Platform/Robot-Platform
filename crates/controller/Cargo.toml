@@ -5,13 +5,15 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[features]
-serde-serialize = ["nalgebra/serde-serialize"]
 
 [dependencies]
 robot = { path = "../robot" }
 recoder = { path = "../recoder" }
 task_manager = { path = "../task_manager" }
+
 serde = { version = '*', features = ["derive"] }
 serde_json = "*"
 nalgebra = "*"
+
+[features]
+serde-serialize = ["nalgebra/serde-serialize"]
