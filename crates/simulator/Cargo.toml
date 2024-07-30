@@ -8,11 +8,13 @@ edition = "2021"
 [dependencies]
 nalgebra = { workspace = true }
 typenum = { workspace = true }
+rosrust = { workspace = true, optional = true }
+rosrust_msg = { workspace = true, optional = true }
 
 robot = { workspace = true }
 task_manager = { workspace = true }
 
 [features]
 noros = []
-ros = []
+ros = ["rosrust", "rosrust_msg"]
 ros2 = []

@@ -10,6 +10,8 @@ edition = "2021"
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 nalgebra = { workspace = true }
+rosrust = { workspace = true, optional = true }
+rosrust_msg = { workspace = true, optional = true }
 
 robot = { workspace = true }
 recoder = { workspace = true }
@@ -20,5 +22,5 @@ task_manager = { workspace = true }
 serde-serialize = ["nalgebra/serde-serialize"]
 
 noros = []
-ros = []
+ros = ["rosrust", "rosrust_msg"]
 ros2 = []
