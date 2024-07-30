@@ -1,14 +1,17 @@
 [workspace]
 members = [
-    "crates/controller",
-    "crates/planner",
-    "crates/recoder",
-    "crates/robot",
-    "crates/simulator",
-    "crates/solver",
-    "crates/task_manager",
-    "crates/temp",
+    "./crates/controller",
+    "./crates/planner",
+    "./crates/recoder",
+    "./crates/robot",
+    "./crates/simulator",
+    "./crates/solver",
+    "./crates/task_manager",
+    "./crates/temp",
 ]
+
+[workspace.package]
+repository = "https://github.com/Robot-Exp-Platform/Robot-Platform"
 
 [package]
 name = "robot_platform"
@@ -17,6 +20,18 @@ edition = "2021"
 # edition = "2024"
 build = "build.rs"
 
+[workspace.dependencies]
+serde = { version = '*', features = ["derive"] }
+serde_json = "*"
+nalgebra = "*"
+typenum = "*"
+
+robot = { path = "./crates/robot" }
+controller = { path = "./crates/controller" }
+planner = { path = "./crates/planner" }
+recoder = { path = "./crates/recoder" }
+task_manager = { path = "./crates/task_manager" }
+
 [dependencies]
 robot = { path = "crates/robot" }
 controller = { path = "crates/controller" }
@@ -24,14 +39,13 @@ planner = { path = "crates/planner" }
 recoder = { path = "crates/recoder" }
 task_manager = { path = "crates/task_manager" }
 
-
 serde = { version = '*', features = ["derive"] }
 serde_json = "*"
 nalgebra = "*"
 
 [features]
-default = ["ros"]
+# default = ["ros"]
 # default = ["ros2"]
 noros = []
-ros = []
+ros = ["task_manager/ros", "controller/ros", "planner/ros"]
 ros2 = []
