@@ -191,6 +191,7 @@ dependencies = [
  "robot",
  "serde",
  "serde_json",
+ "simulator",
  "task_manager",
 ]
 

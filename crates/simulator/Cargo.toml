@@ -11,3 +11,8 @@ typenum = { workspace = true }
 
 robot = { workspace = true }
 task_manager = { workspace = true }
+
+[features]
+noros = []
+ros = []
+ros2 = []

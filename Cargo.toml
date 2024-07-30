@@ -31,21 +31,33 @@ controller = { path = "./crates/controller" }
 planner = { path = "./crates/planner" }
 recoder = { path = "./crates/recoder" }
 task_manager = { path = "./crates/task_manager" }
+simulator = { path = "./crates/simulator" }
 
 [dependencies]
+serde = { version = '*', features = ["derive"] }
+serde_json = "*"
+nalgebra = "*"
+
 robot = { path = "crates/robot" }
 controller = { path = "crates/controller" }
 planner = { path = "crates/planner" }
 recoder = { path = "crates/recoder" }
 task_manager = { path = "crates/task_manager" }
-
-serde = { version = '*', features = ["derive"] }
-serde_json = "*"
-nalgebra = "*"
+simulator = { path = "./crates/simulator" }
 
 [features]
 # default = ["ros"]
 # default = ["ros2"]
-noros = []
-ros = ["task_manager/ros", "controller/ros", "planner/ros"]
-ros2 = []
+noros = [
+    "task_manager/noros",
+    "controller/noros",
+    "planner/noros",
+    "simulator/noros",
+]
+ros = ["task_manager/ros", "controller/ros", "planner/ros", "simulator/ros"]
+ros2 = [
+    "task_manager/ros2",
+    "controller/ros2",
+    "planner/ros2",
+    "simulator/ros2",
+]
