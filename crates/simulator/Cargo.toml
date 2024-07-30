@@ -6,7 +6,15 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-robot = { path = "../robot" }
-task_manager = { path = "../task_manager" }
-nalgebra = "*"
-typenum = "*"
+nalgebra = { workspace = true }
+typenum = { workspace = true }
+rosrust = { workspace = true, optional = true }
+rosrust_msg = { workspace = true, optional = true }
+
+robot = { workspace = true }
+task_manager = { workspace = true }
+
+[features]
+noros = []
+ros = ["rosrust", "rosrust_msg"]
+ros2 = []

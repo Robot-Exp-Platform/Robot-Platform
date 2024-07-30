@@ -1,8 +1,8 @@
+pub mod config;
 pub mod plant_trait;
 pub mod plants;
 pub mod simlulator_trait;
-// pub mod simulators;
-pub mod config;
+pub mod simulators;
 
 #[cfg(test)]
 mod tests {

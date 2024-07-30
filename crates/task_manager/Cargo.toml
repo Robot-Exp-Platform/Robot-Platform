@@ -3,15 +3,14 @@ name = "task_manager"
 version = "0.1.0"
 edition = "2021"
 
-# [dependencies.workspace]
-# path = "../../"
-# optional = true
-# features = ["ros"]
-
-
 [dependencies]
-serde = { version = '*', features = ["derive"] }
-serde_json = "*"
-nalgebra = "*"
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+nalgebra = { workspace = true }
 
-robot = { path = "../robot" }
+robot = { workspace = true }
+
+[features]
+noros = []
+ros = []
+ros2 = []

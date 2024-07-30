@@ -14,7 +14,7 @@ pub struct Pid<R: Robot + 'static, const N: usize> {
     state: PidState<N>,
     params: PidParams<N>,
 
-    _rosnode: PidNode,
+    rosnode: PidNode,
     robot: Arc<RwLock<R>>,
 }
 #[allow(dead_code)]
@@ -59,12 +59,7 @@ impl<'de, const N: usize> Deserialize<'de> for PidParams<N> {
     }
 }
 
-pub struct PidNode {
-    #[cfg(feature = "ros")]
-    sub_list: Vec<ros::Subscriber>,
-    #[cfg(feature = "ros")]
-    pub_list: Vec<ros::Publisher>,
-}
+pub struct PidNode {}
 
 impl<R: Robot + 'static, const N: usize> Pid<R, N> {
     pub fn new(
@@ -85,12 +80,7 @@ impl<R: Robot + 'static, const N: usize> Pid<R, N> {
             },
             params,
 
-            _rosnode: PidNode {
-                #[cfg(feature = "ros")]
-                sub_list: Vec::new(),
-                #[cfg(feature = "ros")]
-                pub_list: Vec::new(),
-            },
+            rosnode: PidNode {},
             robot,
         }
     }

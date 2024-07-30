@@ -7,13 +7,20 @@ edition = "2021"
 
 
 [dependencies]
-robot = { path = "../robot" }
-recoder = { path = "../recoder" }
-task_manager = { path = "../task_manager" }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+nalgebra = { workspace = true }
+rosrust = { workspace = true, optional = true }
+rosrust_msg = { workspace = true, optional = true }
 
-serde = { version = '*', features = ["derive"] }
-serde_json = "*"
-nalgebra = "*"
+robot = { workspace = true }
+recoder = { workspace = true }
+task_manager = { workspace = true }
+
 
 [features]
 serde-serialize = ["nalgebra/serde-serialize"]
+
+noros = []
+ros = ["rosrust", "rosrust_msg"]
+ros2 = []
