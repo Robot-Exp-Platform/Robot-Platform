@@ -48,7 +48,7 @@ task_manager = { path = "./crates/task_manager" }
 simulator = { path = "./crates/simulator" }
 
 [features]
-default = ["ros"]
+# default = ["ros"]
 # default = ["ros2"]
 noros = [
     "task_manager/noros",

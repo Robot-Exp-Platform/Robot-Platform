@@ -17,6 +17,7 @@ pub struct Bullet<R: Robot + 'static, const N: usize> {
 
 #[allow(dead_code)]
 struct BulletNode {
+    #[cfg(feature = "ros")]
     sub_list: Vec<ros::Subscriber>,
 }
 
