@@ -39,9 +39,6 @@ simulator = { path = "./crates/simulator" }
 serde = { version = '*', features = ["derive"] }
 serde_json = "*"
 nalgebra = "*"
-rosrust = { version = "*" }
-rosrust_msg = { version = "*" }
-
 
 robot = { path = "./crates/robot" }
 controller = { path = "./crates/controller" }

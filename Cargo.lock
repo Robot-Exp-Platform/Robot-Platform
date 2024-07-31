@@ -1071,8 +1071,6 @@ dependencies = [
  "planner",
  "recoder",
  "robot",
- "rosrust",
- "rosrust_msg",
  "serde",
  "serde_json",
  "simulator",
