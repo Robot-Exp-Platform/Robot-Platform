@@ -39,6 +39,9 @@ simulator = { path = "./crates/simulator" }
 serde = { version = '*', features = ["derive"] }
 serde_json = "*"
 nalgebra = "*"
+rosrust = { version = "*" }
+rosrust_msg = { version = "*" }
+
 
 robot = { path = "./crates/robot" }
 controller = { path = "./crates/controller" }
@@ -46,6 +49,9 @@ planner = { path = "./crates/planner" }
 recoder = { path = "./crates/recoder" }
 task_manager = { path = "./crates/task_manager" }
 simulator = { path = "./crates/simulator" }
+
+[build-dependencies]
+
 
 [features]
 # default = ["ros"]
