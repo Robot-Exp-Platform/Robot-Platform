@@ -5,9 +5,6 @@ use crate::plants::{first_order_lti::FirstOrderLTI, linear_system::LinearSystem}
 use nalgebra as na;
 use plant_trait::Plant;
 
-#[cfg(target_os = "linux")]
-// use rosrust as ros;
-
 fn main() {
     const N: usize = 7;
     let mut plant_list: Vec<Box<dyn Plant<N, N, N>>> = vec![Box::new(FirstOrderLTI::<N>::new())];
