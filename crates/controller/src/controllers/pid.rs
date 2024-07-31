@@ -14,7 +14,7 @@ pub struct Pid<R: Robot + 'static, const N: usize> {
     state: PidState<N>,
     params: PidParams<N>,
 
-    rosnode: PidNode,
+    msgnode: PidNode,
     robot: Arc<RwLock<R>>,
 }
 #[allow(dead_code)]
@@ -80,7 +80,7 @@ impl<R: Robot + 'static, const N: usize> Pid<R, N> {
             },
             params,
 
-            rosnode: PidNode {},
+            msgnode: PidNode {},
             robot,
         }
     }

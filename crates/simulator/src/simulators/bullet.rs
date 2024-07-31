@@ -11,7 +11,7 @@ pub struct Bullet<R: Robot + 'static, const N: usize> {
     name: String,
     path: String,
 
-    rosnode: BulletNode,
+    msgnode: BulletNode,
     robot: Arc<RwLock<R>>,
 }
 
@@ -25,7 +25,7 @@ impl<R: Robot + 'static, const N: usize> Bullet<R, N> {
         Bullet {
             name,
             path,
-            rosnode: BulletNode {
+            msgnode: BulletNode {
                 #[cfg(feature = "ros")]
                 sub_list: Vec::new(),
             },
