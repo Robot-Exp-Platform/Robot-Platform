@@ -47,6 +47,8 @@ impl<R: Robot + 'static, const N: usize> Simulator for Bullet<R, N> {
     fn get_path(&self) -> String {
         self.path.clone()
     }
+
+    fn add_simulator(&mut self, _: Arc<std::sync::Mutex<dyn Simulator>>) {}
 }
 
 impl<R: Robot + 'static, const N: usize> ROSThread for Bullet<R, N> {

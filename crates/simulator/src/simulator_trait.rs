@@ -4,5 +4,5 @@ pub trait Simulator: ROSThread {
     fn get_name(&self) -> String;
     fn get_path(&self) -> String;
 
-    fn add_simulator(&mut self, simulator: Arc<Mutex<dyn Simulator>>) {}
+    fn add_simulator(&mut self, _: Arc<Mutex<dyn Simulator>>) {}
 }
