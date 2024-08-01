@@ -62,6 +62,8 @@ impl Robot for RobotList {
     fn set_path(&mut self, path: String) {
         self.path = path
     }
+    fn set_q(&mut self, _: Vec<f64>) {}
+    fn set_q_dot(&mut self, _: Vec<f64>) {}
 
     fn reset_state(&mut self) {
         self.robots

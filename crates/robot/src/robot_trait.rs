@@ -27,6 +27,8 @@ pub trait Robot: Send + Sync {
 
     fn set_name(&mut self, name: String);
     fn set_path(&mut self, path: String);
+    fn set_q(&mut self, q: Vec<f64>);
+    fn set_q_dot(&mut self, q_dot: Vec<f64>);
 
     fn reset_state(&mut self);
 }

@@ -14,5 +14,6 @@ serde_json = { workspace = true }
 
 [features]
 noros = []
+rszmq = []
 ros = []
 ros2 = []
