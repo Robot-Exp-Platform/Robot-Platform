@@ -1,4 +1,4 @@
-use crate::simlulator_trait::Simlulator;
+use crate::simulator_trait::Simulator;
 use robot::robot_trait::Robot;
 #[cfg(feature = "ros")]
 use rosrust as ros;
@@ -40,7 +40,7 @@ impl<R: Robot + 'static, const N: usize> Bullet<R, N> {
     }
 }
 
-impl<R: Robot + 'static, const N: usize> Simlulator for Bullet<R, N> {
+impl<R: Robot + 'static, const N: usize> Simulator for Bullet<R, N> {
     fn get_name(&self) -> String {
         self.name.clone()
     }

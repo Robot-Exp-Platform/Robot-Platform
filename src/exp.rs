@@ -1,4 +1,3 @@
-use controller::Controller;
 use serde::Deserialize;
 use serde_json::from_reader;
 use std::fs::File;
@@ -9,6 +8,7 @@ use crate::config::CONFIG_PATH;
 use controller::config::create_controller;
 use planner::config::create_planner;
 use robot::robots::{panda, robot_list::RobotList};
+use simulator::config::create_simulator;
 use task_manager::ros_thread::ROSThread;
 use task_manager::task::Task;
 use task_manager::thread_manage::ThreadManage;
@@ -22,6 +22,7 @@ pub struct Exp {
     pub robot_exp: Arc<RwLock<dyn robot::Robot>>,
     pub controller_exp: Arc<Mutex<dyn controller::Controller>>,
     pub planner_exp: Arc<Mutex<dyn planner::Planner>>,
+    pub simulator_exp: Arc<Mutex<dyn simulator::Simulator>>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -31,6 +32,7 @@ struct Config {
     robot_type: String,
     controller: String,
     planner: String,
+    simulator: String,
     robots: Option<Vec<Config>>,
 }
 
@@ -42,7 +44,7 @@ impl Exp {
 
         // 根据配置文件生成机器人树
         let mut thread_manage = ThreadManage::new();
-        let (robot, controller, planner) =
+        let (robot, controller, planner, simulator) =
             Exp::build_exp_tree(config, "".to_string(), &mut thread_manage);
         Exp {
             thread_manage,
@@ -50,6 +52,7 @@ impl Exp {
             robot_exp: robot,
             controller_exp: controller,
             planner_exp: planner,
+            simulator_exp: simulator,
         }
     }
 
@@ -64,6 +67,7 @@ impl Exp {
         Arc<RwLock<dyn robot::Robot>>,
         Arc<Mutex<dyn controller::Controller>>,
         Arc<Mutex<dyn planner::Planner>>,
+        Arc<Mutex<dyn simulator::Simulator>>,
     ) {
         // 由于 Exo 的树状结构，所以这里需要递归的生成树状结构，每款机器人的 常数参量并不相同，所以需要在这里枚举以创建不同大小的 控制器、规划器 等
         match config.robot_type.as_str() {
@@ -85,16 +89,23 @@ impl Exp {
                     path.clone(),
                     robot.clone(),
                 );
+                let simulator = create_simulator::<RobotList, 0>(
+                    config.simulator.clone(),
+                    config.robot_type.clone(),
+                    path.clone(),
+                    robot.clone(),
+                );
 
                 // ! 递归!树就是从这里长起来的
                 for robot_config in config.robots.unwrap() {
-                    let (child_robot, child_controller, child_planner) =
+                    let (child_robot, child_controller, child_planner, child_simulator) =
                         Exp::build_exp_tree(robot_config, path.clone(), thread_manage);
                     robot.write().unwrap().add_robot(child_robot);
                     controller.lock().unwrap().add_controller(child_controller);
                     planner.lock().unwrap().add_planner(child_planner);
+                    simulator.lock().unwrap().add_simulator(child_simulator);
                 }
-                (robot, controller, planner)
+                (robot, controller, planner, simulator)
             }
             "panda" => {
                 // ! 经典的 Franka Emika Panda 机器人
@@ -113,19 +124,26 @@ impl Exp {
                     path.clone(),
                     robot.clone(),
                 );
+                let simulator = create_simulator::<panda::Panda, { panda::PANDA_DOF }>(
+                    config.simulator.clone(),
+                    config.robot_type.clone(),
+                    path.clone(),
+                    robot.clone(),
+                );
 
                 // 需要给控制器和规划器开辟独立的线程
                 thread_manage.add_thread(controller.clone());
                 thread_manage.add_thread(planner.clone());
+                thread_manage.add_thread(simulator.clone());
 
-                (robot, controller, planner)
+                (robot, controller, planner, simulator)
             }
             _ => panic!("Unknown robot type"),
         }
     }
 
     pub fn get_controller_by_path(
-        controller: &Arc<Mutex<dyn Controller>>,
+        controller: &Arc<Mutex<dyn controller::Controller>>,
         path: String,
     ) -> Option<Arc<Mutex<dyn controller::Controller>>> {
         // !从 controller 树中根据 path 获取 controller,辅助函数,之后可能作为私有函数.这个函数本身不依赖 exp 所以之后可以考虑从 exp 中那出去
