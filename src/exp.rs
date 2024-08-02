@@ -7,7 +7,8 @@ use std::sync::{Arc, Mutex, RwLock};
 use crate::config::CONFIG_PATH;
 use controller::config::create_controller;
 use planner::config::create_planner;
-use robot::robots::{panda, robot_list::RobotList};
+use robot::robots::panda;
+use robot::robots::robot_list::RobotList;
 use simulator::config::create_simulator;
 use task_manager::ros_thread::ROSThread;
 use task_manager::task::Task;
@@ -56,7 +57,36 @@ impl Exp {
         }
     }
 
-    pub fn init() {}
+    fn create_nodes<T: robot::Robot + 'static, const N: usize>(
+        config: &Config,
+        path: &String,
+        robot: Arc<RwLock<T>>,
+    ) -> (
+        Arc<Mutex<dyn controller::Controller>>,
+        Arc<Mutex<dyn planner::Planner>>,
+        Arc<Mutex<dyn simulator::Simulator>>,
+    ) {
+        let controller = create_controller::<T, N>(
+            config.controller.clone(),
+            config.robot_type.clone(),
+            path.clone(),
+            robot.clone(),
+        );
+        let planner = create_planner::<T, N>(
+            config.planner.clone(),
+            config.robot_type.clone(),
+            path.clone(),
+            robot.clone(),
+        );
+        let simulator = create_simulator::<T, N>(
+            config.simulator.clone(),
+            config.robot_type.clone(),
+            path.clone(),
+            robot.clone(),
+        );
+
+        (controller, planner, simulator)
+    }
 
     #[allow(clippy::type_complexity)]
     fn build_exp_tree(
@@ -77,24 +107,8 @@ impl Exp {
                 let robot = Arc::new(RwLock::new(robot));
 
                 // 分别判断 controller 和 planner 的类型，然后创建对应的 controller 和 planner
-                let controller = create_controller::<RobotList, 0>(
-                    config.controller.clone(),
-                    config.robot_type.clone(),
-                    path.clone(),
-                    robot.clone(),
-                );
-                let planner = create_planner::<RobotList, 0>(
-                    config.planner.clone(),
-                    config.robot_type.clone(),
-                    path.clone(),
-                    robot.clone(),
-                );
-                let simulator = create_simulator::<RobotList, 0>(
-                    config.simulator.clone(),
-                    config.robot_type.clone(),
-                    path.clone(),
-                    robot.clone(),
-                );
+                let (controller, planner, simulator) =
+                    Exp::create_nodes::<RobotList, 0>(&config, &path, robot.clone());
 
                 // ! 递归!树就是从这里长起来的
                 for robot_config in config.robots.unwrap() {
@@ -108,27 +122,15 @@ impl Exp {
                 (robot, controller, planner, simulator)
             }
             "panda" => {
-                // ! 经典的 Franka Emika Panda 机器人
+                // ! 经典的 Franka Emika Panda 机器人 panda::PANDA_DOF
                 let robot = panda::Panda::new(path.clone());
                 let robot = Arc::new(RwLock::new(robot));
 
-                let controller = create_controller::<panda::Panda, { panda::PANDA_DOF }>(
-                    config.controller.clone(),
-                    config.robot_type.clone(),
-                    path.clone(),
-                    robot.clone(),
-                );
-                let planner = create_planner::<panda::Panda, { panda::PANDA_DOF }>(
-                    config.planner.clone(),
-                    config.robot_type.clone(),
-                    path.clone(),
-                    robot.clone(),
-                );
-                let simulator = create_simulator::<panda::Panda, { panda::PANDA_DOF }>(
-                    config.simulator.clone(),
-                    config.robot_type.clone(),
-                    path.clone(),
-                    robot.clone(),
+                let (controller, planner, simulator) = Exp::create_nodes::<
+                    panda::Panda,
+                    { panda::PANDA_DOF },
+                >(
+                    &config, &path, robot.clone()
                 );
 
                 // 需要给控制器和规划器开辟独立的线程
