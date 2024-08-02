@@ -1,6 +1,6 @@
 use std::sync::{Arc, RwLock};
 
-use crate::robot_trait::{Robot, RobotType};
+use crate::robot_trait::Robot;
 
 pub struct RobotList {
     name: String,
@@ -42,11 +42,12 @@ impl Robot for RobotList {
     fn get_path(&self) -> String {
         self.path.clone()
     }
-    fn get_type(&self) -> RobotType {
-        RobotType::RobotListType(apply_closure_to_iter!(self.robots, |robot| robot
-            .read()
-            .unwrap()
-            .get_type()))
+
+    fn get_q(&self) -> Vec<f64> {
+        Vec::new()
+    }
+    fn get_q_dot(&self) -> Vec<f64> {
+        Vec::new()
     }
 
     fn get_end_effector_pose(&self) -> Vec<crate::robot_trait::Pose> {

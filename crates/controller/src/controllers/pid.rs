@@ -62,7 +62,12 @@ impl<'de, const N: usize> Deserialize<'de> for PidParams<N> {
     }
 }
 
-pub struct PidNode {}
+pub struct PidNode {
+    // #[cfg(feature = "zmq")]
+    // pub sub_list: Vec<zmq::Socket>,
+    #[cfg(feature = "ros")]
+    pub sub_list: Vec<rosrust::Subscriber>,
+}
 
 impl<R: Robot + 'static, const N: usize> Pid<R, N> {
     pub fn new(
@@ -83,7 +88,12 @@ impl<R: Robot + 'static, const N: usize> Pid<R, N> {
             },
             params,
 
-            msgnode: PidNode {},
+            msgnode: PidNode {
+                #[cfg(feature = "zmq")]
+                sub_list: Vec::new(),
+                #[cfg(feature = "ros")]
+                sub_list: Vec::new(),
+            },
             robot,
         }
     }
@@ -130,16 +140,23 @@ impl<R: Robot + 'static, const N: usize> Controller for Pid<R, N> {
 
 impl<R: Robot + 'static, const N: usize> ROSThread for Pid<R, N> {
     fn init(&mut self) {
-        // 在这里进行话题的声明，
-        // 新建发布者和接收者，并将他们放入list中去
+        #[cfg(feature = "ros")]
+        {
+            self.msgnode.sub_list.push(
+                rosrust::subscribe(&self.name, 1, move |_: rosrust_msg::std_msgs::Float32| {
+                    // TODO 从消息中提取数据
+                })
+                .unwrap(),
+            );
+        }
     }
-    fn start(&mut self) {
-        // 在这里进行话题的发布和订阅
-    }
+    fn start(&mut self) {}
 
     fn update(&mut self) {
         let robot_read = self.robot.read().unwrap();
-        let new_error = self.state.target - robot_read.get_q();
+        let q = na::SVector::from_row_slice(&robot_read.get_q()[..N]);
+
+        let new_error = self.state.target - q;
         self.state.integral += new_error * self.params.period;
         self.state.derivative = (new_error - self.state.error) / self.params.period;
         self.state.error = new_error;

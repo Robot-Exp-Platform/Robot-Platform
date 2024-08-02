@@ -1,4 +1,4 @@
-use crate::robot_trait::{Pose, Robot, RobotType};
+use crate::robot_trait::{Pose, Robot};
 use nalgebra as na;
 use std::f64::consts::PI;
 
@@ -96,16 +96,19 @@ impl Robot for Panda {
     fn get_path(&self) -> String {
         self.path.clone()
     }
-    fn get_type(&self) -> RobotType {
-        RobotType::PandaType
+    // fn get_q<const N: usize>(&self) -> &nalgebra::SVector<f64, N> {
+    //     assert_eq!(N, PANDA_DOF, "const Dof must be equal to PANDA_DOF");
+    //     unsafe { &*(self.state.q.as_ptr() as *const na::SVector<f64, N>) }
+    // }
+    // fn get_q_dot<const N: usize>(&self) -> &nalgebra::SVector<f64, N> {
+    //     assert_eq!(N, PANDA_DOF, "const Dof must be equal to PANDA_DOF");
+    //     unsafe { &*(self.state.q_dot.as_ptr() as *const na::SVector<f64, N>) }
+    // }
+    fn get_q(&self) -> Vec<f64> {
+        self.state.q.iter().copied().collect()
     }
-    fn get_q<const N: usize>(&self) -> &nalgebra::SVector<f64, N> {
-        assert_eq!(N, PANDA_DOF, "const Dof must be equal to PANDA_DOF");
-        unsafe { &*(self.state.q.as_ptr() as *const na::SVector<f64, N>) }
-    }
-    fn get_q_dot<const N: usize>(&self) -> &nalgebra::SVector<f64, N> {
-        assert_eq!(N, PANDA_DOF, "const Dof must be equal to PANDA_DOF");
-        unsafe { &*(self.state.q_dot.as_ptr() as *const na::SVector<f64, N>) }
+    fn get_q_dot(&self) -> Vec<f64> {
+        self.state.q_dot.iter().copied().collect()
     }
     fn get_end_effector_pose(&self) -> Vec<Pose> {
         vec![self.state.base_pose]

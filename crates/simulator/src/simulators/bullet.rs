@@ -57,6 +57,7 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Bullet<R, N> {
         {
             // ! 使用 zmq 写的订阅者通讯
             // ! zmq 不容许在多个线程中使用同一个 Socket ,虽然我们只会在一个线程中调用他,但是尚且没有想到规避的办法,暂且取悦编译器,可能会导致阻塞！！！
+            // TODO 找到绕开的办法了,但是需要 unsafe 代码,还没搓好,unsafe impl Send for Context {},unsafe impl Sync for Context {}
             // 在这里进行订阅者的声明
             let context = zmq::Context::new();
             let subscriber = context.socket(zmq::SUB).unwrap();
@@ -87,7 +88,6 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Bullet<R, N> {
         {
             // ! 使用 ros 写的订阅者通讯
             // 在这里进行节点和话题的声明
-            ros::init((self.path.clone() + self.name.clone().as_str()).as_str());
             let robot = self.robot.clone();
             self.msgnode.sub_list.push(
                 ros::subscribe(
