@@ -99,6 +99,14 @@ impl Robot for Panda {
     fn get_type(&self) -> RobotType {
         RobotType::PandaType
     }
+    fn get_q<const N: usize>(&self) -> &nalgebra::SVector<f64, N> {
+        assert_eq!(N, PANDA_DOF, "const Dof must be equal to PANDA_DOF");
+        unsafe { &*(self.state.q.as_ptr() as *const na::SVector<f64, N>) }
+    }
+    fn get_q_dot<const N: usize>(&self) -> &nalgebra::SVector<f64, N> {
+        assert_eq!(N, PANDA_DOF, "const Dof must be equal to PANDA_DOF");
+        unsafe { &*(self.state.q_dot.as_ptr() as *const na::SVector<f64, N>) }
+    }
     fn get_end_effector_pose(&self) -> Vec<Pose> {
         vec![self.state.base_pose]
     }

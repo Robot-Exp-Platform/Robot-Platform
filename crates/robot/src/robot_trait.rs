@@ -22,7 +22,8 @@ pub trait Robot: Send + Sync {
     fn get_name(&self) -> String;
     fn get_path(&self) -> String;
     fn get_type(&self) -> RobotType;
-
+    fn get_q<const N: usize>(&self) -> &na::SVector<f64, N>;
+    fn get_q_dot<const N: usize>(&self) -> &na::SVector<f64, N>;
     fn get_end_effector_pose(&self) -> Vec<Pose>;
 
     fn set_name(&mut self, name: String);

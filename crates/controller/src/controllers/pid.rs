@@ -28,6 +28,7 @@ pub struct PidState<const N: usize> {
 
 #[allow(dead_code)]
 pub struct PidParams<const N: usize> {
+    period: f64,
     kp: na::SMatrix<f64, N, N>,
     ki: na::SMatrix<f64, N, N>,
     kd: na::SMatrix<f64, N, N>,
@@ -40,6 +41,7 @@ impl<'de, const N: usize> Deserialize<'de> for PidParams<N> {
     {
         #[derive(Deserialize)]
         struct PidParamsData {
+            period: f64,
             kp: Vec<f64>,
             ki: Vec<f64>,
             kd: Vec<f64>,
@@ -52,6 +54,7 @@ impl<'de, const N: usize> Deserialize<'de> for PidParams<N> {
         assert_eq!(data.kd.len(), N * N, "Matrix data has incorrect length");
 
         Ok(PidParams {
+            period: data.period,
             kp: na::SMatrix::from_vec(data.kp),
             ki: na::SMatrix::from_vec(data.ki),
             kd: na::SMatrix::from_vec(data.kd),
@@ -90,6 +93,7 @@ impl<R: Robot + 'static, const N: usize> Pid<R, N> {
             name,
             path,
             PidParams {
+                period: 0.0,
                 kp: na::SMatrix::from_element(0.0),
                 ki: na::SMatrix::from_element(0.0),
                 kd: na::SMatrix::from_element(0.0),
@@ -126,34 +130,22 @@ impl<R: Robot + 'static, const N: usize> Controller for Pid<R, N> {
 
 impl<R: Robot + 'static, const N: usize> ROSThread for Pid<R, N> {
     fn init(&mut self) {
-        #[cfg(target_os = "linux")]
-        {
-            // 在这里进行话题的声明，
-            // 新建发布者和接收者，并将他们放入list中去
-        }
+        // 在这里进行话题的声明，
+        // 新建发布者和接收者，并将他们放入list中去
     }
     fn start(&mut self) {
-        #[cfg(target_os = "linux")]
-        {
-            // 在这里进行话题的发布和订阅
-        }
+        // 在这里进行话题的发布和订阅
     }
 
-    fn update(&mut self) {}
-    // fn update(&mut self, period: f64) {
-    //     let robot_read = self.robot.read().unwrap();
-    //     let new_error = self.state.target - robot_read.get_joint_positions();
-    //     self.state.integral += new_error * period;
-    //     self.state.derivative = (new_error - self.state.error) / period;
-    //     self.state.error = new_error;
+    fn update(&mut self) {
+        let robot_read = self.robot.read().unwrap();
+        let new_error = self.state.target - robot_read.get_q();
+        self.state.integral += new_error * self.params.period;
+        self.state.derivative = (new_error - self.state.error) / self.params.period;
+        self.state.error = new_error;
 
-    //     let _control_output = self.params.kp * self.state.error
-    //         + self.params.ki * self.state.integral
-    //         + self.params.kd * self.state.derivative;
-
-    //     #[cfg(target_os = "unix")]
-    //     {
-    //         // publish control_output
-    //     }
-    // }
+        let _control_output = self.params.kp * self.state.error
+            + self.params.ki * self.state.integral
+            + self.params.kd * self.state.derivative;
+    }
 }
