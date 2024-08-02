@@ -35,9 +35,15 @@ impl<const N: usize, const I: usize, const O: usize> LinearSystem<N, I, O> {
     }
 }
 
+impl<const N: usize, const I: usize, const O: usize> Default for LinearSystem<N, I, O> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<const N: usize, const I: usize, const O: usize> Plant<N, I, O> for LinearSystem<N, I, O> {
     fn get_state(&self) -> (na::SVector<f64, N>, na::SVector<f64, N>) {
-        (self.q.clone(), self.q_dot.clone())
+        (self.q, self.q_dot)
     }
 
     fn init_state(&mut self, q: na::SVector<f64, N>, q_dot: na::SVector<f64, N>) {
