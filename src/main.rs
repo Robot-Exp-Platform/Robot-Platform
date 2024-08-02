@@ -15,14 +15,6 @@ fn main() {
     loop {
         // ! 更新任务，将从 ${TASK_PATH}/task.json 中读取任务文件和参数信息文件，并生成对应的任务树
         // exp.start();
-        #[cfg(feature = "ros")]
-        {
-            print!("ROS Thread Start\n");
-        }
-        #[cfg(feature = "ros2")]
-        {
-            print!("ROS2 Thread Start\n");
-        }
 
         while exp.is_running() {
             exp.update();

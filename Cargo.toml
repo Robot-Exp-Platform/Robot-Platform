@@ -42,6 +42,8 @@ serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
 nalgebra.workspace = true
 zmq = { workspace = true, optional = true }
+rosrust = { workspace = true, optional = true }
+rosrust_msg = { workspace = true, optional = true }
 
 robot.workspace = true
 controller.workspace = true
@@ -71,7 +73,14 @@ noros = [
     "planner/noros",
     "simulator/noros",
 ]
-ros = ["task_manager/ros", "controller/ros", "planner/ros", "simulator/ros"]
+ros = [
+    "rosrust",
+    "rosrust_msg",
+    "task_manager/ros",
+    "controller/ros",
+    "planner/ros",
+    "simulator/ros",
+]
 ros2 = [
     "task_manager/ros2",
     "controller/ros2",
