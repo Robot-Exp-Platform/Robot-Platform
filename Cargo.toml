@@ -27,6 +27,8 @@ nalgebra = "*"
 typenum = "*"
 rosrust = '*'
 rosrust_msg = '*'
+zmq = "*"
+zeromq = "*"
 
 robot = { path = "./crates/robot" }
 controller = { path = "./crates/controller" }
@@ -36,26 +38,33 @@ task_manager = { path = "./crates/task_manager" }
 simulator = { path = "./crates/simulator" }
 
 [dependencies]
-serde = { version = '*', features = ["derive"] }
-serde_json = "*"
-nalgebra = "*"
-rosrust = { version = "*" }
-rosrust_msg = { version = "*" }
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+nalgebra.workspace = true
+zmq = { workspace = true, optional = true }
 
+robot.workspace = true
+controller.workspace = true
+planner.workspace = true
+recoder.workspace = true
+task_manager.workspace = true
+simulator.workspace = true
 
-robot = { path = "./crates/robot" }
-controller = { path = "./crates/controller" }
-planner = { path = "./crates/planner" }
-recoder = { path = "./crates/recoder" }
-task_manager = { path = "./crates/task_manager" }
-simulator = { path = "./crates/simulator" }
 
 [build-dependencies]
 
 
 [features]
-# default = ["ros"]
+# default = ["rszmq"]
+default = ["ros"]
 # default = ["ros2"]
+rszmq = [
+    "zmq",
+    "task_manager/rszmq",
+    "controller/rszmq",
+    "planner/rszmq",
+    "simulator/rszmq",
+]
 noros = [
     "task_manager/noros",
     "controller/noros",

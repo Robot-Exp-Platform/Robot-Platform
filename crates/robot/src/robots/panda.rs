@@ -109,6 +109,12 @@ impl Robot for Panda {
     fn set_path(&mut self, path: String) {
         self.path = path
     }
+    fn set_q(&mut self, q: Vec<f64>) {
+        self.state.q = na::SVector::from_vec(q)
+    }
+    fn set_q_dot(&mut self, q_dot: Vec<f64>) {
+        self.state.q_dot = na::SVector::from_vec(q_dot)
+    }
 
     fn reset_state(&mut self) {
         // TODO 位置重置

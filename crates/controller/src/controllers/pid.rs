@@ -125,7 +125,7 @@ impl<R: Robot + 'static, const N: usize> Controller for Pid<R, N> {
 }
 
 impl<R: Robot + 'static, const N: usize> ROSThread for Pid<R, N> {
-    fn init(&self) {
+    fn init(&mut self) {
         #[cfg(target_os = "linux")]
         {
             // 在这里进行话题的声明，
@@ -139,7 +139,7 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Pid<R, N> {
         }
     }
 
-    fn update(&self) {}
+    fn update(&mut self) {}
     // fn update(&mut self, period: f64) {
     //     let robot_read = self.robot.read().unwrap();
     //     let new_error = self.state.target - robot_read.get_joint_positions();

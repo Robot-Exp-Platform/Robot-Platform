@@ -7,10 +7,12 @@ edition = "2021"
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 nalgebra = { workspace = true }
+zmq = { workspace = true, optional = true }
 
 robot = { workspace = true }
 
 [features]
+rszmq = ["zmq"]
 noros = []
 ros = []
 ros2 = []

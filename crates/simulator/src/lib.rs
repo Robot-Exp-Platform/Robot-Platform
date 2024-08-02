@@ -1,8 +1,9 @@
 pub mod config;
 pub mod plant_trait;
 pub mod plants;
-pub mod simlulator_trait;
+pub mod simulator_trait;
 pub mod simulators;
+pub use simulator_trait::Simulator;
 
 #[cfg(test)]
 mod tests {
