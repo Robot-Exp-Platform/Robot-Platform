@@ -1,6 +1,6 @@
 pub mod robot_trait;
 pub mod robots;
-pub use robot_trait::{Robot, RobotState};
+pub use robot_trait::Robot;
 
 #[cfg(test)]
 mod tests {
