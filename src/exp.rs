@@ -218,7 +218,7 @@ impl Exp {
 
 impl ROSThread for Exp {
     // ! 为 Exp 实现 ROSThread trait,这将使得 Exp 可以被 ThreadManage 管理,同时也具备基本的运行函数
-    fn init(&self) {}
+    fn init(&mut self) {}
 
     fn start(&mut self) {
         // ! 所有线程停一会儿，等待下个任务到来
@@ -230,5 +230,5 @@ impl ROSThread for Exp {
         self.thread_manage.start_all();
     }
 
-    fn update(&self) {}
+    fn update(&mut self) {}
 }

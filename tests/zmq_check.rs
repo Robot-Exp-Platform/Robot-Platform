@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use std::thread::{self, sleep};
+    use std::thread::{self};
     #[cfg(feature = "rszmq")]
     use zmq;
     #[test]

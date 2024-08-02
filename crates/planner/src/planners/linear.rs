@@ -82,7 +82,7 @@ impl<R: Robot + 'static, const N: usize> Planner for Linear<R, N> {
 }
 
 impl<R: Robot + 'static, const N: usize> ROSThread for Linear<R, N> {
-    fn init(&self) {}
+    fn init(&mut self) {}
     fn start(&mut self) {}
-    fn update(&self) {}
+    fn update(&mut self) {}
 }

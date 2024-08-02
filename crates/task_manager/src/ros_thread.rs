@@ -1,5 +1,5 @@
 pub trait ROSThread: Send + Sync {
-    fn init(&self) {}
+    fn init(&mut self) {}
     fn start(&mut self) {}
-    fn update(&self) {}
+    fn update(&mut self) {}
 }

@@ -62,7 +62,7 @@ impl Controller for ControllerList {
 }
 
 impl ROSThread for ControllerList {
-    fn init(&self) {
+    fn init(&mut self) {
         self.controllers
             .iter()
             .for_each(|controller| controller.lock().unwrap().init())
@@ -74,7 +74,7 @@ impl ROSThread for ControllerList {
             .for_each(|controller| controller.lock().unwrap().start())
     }
 
-    fn update(&self) {
+    fn update(&mut self) {
         self.controllers
             .iter()
             .for_each(|controller| controller.lock().unwrap().update())

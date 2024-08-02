@@ -55,8 +55,8 @@ simulator.workspace = true
 
 
 [features]
-default = ["rszmq"]
-# default = ["ros"]
+# default = ["rszmq"]
+default = ["ros"]
 # default = ["ros2"]
 rszmq = [
     "zmq",
