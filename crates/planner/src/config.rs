@@ -6,16 +6,15 @@ use robot::robot_trait::Robot;
 
 pub fn create_planner<R: Robot + 'static, const N: usize>(
     planner_type: String,
-    robot_type: String,
+    robot_name: String,
     path: String,
     robot: Arc<RwLock<R>>,
 ) -> Arc<Mutex<dyn Planner>> {
     // !跟着文家新建 Planner 啦啦啦
+    let name = format!("{}:{}", planner_type, robot_name);
     match planner_type.as_str() {
         "linear" => Arc::new(Mutex::new(Linear::<R, N>::new_without_params(
-            robot_type + "_linear",
-            path,
-            robot,
+            name, path, robot,
         ))),
         _ => panic!("Planner type not found"),
     }

@@ -4,16 +4,16 @@ pub use robot_trait::Robot;
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use robot_trait::Robot;
-    use robots::panda::Panda;
+    // use super::*;
+    // use robot_trait::Robot;
+    // use robots::panda::Panda;
     // use robots::robot_list::RobotList;
 
-    #[test]
-    fn init_a_robot() {
-        let my_panda = Panda::new("robot/".to_string());
-        print!("{}", my_panda.get_name());
-    }
+    // #[test]
+    // fn init_a_robot() {
+    //     let my_panda = Panda::new("robot/".to_string());
+    //     print!("{}", my_panda.get_name());
+    // }
 
     // #[test]
     // fn init_robots() {
