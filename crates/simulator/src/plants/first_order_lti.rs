@@ -28,9 +28,15 @@ impl<const N: usize> FirstOrderLTI<N> {
     }
 }
 
+impl<const N: usize> Default for FirstOrderLTI<N> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<const N: usize> Plant<N, N, N> for FirstOrderLTI<N> {
     fn get_state(&self) -> (na::SVector<f64, N>, na::SVector<f64, N>) {
-        (self.q.clone(), self.q_dot.clone())
+        (self.q, self.q_dot)
     }
 
     fn init_state(&mut self, q: na::SVector<f64, N>, q_dot: na::SVector<f64, N>) {
@@ -42,6 +48,6 @@ impl<const N: usize> Plant<N, N, N> for FirstOrderLTI<N> {
         // Update the state of the plant for 1 temp_step
         self.q_dot = self.params.tau.try_inverse().unwrap() * (self.params.k * u - self.q);
         self.q += self.q_dot * self.params.time_step;
-        self.q.clone()
+        self.q
     }
 }

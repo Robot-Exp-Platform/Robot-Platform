@@ -57,9 +57,10 @@ impl Exp {
         }
     }
 
+    #[allow(clippy::type_complexity)]
     fn create_nodes<T: robot::Robot + 'static, const N: usize>(
         config: &Config,
-        path: &String,
+        path: &str,
         robot: Arc<RwLock<T>>,
     ) -> (
         Arc<Mutex<dyn controller::Controller>>,
@@ -69,19 +70,19 @@ impl Exp {
         let controller = create_controller::<T, N>(
             config.controller.clone(),
             config.robot_type.clone(),
-            path.clone(),
+            path.to_owned(),
             robot.clone(),
         );
         let planner = create_planner::<T, N>(
             config.planner.clone(),
             config.robot_type.clone(),
-            path.clone(),
+            path.to_owned(),
             robot.clone(),
         );
         let simulator = create_simulator::<T, N>(
             config.simulator.clone(),
             config.robot_type.clone(),
-            path.clone(),
+            path.to_owned(),
             robot.clone(),
         );
 
