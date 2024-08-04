@@ -741,6 +741,7 @@ name = "massage"
 version = "0.1.0"
 dependencies = [
  "nalgebra",
+ "rosrust",
 ]
 
 [[package]]
@@ -1423,6 +1424,7 @@ dependencies = [
 name = "simulator"
 version = "0.1.0"
 dependencies = [
+ "massage",
  "nalgebra",
  "robot",
  "rosrust",

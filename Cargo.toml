@@ -63,7 +63,7 @@ massage.workspace = true
 
 [features]
 # default = ["rszmq"]
-# default = ["ros"]
+default = ["ros"]
 # default = ["ros2"]
 rszmq = [
     "zmq",
@@ -85,6 +85,7 @@ ros = [
     "controller/ros",
     "planner/ros",
     "simulator/ros",
+    "massage/ros",
 ]
 ros2 = [
     "task_manager/ros2",
