@@ -9,7 +9,8 @@ serde_json = { workspace = true }
 nalgebra = { workspace = true }
 zmq = { workspace = true, optional = true }
 
-robot = { workspace = true }
+robot.workspace = true
+massage.workspace = true
 
 [features]
 rszmq = ["zmq"]

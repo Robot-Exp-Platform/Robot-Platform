@@ -4,6 +4,7 @@ use robot::robot_trait::Robot;
 use rosrust as ros;
 use std::sync::{Arc, RwLock};
 use task_manager::ros_thread::ROSThread;
+
 #[cfg(feature = "rszmq")]
 use zmq;
 
