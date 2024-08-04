@@ -70,11 +70,7 @@ impl PandaParams {
 }
 
 impl Panda {
-    pub fn new(path: String) -> Panda {
-        Panda::new_with_name("panda".to_string(), path)
-    }
-
-    pub fn new_with_name(name: String, path: String) -> Panda {
+    pub fn new(name: String, path: String) -> Panda {
         Panda {
             path: path + &name,
             name,

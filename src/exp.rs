@@ -1,3 +1,4 @@
+use crossbeam::queue::SegQueue;
 use serde::Deserialize;
 use serde_json::from_reader;
 use std::fs::File;
@@ -6,6 +7,8 @@ use std::sync::{Arc, Mutex, RwLock};
 
 use crate::config::CONFIG_PATH;
 use controller::config::create_controller;
+use massage::target::{self, Target};
+use massage::track::Track;
 use planner::config::create_planner;
 use robot::robots::panda;
 use robot::robots::robot_list::RobotList;
@@ -69,20 +72,20 @@ impl Exp {
     ) {
         let controller = create_controller::<T, N>(
             config.controller.clone(),
-            config.robot_type.clone(),
-            path.to_owned(),
+            config.name.clone(),
+            format!("/controller/{}", path),
             robot.clone(),
         );
         let planner = create_planner::<T, N>(
             config.planner.clone(),
-            config.robot_type.clone(),
-            path.to_owned(),
+            config.name.clone(),
+            format!("/planner/{}", path),
             robot.clone(),
         );
         let simulator = create_simulator::<T, N>(
             config.simulator.clone(),
-            config.robot_type.clone(),
-            path.to_owned(),
+            config.name.clone(),
+            format!("/simulator/{}", path),
             robot.clone(),
         );
 
@@ -100,11 +103,11 @@ impl Exp {
         Arc<Mutex<dyn planner::Planner>>,
         Arc<Mutex<dyn simulator::Simulator>>,
     ) {
-        // 由于 Exo 的树状结构，所以这里需要递归的生成树状结构，每款机器人的 常数参量并不相同，所以需要在这里枚举以创建不同大小的 控制器、规划器 等
+        // 由于 Exp 的树状结构，所以这里需要递归的生成树状结构，每款机器人的 常数参量并不相同，所以需要在这里枚举以创建不同大小的 控制器、规划器 等
         match config.robot_type.as_str() {
             "robot_list" => {
                 // ! 这里的 robot_list 是一个虚拟机器人，它的作用是将多个机器人组合成一个机器人，这样可以在一个控制器中控制多个机器人，所以 robot_list 一般指叶节点
-                let robot = RobotList::new(config.name.clone(), path.clone());
+                let robot = RobotList::new(config.name.clone(), format!("/robot/{}", path));
                 let robot = Arc::new(RwLock::new(robot));
 
                 // 分别判断 controller 和 planner 的类型，然后创建对应的 controller 和 planner
@@ -114,7 +117,11 @@ impl Exp {
                 // ! 递归!树就是从这里长起来的
                 for robot_config in config.robots.unwrap() {
                     let (child_robot, child_controller, child_planner, child_simulator) =
-                        Exp::build_exp_tree(robot_config, path.clone(), thread_manage);
+                        Exp::build_exp_tree(
+                            robot_config,
+                            format!("{}/robot_list", path),
+                            thread_manage,
+                        );
                     robot.write().unwrap().add_robot(child_robot);
                     controller.lock().unwrap().add_controller(child_controller);
                     planner.lock().unwrap().add_planner(child_planner);
@@ -124,7 +131,7 @@ impl Exp {
             }
             "panda" => {
                 // ! 经典的 Franka Emika Panda 机器人 panda::PANDA_DOF
-                let robot = panda::Panda::new(path.clone());
+                let robot = panda::Panda::new(config.name.clone(), format!("/robot/{}", path));
                 let robot = Arc::new(RwLock::new(robot));
 
                 let (controller, planner, simulator) = Exp::create_nodes::<
@@ -138,6 +145,19 @@ impl Exp {
                 thread_manage.add_thread(controller.clone());
                 thread_manage.add_thread(planner.clone());
                 thread_manage.add_thread(simulator.clone());
+
+                let target_queue = Arc::new(SegQueue::new());
+                let track_queue = Arc::new(SegQueue::new());
+
+                controller
+                    .lock()
+                    .unwrap()
+                    .set_track_queue(track_queue.clone());
+                planner
+                    .lock()
+                    .unwrap()
+                    .set_target_queue(target_queue.clone());
+                planner.lock().unwrap().set_track_queue(track_queue.clone());
 
                 (robot, controller, planner, simulator)
             }

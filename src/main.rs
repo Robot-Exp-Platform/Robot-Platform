@@ -2,7 +2,6 @@
 
 use task_manager::ros_thread::ROSThread;
 
-mod collision_object;
 mod config;
 mod exp;
 mod msg;

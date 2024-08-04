@@ -8,6 +8,7 @@ members = [
     "./crates/solver",
     "./crates/task_manager",
     "./crates/temp",
+    "crates/massage",
 ]
 
 [workspace.package]
@@ -29,6 +30,7 @@ rosrust = '*'
 rosrust_msg = '*'
 zmq = "*"
 zeromq = "*"
+crossbeam = "*"
 
 robot = { path = "./crates/robot" }
 controller = { path = "./crates/controller" }
@@ -36,11 +38,13 @@ planner = { path = "./crates/planner" }
 recoder = { path = "./crates/recoder" }
 task_manager = { path = "./crates/task_manager" }
 simulator = { path = "./crates/simulator" }
+massage = { path = "./crates/massage" }
 
 [dependencies]
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
 nalgebra.workspace = true
+crossbeam.workspace = true
 zmq = { workspace = true, optional = true }
 rosrust = { workspace = true, optional = true }
 rosrust_msg = { workspace = true, optional = true }
@@ -51,6 +55,7 @@ planner.workspace = true
 recoder.workspace = true
 task_manager.workspace = true
 simulator.workspace = true
+massage.workspace = true
 
 
 [build-dependencies]

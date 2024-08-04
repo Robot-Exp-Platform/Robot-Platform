@@ -38,6 +38,19 @@ impl<R: Robot + 'static, const N: usize> Bullet<R, N> {
             robot,
         }
     }
+    pub fn new_without_params(name: String, path: String, robot: Arc<RwLock<R>>) -> Bullet<R, N> {
+        Bullet {
+            name,
+            path,
+            msgnode: BulletNode {
+                // #[cfg(feature = "zmq")]
+                // sub_list: Vec::new(),
+                #[cfg(feature = "ros")]
+                sub_list: Vec::new(),
+            },
+            robot,
+        }
+    }
 }
 
 impl<R: Robot + 'static, const N: usize> Simulator for Bullet<R, N> {

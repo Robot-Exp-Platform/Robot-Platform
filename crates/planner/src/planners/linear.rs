@@ -1,7 +1,10 @@
+use crossbeam::queue::SegQueue;
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex, RwLock};
 
 use crate::planner_trait::Planner;
+use massage::target::Target;
+use massage::track::Track;
 use robot::robot_trait::Robot;
 use task_manager::ros_thread::ROSThread;
 
@@ -12,10 +15,8 @@ pub struct LinearParams {
 }
 
 pub struct LinearNode {
-    // #[cfg(target_os = "linux")]
-    // sub_list: Vec<String>,
-    // #[cfg(target_os = "linux")]
-    // pub_list: Vec<String>,
+    target_queue: Arc<SegQueue<Target>>,
+    track_queue: Arc<SegQueue<Track>>,
 }
 
 pub struct Linear<R: Robot + 'static, const N: usize> {
@@ -24,7 +25,7 @@ pub struct Linear<R: Robot + 'static, const N: usize> {
 
     params: LinearParams,
 
-    _rosnode: LinearNode,
+    magnode: LinearNode,
 
     #[allow(dead_code)]
     robot: Arc<RwLock<R>>,
@@ -43,11 +44,9 @@ impl<R: Robot + 'static, const N: usize> Linear<R, N> {
 
             params,
 
-            _rosnode: LinearNode {
-                // #[cfg(target_os = "linux")]
-                // sub_list: Vec::new(),
-                // #[cfg(target_os = "linux")]
-                // pub_list: Vec::new(),
+            magnode: LinearNode {
+                target_queue: Arc::new(SegQueue::new()),
+                track_queue: Arc::new(SegQueue::new()),
             },
             robot,
         }
@@ -59,10 +58,6 @@ impl<R: Robot + 'static, const N: usize> Linear<R, N> {
 }
 
 impl<R: Robot + 'static, const N: usize> Planner for Linear<R, N> {
-    // fn get_planner_state(&self) -> PlannerState {
-    //     self.state
-    // }
-
     fn get_name(&self) -> String {
         self.name.clone()
     }
@@ -76,6 +71,12 @@ impl<R: Robot + 'static, const N: usize> Planner for Linear<R, N> {
     fn set_params(&mut self, params: String) {
         let params: LinearParams = serde_json::from_str(&params).unwrap();
         self.params = params;
+    }
+    fn set_target_queue(&mut self, target_queue: Arc<SegQueue<Target>>) {
+        self.magnode.target_queue = target_queue;
+    }
+    fn set_track_queue(&mut self, _track_queue: Arc<SegQueue<Track>>) {
+        self.magnode.track_queue = _track_queue;
     }
 
     fn add_planner(&mut self, _planner: Arc<Mutex<dyn Planner>>) {}

@@ -9,6 +9,8 @@ edition = "2021"
 robot = { workspace = true }
 recoder = { workspace = true }
 task_manager = { workspace = true }
+massage = { workspace = true }
+crossbeam = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 

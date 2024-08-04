@@ -52,6 +52,7 @@ impl Controller for ControllerList {
     }
 
     fn set_params(&mut self, _: String) {}
+    fn set_track_queue(&mut self, _: Arc<crossbeam::queue::SegQueue<massage::track::Track>>) {}
 
     fn add_controller(&mut self, controller: Arc<Mutex<dyn Controller>>) {
         self.controllers.push(controller)
