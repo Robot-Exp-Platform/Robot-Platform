@@ -6,8 +6,9 @@ repository.workspace = true
 
 [dependencies]
 nalgebra.workspace = true
-
 rosrust = { workspace = true, optional = true }
+
+robot.workspace = true
 
 [features]
 ros = ["rosrust"]

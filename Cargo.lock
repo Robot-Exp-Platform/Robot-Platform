@@ -741,6 +741,7 @@ name = "massage"
 version = "0.1.0"
 dependencies = [
  "nalgebra",
+ "robot",
  "rosrust",
 ]
 
