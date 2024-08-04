@@ -1,6 +1,19 @@
 use nalgebra as na;
 
-pub type Pose = na::SVector<f64, 6>;
+#[derive(Clone, Copy)]
+pub struct Pose {
+    pub position: na::Point3<f64>,
+    pub orientation: na::UnitQuaternion<f64>,
+}
+
+impl Pose {
+    pub fn new() -> Pose {
+        Pose {
+            position: na::Point3::new(0.0, 0.0, 0.0),
+            orientation: na::UnitQuaternion::identity(),
+        }
+    }
+}
 
 pub trait Robot: Send + Sync {
     fn get_name(&self) -> String;
