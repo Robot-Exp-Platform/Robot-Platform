@@ -1,3 +1,4 @@
+use crossbeam::queue::SegQueue;
 use serde::Deserialize;
 use serde_json::from_reader;
 use std::fs::File;
@@ -6,6 +7,8 @@ use std::sync::{Arc, Mutex, RwLock};
 
 use crate::config::CONFIG_PATH;
 use controller::config::create_controller;
+use massage::target::{self, Target};
+use massage::track::Track;
 use planner::config::create_planner;
 use robot::robots::panda;
 use robot::robots::robot_list::RobotList;
@@ -100,7 +103,7 @@ impl Exp {
         Arc<Mutex<dyn planner::Planner>>,
         Arc<Mutex<dyn simulator::Simulator>>,
     ) {
-        // 由于 Exo 的树状结构，所以这里需要递归的生成树状结构，每款机器人的 常数参量并不相同，所以需要在这里枚举以创建不同大小的 控制器、规划器 等
+        // 由于 Exp 的树状结构，所以这里需要递归的生成树状结构，每款机器人的 常数参量并不相同，所以需要在这里枚举以创建不同大小的 控制器、规划器 等
         match config.robot_type.as_str() {
             "robot_list" => {
                 // ! 这里的 robot_list 是一个虚拟机器人，它的作用是将多个机器人组合成一个机器人，这样可以在一个控制器中控制多个机器人，所以 robot_list 一般指叶节点
@@ -142,6 +145,19 @@ impl Exp {
                 thread_manage.add_thread(controller.clone());
                 thread_manage.add_thread(planner.clone());
                 thread_manage.add_thread(simulator.clone());
+
+                let target_queue = Arc::new(SegQueue::new());
+                let track_queue = Arc::new(SegQueue::new());
+
+                controller
+                    .lock()
+                    .unwrap()
+                    .set_track_queue(track_queue.clone());
+                planner
+                    .lock()
+                    .unwrap()
+                    .set_target_queue(target_queue.clone());
+                planner.lock().unwrap().set_track_queue(track_queue.clone());
 
                 (robot, controller, planner, simulator)
             }

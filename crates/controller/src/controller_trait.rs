@@ -1,6 +1,8 @@
+use crossbeam::queue::SegQueue;
 use std::sync::{Arc, Mutex};
 
 use crate::controllers::pid::{PidParams, PidState};
+use massage::track::Track;
 use robot::robots::panda::PANDA_DOF;
 use task_manager::ros_thread::ROSThread;
 
@@ -26,6 +28,7 @@ pub trait Controller: ROSThread {
     fn get_path(&self) -> String;
 
     fn set_params(&mut self, params: String);
+    fn set_track_queue(&mut self, track_queue: Arc<SegQueue<Track>>);
 
     fn add_controller(&mut self, controller: Arc<Mutex<dyn Controller>>);
     fn get_controller(&self) -> &Vec<Arc<Mutex<dyn Controller>>> {

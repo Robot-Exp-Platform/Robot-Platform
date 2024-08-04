@@ -1,8 +1,10 @@
+use crossbeam::queue::SegQueue;
 use nalgebra as na;
 use serde::{Deserialize, Deserializer};
 use std::sync::{Arc, Mutex, RwLock};
 
 use crate::controller_trait::Controller;
+use massage::track::Track;
 use robot::robot_trait::Robot;
 use task_manager::ros_thread::ROSThread;
 
@@ -63,6 +65,7 @@ impl<'de, const N: usize> Deserialize<'de> for PidParams<N> {
 }
 
 pub struct PidNode {
+    track_queue: Arc<SegQueue<Track>>,
     // #[cfg(feature = "zmq")]
     // pub sub_list: Vec<zmq::Socket>,
     #[cfg(feature = "ros")]
@@ -89,6 +92,7 @@ impl<R: Robot + 'static, const N: usize> Pid<R, N> {
             params,
 
             msgnode: PidNode {
+                track_queue: Arc::new(SegQueue::new()),
                 #[cfg(feature = "zmq")]
                 sub_list: Vec::new(),
                 #[cfg(feature = "ros")]
@@ -133,6 +137,9 @@ impl<R: Robot + 'static, const N: usize> Controller for Pid<R, N> {
     fn set_params(&mut self, params: String) {
         let params: PidParams<N> = serde_json::from_str(&params).unwrap();
         self.params = params;
+    }
+    fn set_track_queue(&mut self, track_queue: Arc<SegQueue<Track>>) {
+        self.msgnode.track_queue = track_queue;
     }
 
     fn add_controller(&mut self, _: Arc<Mutex<dyn Controller>>) {}

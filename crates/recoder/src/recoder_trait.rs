@@ -1,3 +1,5 @@
+use massage::massage_trait::Massage;
+
 pub trait Recoder {
-    fn recoder();
+    fn record_msg(&self, msg: Massage);
 }
