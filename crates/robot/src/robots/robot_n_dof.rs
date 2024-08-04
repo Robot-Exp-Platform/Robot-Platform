@@ -69,7 +69,7 @@ impl<const N: usize> RobotNDofState<N> {
         RobotNDofState {
             q: na::SVector::from_element(0.0),
             q_dot: na::SVector::from_element(0.0),
-            base_pose: Pose::new(),
+            base_pose: Pose::identity(),
         }
     }
 }
