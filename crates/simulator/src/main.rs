@@ -1,31 +1,26 @@
-use zmq::Context;
+use crossbeam::queue::SegQueue;
+use std::sync::{Arc, RwLock};
+
+use massage::control_command::ControlCommand::Joint;
+use robot::robots::panda::Panda;
+use simulator::{simulators::bullet::Bullet, Simulator};
+use task_manager::ros_thread::ROSThread;
 
 fn main() {
-    // 创建一个新的zmq上下文
-    let context = Context::new();
+    let robot = Panda::new("panda_1".to_string(), "/robot".to_string());
+    let mut simulator = Bullet::<Panda, 7>::new(
+        "bullet:panda_1".to_string(),
+        "/simulator".to_string(),
+        Arc::new(RwLock::new(robot)),
+    );
 
-    // 创建一个REP套接字
-    let socket = context.socket(zmq::REP).expect("Failed to create socket");
+    let controller_command_queue = Arc::new(SegQueue::new());
 
-    // 绑定到tcp地址
-    socket.bind("tcp://*:5555").expect("Failed to bind socket");
+    // 随便往队列里面塞点数据
+    controller_command_queue.push(Joint(vec![0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]));
+    controller_command_queue.push(Joint(vec![0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6]));
 
-    println!("Server is running and waiting for requests...");
+    simulator.set_controller_command_queue(controller_command_queue);
 
-    loop {
-        // 等待接收请求
-        let message = socket
-            .recv_string(0)
-            .expect("Failed to receive message")
-            .unwrap();
-        println!("Received request: {}", message);
-
-        // 模拟处理一些工作
-        std::thread::sleep(std::time::Duration::from_secs(1));
-
-        // 发送回复
-        let reply = "World";
-        socket.send(reply, 0).expect("Failed to send reply");
-        println!("Sent reply: {}", reply);
-    }
+    simulator.init();
 }

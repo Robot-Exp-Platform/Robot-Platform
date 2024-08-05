@@ -1,2 +1,4 @@
 #[derive(Debug)]
-pub enum ControlCommand {}
+pub enum ControlCommand {
+    Joint(Vec<f64>),
+}
