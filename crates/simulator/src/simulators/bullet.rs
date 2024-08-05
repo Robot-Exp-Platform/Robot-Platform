@@ -10,6 +10,7 @@ use massage::control_command::ControlCommand;
 use robot::robot_trait::Robot;
 use task_manager::ros_thread::ROSThread;
 
+// bullet 结构体声明，包含其名称，路径，消息节点，以及机器人
 #[allow(dead_code)]
 pub struct Bullet<R: Robot + 'static, const N: usize> {
     name: String,
