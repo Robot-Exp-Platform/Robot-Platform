@@ -18,7 +18,7 @@ rosrust_msg = { workspace = true, optional = true }
 robot.workspace = true
 recoder.workspace = true
 task_manager.workspace = true
-massage.workspace = true
+message.workspace = true
 
 
 [features]

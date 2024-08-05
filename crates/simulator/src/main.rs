@@ -1,7 +1,7 @@
 use crossbeam::queue::SegQueue;
 use std::sync::{Arc, RwLock};
 
-use massage::control_command::ControlCommand::Joint;
+use message::control_command::ControlCommand::Joint;
 use robot::robots::panda::Panda;
 use simulator::{simulators::bullet::Bullet, Simulator};
 use task_manager::ros_thread::ROSThread;

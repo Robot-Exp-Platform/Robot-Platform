@@ -1,3 +1,4 @@
+use chrono;
 use crossbeam::queue::SegQueue;
 use serde::Deserialize;
 use serde_json::from_reader;
@@ -7,6 +8,7 @@ use std::sync::{Arc, Mutex, RwLock};
 
 use crate::config::CONFIG_PATH;
 use controller::config::create_controller;
+use message::target::Target::Pose;
 use planner::config::create_planner;
 use robot::robots::panda;
 use robot::robots::robot_list::RobotList;
@@ -172,40 +174,54 @@ impl Exp {
         }
     }
 
-    pub fn get_planner_by_path(
+    pub fn get_planner_with_name(
         planner: &Arc<Mutex<dyn planner::Planner>>,
-        path: String,
+        name: &str,
     ) -> Option<Arc<Mutex<dyn planner::Planner>>> {
-        // !从 planner 树中根据 path 获取 planner,辅助函数,之后可能作为私有函数.这个函数本身不依赖 exp 所以之后可以考虑从 exp 中那出去
-        let parts: Vec<&str> = path.trim_start_matches("/").split('/').collect();
-
-        if parts.len() == 1 {
+        // !从 planner 树中根据 name 获取 planner,辅助函数,之后可能作为私有函数.这个函数本身不依赖 exp 所以之后可以考虑从 exp 中那出去
+        if planner.lock().unwrap().get_name() == name {
             return Some(planner.clone());
         }
 
         for child in planner.lock().unwrap().get_planner().iter() {
-            if child.lock().unwrap().get_name() == parts[0] {
-                return Exp::get_planner_by_path(planner, parts[1..].join("/"));
+            if child.lock().unwrap().get_name() == name {
+                return Some(child.clone());
             }
         }
 
         None
     }
 
-    pub fn get_controller_by_path(
+    pub fn get_controller_with_name(
         controller: &Arc<Mutex<dyn controller::Controller>>,
-        path: String,
+        name: &str,
     ) -> Option<Arc<Mutex<dyn controller::Controller>>> {
-        // !从 controller 树中根据 path 获取 controller,辅助函数,之后可能作为私有函数.这个函数本身不依赖 exp 所以之后可以考虑从 exp 中那出去
-        let parts: Vec<&str> = path.trim_start_matches("/").split('/').collect();
-
-        if parts.len() == 1 {
+        // !从 controller 树中根据 name 获取 controller,辅助函数,之后可能作为私有函数.这个函数本身不依赖 exp 所以之后可以考虑从 exp 中那出去
+        if controller.lock().unwrap().get_name() == name {
             return Some(controller.clone());
         }
 
         for child in controller.lock().unwrap().get_controller().iter() {
-            if child.lock().unwrap().get_name() == parts[0] {
-                return Exp::get_controller_by_path(controller, parts[1..].join("/"));
+            if child.lock().unwrap().get_name() == name {
+                return Some(child.clone());
+            }
+        }
+
+        None
+    }
+
+    pub fn get_simulator_with_name(
+        simulator: &Arc<Mutex<dyn simulator::Simulator>>,
+        name: &str,
+    ) -> Option<Arc<Mutex<dyn simulator::Simulator>>> {
+        // !从 simulator 树中根据 name 获取 simulator,辅助函数,之后可能作为私有函数.这个函数本身不依赖 exp 所以之后可以考虑从 exp 中那出去
+        if simulator.lock().unwrap().get_name() == name {
+            return Some(simulator.clone());
+        }
+
+        for child in simulator.lock().unwrap().get_simulator().iter() {
+            if child.lock().unwrap().get_name() == name {
+                return Some(child.clone());
             }
         }
 
@@ -220,33 +236,62 @@ impl Exp {
         let controller = self.controller_exp.clone();
         let planner = self.planner_exp.clone();
 
-        for param in &task.params {
-            match param.node_type.as_str() {
+        for node in &task.nodes {
+            match node.node_type.as_str() {
                 "planner" => {
-                    let planner = Exp::get_planner_by_path(&planner, param.path.clone()).unwrap();
-                    planner.lock().unwrap().set_params(param.param.clone());
+                    let planner = Exp::get_planner_with_name(&planner, node.name.as_str()).unwrap();
+                    planner.lock().unwrap().set_params(node.param.clone());
                 }
                 "controller" => {
                     let controller =
-                        Exp::get_controller_by_path(&controller, param.path.clone()).unwrap();
-                    controller.lock().unwrap().set_params(param.param.clone());
+                        Exp::get_controller_with_name(&controller, node.name.as_str()).unwrap();
+                    controller.lock().unwrap().set_params(node.param.clone());
+                }
+                "simulator" => {
+                    let simulator =
+                        Exp::get_simulator_with_name(&self.simulator_exp, node.name.as_str())
+                            .unwrap();
+                    simulator.lock().unwrap().set_params(node.param.clone());
                 }
                 _ => panic!("Unknown node type"),
             }
         }
+
+        for robot_task in &task.robot_tasks {
+            // TODO 当前的 robot_task 不对劲，应该是一个枚举类型，但是枚举类型的反序列化还没写。以下的代码仅限于临时使用
+            let target_queue = Arc::new(SegQueue::new());
+            let planner = Exp::get_planner_with_name(
+                &planner,
+                format!("linear:{}", robot_task.name).as_str(),
+            )
+            .unwrap();
+            for target in &robot_task.targets {
+                target_queue.push(Pose(target.clone()));
+            }
+            planner
+                .lock()
+                .unwrap()
+                .set_target_queue(target_queue.clone());
+        }
+
         self.task_manage = Some(task);
     }
 
     pub fn is_running(&self) -> bool {
         // ! 一个状态判断函数,如果运行终端或者当前 task 已经运行完成,则返回 false,开始下一轮的任务安排
         // unimplemented!();
-        true
+        false
     }
 }
 
 impl ROSThread for Exp {
     // ! 为 Exp 实现 ROSThread trait,这将使得 Exp 可以被 ThreadManage 管理,同时也具备基本的运行函数
-    fn init(&mut self) {}
+    fn init(&mut self) {
+        println!(
+            "现在是 {}，先生，祝您早上、中午、晚上好",
+            chrono::Local::now().format("%Y-%m-%d %H:%M:%S")
+        );
+    }
 
     fn start(&mut self) {
         // ! 所有线程停一会儿，等待下个任务到来

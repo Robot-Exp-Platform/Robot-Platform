@@ -13,7 +13,7 @@ pub fn create_simulator<R: Robot + 'static, const N: usize>(
     let name = format!("{}:{}", simulator_type, robot_name);
     match simulator_type.as_str() {
         // 在这里按照仿真器类型创建仿真器
-        "pybullet" => Arc::new(Mutex::new(Bullet::<R, N>::new_without_params(
+        "bullet" => Arc::new(Mutex::new(Bullet::<R, N>::new_without_params(
             name, path, robot,
         ))),
         _ => panic!("Controller type not found"),

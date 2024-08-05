@@ -2,8 +2,8 @@ use crossbeam::queue::SegQueue;
 use std::sync::{Arc, Mutex};
 
 use crate::controllers::pid::{PidParams, PidState};
-use massage::control_command::ControlCommand;
-use massage::track::Track;
+use message::control_command::ControlCommand;
+use message::track::Track;
 use robot::robots::panda::PANDA_DOF;
 use task_manager::ros_thread::ROSThread;
 

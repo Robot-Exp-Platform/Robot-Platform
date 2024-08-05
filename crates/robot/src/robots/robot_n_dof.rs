@@ -23,7 +23,7 @@ pub struct RobotNDofParams<const N: usize, const N_ADD_ONE: usize> {
     // 机器人参数,在运行状态下一般不会改变
     pub nlink: usize,
     pub q_up_bound: na::SVector<f64, N>,
-    pub q_done_bound: na::SVector<f64, N>,
+    pub q_down_bound: na::SVector<f64, N>,
     pub q_dot_bound: na::SVector<f64, N>,
     pub q_ddot_bound: na::SVector<f64, N>,
     pub q_jerk_bound: na::SVector<f64, N>,
@@ -55,7 +55,7 @@ impl<const N: usize, const N_ADD_ONE: usize> RobotNDofParams<N, N_ADD_ONE> {
         RobotNDofParams {
             nlink: N,
             q_up_bound: na::SVector::from_element(0.0),
-            q_done_bound: na::SVector::from_element(0.0),
+            q_down_bound: na::SVector::from_element(0.0),
             q_dot_bound: na::SVector::from_element(0.0),
             q_ddot_bound: na::SVector::from_element(0.0),
             q_jerk_bound: na::SVector::from_element(0.0),

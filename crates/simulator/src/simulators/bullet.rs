@@ -6,7 +6,7 @@ use std::sync::{Arc, RwLock};
 use zmq;
 
 use crate::simulator_trait::Simulator;
-use massage::control_command::ControlCommand;
+use message::control_command::ControlCommand;
 use robot::robot_trait::Robot;
 use task_manager::ros_thread::ROSThread;
 
@@ -60,6 +60,7 @@ impl<R: Robot + 'static, const N: usize> Simulator for Bullet<R, N> {
         self.path.clone()
     }
 
+    fn set_params(&mut self, _: String) {}
     fn set_controller_command_queue(
         &mut self,
         controller_command_queue: Arc<SegQueue<ControlCommand>>,
@@ -73,6 +74,7 @@ impl<R: Robot + 'static, const N: usize> Simulator for Bullet<R, N> {
 // 为 Bullet 实现 ROSThread 特征，使得其可以被类似 ros 的线程管理器调用，而实际上并不一定用到了ros，只是结构相似罢了
 impl<R: Robot + 'static, const N: usize> ROSThread for Bullet<R, N> {
     fn init(&mut self) {
+        println!("{} 向您问好. {} says hello.", self.name, self.name);
         #[cfg(feature = "rszmq")]
         {
             // 使用zmq实现程序通信，通信协议暂定为TCP
@@ -80,7 +82,9 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Bullet<R, N> {
             let context = zmq::Context::new();
             let responder = context.socket(zmq::REP).unwrap();
             // 绑定到TCP地址
-            responder.bind("tcp://*:5555").expect("Failed to bind socket");
+            responder
+                .bind("tcp://*:5555")
+                .expect("Failed to bind socket");
 
             loop {
                 let message = responder
