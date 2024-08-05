@@ -5,9 +5,9 @@
       "task_type": "target",
       "target_type": "pose",
       "target_list": [
-        { "rotation": [0, 0, 0, 1], "translation": [0, 0, 0] },
-        { "rotation": [0, 0, 0, 1], "translation": [0, 0, 0] },
-        { "rotation": [0, 0, 0, 1], "translation": [0, 0, 0] }
+        { "rotation": [0, 0, 0, 1.0], "translation": [0, 0, 0] },
+        { "rotation": [0, 0, 0, 1.0], "translation": [0, 0, 0] },
+        { "rotation": [0, 0, 0, 1.0], "translation": [0, 0, 0] }
       ]
     }
   ],

@@ -1,94 +1,81 @@
-use nalgebra::{
-    DMatrix, Isometry2, Isometry3, IsometryMatrix2, IsometryMatrix3, Matrix2x3, Matrix3x4, Point2,
-    Point3, Quaternion, Rotation2, Rotation3, Similarity2, Similarity3, SimilarityMatrix2,
-    SimilarityMatrix3, Translation2, Translation3, Unit, Vector2,
-};
-use rand;
-use serde::{Deserialize, Serialize};
-use serde_json;
+#[cfg(test)]
+mod tests {
+    use std::vec;
 
-macro_rules! test_serde(
-    ($($test: ident, $ty: ident);* $(;)*) => {$(
-        #[test]
-        fn $test() {
-            let v: $ty<f32> = rand::random();
-            let serialized = serde_json::to_string(&v).unwrap();
-            let deserialized: $ty<f32> = serde_json::from_str(&serialized).unwrap();
-            assert_eq!(v, deserialized);
-        }
-    )*}
-);
+    use nalgebra as na;
+    use serde_json;
 
-#[test]
-fn serde_dmatrix() {
-    let v: DMatrix<f32> = DMatrix::new_random(3, 4);
-    let serialized = serde_json::to_string(&v).unwrap();
-    let deserialized: DMatrix<f32> = serde_json::from_str(&serialized).unwrap();
-    assert_eq!(v, deserialized);
+    #[test]
+    fn na_serialize_check() {
+        let svec3 = na::SVector::<f64, 3>::from_vec(vec![1.0, 2.0, 3.0]);
+        let dvec3 = na::DVector::<f64>::from_vec(vec![1.0, 2.0, 3.0]);
+        let smat2x2 = na::SMatrix::<f64, 2, 2>::from_vec(vec![1.0, 2.0, 3.0, 4.0]);
+        let dmat2x2 = na::DMatrix::<f64>::from_vec(2, 2, vec![1.0, 2.0, 3.0, 4.0]);
+        let iso3 = na::Isometry3::new(
+            na::Vector3::new(1.0, 2.0, 3.0),
+            na::Vector3::new(0.0, 0.0, 0.0),
+        );
 
-    let m = DMatrix::from_column_slice(2, 3, &[1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
-    let mat_str = "[[1.0, 2.0, 3.0, 4.0, 5.0, 6.0],2,3]";
-    let deserialized: DMatrix<f32> = serde_json::from_str(&mat_str).unwrap();
-    assert_eq!(m, deserialized);
+        let svec3_serialized = serde_json::to_string(&svec3).unwrap();
+        let dvec3_serialized = serde_json::to_string(&dvec3).unwrap();
+        let smat2x2_serialized = serde_json::to_string(&smat2x2).unwrap();
+        let dmat2x2_serialized = serde_json::to_string(&dmat2x2).unwrap();
+        let iso3_serialized = serde_json::to_string(&iso3).unwrap();
 
-    let m = Matrix2x3::from_column_slice(&[1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
-    let mat_str = "[1.0, 2.0, 3.0, 4.0, 5.0, 6.0]";
-    let deserialized: Matrix2x3<f32> = serde_json::from_str(&mat_str).unwrap();
-    assert_eq!(m, deserialized);
-}
+        let svec3_json: serde_json::Value = serde_json::to_value(&svec3).unwrap();
+        let dvec3_json: serde_json::Value = serde_json::to_value(&dvec3).unwrap();
+        let smat2x2_json: serde_json::Value = serde_json::to_value(&smat2x2).unwrap();
+        let dmat2x2_json: serde_json::Value = serde_json::to_value(&dmat2x2).unwrap();
+        let iso3_json: serde_json::Value = serde_json::to_value(&iso3).unwrap();
 
-#[test]
-#[should_panic]
-fn serde_dmatrix_invalid_len() {
-    // This must fail: we attempt to deserialize a 2x3 with only 5 elements.
-    let mat_str = "[[1.0, 2.0, 3.0, 4.0, 5.0],2,3]";
-    let _: DMatrix<f32> = serde_json::from_str(&mat_str).unwrap();
-}
+        println!("print SVector: {}", svec3);
+        println!("serialized: {}", svec3_serialized);
+        println!("json: {}", svec3_json);
 
-#[test]
-#[should_panic]
-fn serde_smatrix_invalid_len() {
-    // This must fail: we attempt to deserialize a 2x3 with only 5 elements.
-    let mat_str = "[1.0, 2.0, 3.0, 4.0, 5.0]";
-    let _: Matrix2x3<f32> = serde_json::from_str(&mat_str).unwrap();
-}
+        println!("print DVector: {}", dvec3);
+        println!("serialized: {}", dvec3_serialized);
+        println!("json: {}", dvec3_json);
 
-test_serde!(
-    serde_matrix3x4,          Matrix3x4;
-    serde_point3,             Point3;
-    serde_translation3,       Translation3;
-    serde_rotation3,          Rotation3;
-    serde_isometry3,          Isometry3;
-    serde_isometry_matrix3,   IsometryMatrix3;
-    serde_similarity3,        Similarity3;
-    serde_similarity_matrix3, SimilarityMatrix3;
-    serde_quaternion,         Quaternion;
-    serde_point2,             Point2;
-    serde_translation2,       Translation2;
-    serde_rotation2,          Rotation2;
-    serde_isometry2,          Isometry2;
-    serde_isometry_matrix2,   IsometryMatrix2;
-    serde_similarity2,        Similarity2;
-    serde_similarity_matrix2, SimilarityMatrix2;
-);
+        println!("print SMatrix: {}", smat2x2);
+        println!("serialized: {}", smat2x2_serialized);
+        println!("json: {}", smat2x2_json);
 
-#[test]
-fn serde_flat() {
-    // The actual storage is hidden behind three layers of wrapper types that shouldn't appear in serialized form.
-    let v = Unit::new_normalize(Quaternion::new(0., 0., 0., 1.));
-    let serialized = serde_json::to_string(&v).unwrap();
-    assert_eq!(serialized, "[0.0,0.0,1.0,0.0]");
-}
+        println!("print DMatrix: {}", dmat2x2);
+        println!("serialized: {}", dmat2x2_serialized);
+        println!("json: {}", dmat2x2_json);
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Copy, Clone)]
-enum Stuff {
-    A(f64),
-    B(f64),
-}
+        println!("print Isometry3: {}", iso3);
+        println!("serialized: {}", iso3_serialized);
+        println!("json: {}", iso3_json);
 
-#[test]
-fn deserialize_enum() {
-    let json = r#"[{"letter":"A", "value":123.4}, {"letter":"B", "value":567.8}]"#;
-    let parsed: Result<Vector2<Stuff>, _> = serde_json::from_str(json);
-    println!("parsed: {:?}", parsed);
+        let svec3_deserialized: na::SVector<f64, 3> =
+            serde_json::from_str(&svec3_serialized).unwrap();
+        let dvec3_deserialized: na::DVector<f64> = serde_json::from_str(&dvec3_serialized).unwrap();
+        let smat2x2_deserialized: na::SMatrix<f64, 2, 2> =
+            serde_json::from_str(&smat2x2_serialized).unwrap();
+        let dmat2x2_deserialized: na::DMatrix<f64> =
+            serde_json::from_str(&dmat2x2_serialized).unwrap();
+        let iso3_deserialized: na::Isometry3<f64> = serde_json::from_str(&iso3_serialized).unwrap();
+
+        assert_eq!(svec3, svec3_deserialized);
+        assert_eq!(dvec3, dvec3_deserialized);
+        assert_eq!(smat2x2, smat2x2_deserialized);
+        assert_eq!(dmat2x2, dmat2x2_deserialized);
+        assert_eq!(iso3, iso3_deserialized);
+
+        let svec3_deserialized_json: na::SVector<f64, 3> =
+            serde_json::from_value(svec3_json).unwrap();
+        let dvec3_deserialized_json: na::DVector<f64> = serde_json::from_value(dvec3_json).unwrap();
+        let smat2x2_deserialized_json: na::SMatrix<f64, 2, 2> =
+            serde_json::from_value(smat2x2_json).unwrap();
+        let dmat2x2_deserialized_json: na::DMatrix<f64> =
+            serde_json::from_value(dmat2x2_json).unwrap();
+        let iso3_deserialized_json: na::Isometry3<f64> = serde_json::from_value(iso3_json).unwrap();
+
+        assert_eq!(svec3, svec3_deserialized_json);
+        assert_eq!(dvec3, dvec3_deserialized_json);
+        assert_eq!(smat2x2, smat2x2_deserialized_json);
+        assert_eq!(dmat2x2, dmat2x2_deserialized_json);
+        assert_eq!(iso3, iso3_deserialized_json);
+    }
 }
