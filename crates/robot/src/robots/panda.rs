@@ -18,7 +18,7 @@ impl Panda {
                 q_up_bound: na::SVector::from_vec(vec![
                     -2.8973, -1.7628, -2.8973, -3.0718, -2.8973, -0.0175, -2.8973,
                 ]),
-                q_done_bound: na::SVector::from_vec(vec![
+                q_down_bound: na::SVector::from_vec(vec![
                     2.8973, 1.7628, 2.8973, -0.0698, 2.8973, 3.7525, 2.8973,
                 ]),
                 q_dot_bound: na::SVector::from_vec(vec![

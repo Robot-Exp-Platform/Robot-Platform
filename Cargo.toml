@@ -8,7 +8,7 @@ members = [
     "./crates/solver",
     "./crates/task_manager",
     "./crates/temp",
-    "crates/massage",
+    "crates/message",
 ]
 
 [workspace.package]
@@ -38,7 +38,7 @@ planner = { path = "./crates/planner" }
 recoder = { path = "./crates/recoder" }
 task_manager = { path = "./crates/task_manager" }
 simulator = { path = "./crates/simulator" }
-massage = { path = "./crates/massage" }
+message = { path = "./crates/message" }
 
 [dependencies]
 serde = { workspace = true, features = ["derive"] }
@@ -55,7 +55,7 @@ planner.workspace = true
 recoder.workspace = true
 task_manager.workspace = true
 simulator.workspace = true
-massage.workspace = true
+message.workspace = true
 
 
 [build-dependencies]
@@ -85,7 +85,7 @@ ros = [
     "controller/ros",
     "planner/ros",
     "simulator/ros",
-    "massage/ros",
+    "message/ros",
 ]
 ros2 = [
     "task_manager/ros2",

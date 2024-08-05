@@ -52,10 +52,10 @@ impl Controller for ControllerList {
     }
 
     fn set_params(&mut self, _: String) {}
-    fn set_track_queue(&mut self, _: Arc<crossbeam::queue::SegQueue<massage::track::Track>>) {}
+    fn set_track_queue(&mut self, _: Arc<crossbeam::queue::SegQueue<message::track::Track>>) {}
     fn set_controller_command_queue(
         &mut self,
-        _: Arc<crossbeam::queue::SegQueue<massage::control_command::ControlCommand>>,
+        _: Arc<crossbeam::queue::SegQueue<message::control_command::ControlCommand>>,
     ) {
     }
 

@@ -8,4 +8,4 @@ pub struct RobotState {
 }
 
 // #[cfg(feature = "ros")]
-// rosrust::rosmsg_include!(massage / RobotState);
+// rosrust::rosmsg_include!(message / RobotState);

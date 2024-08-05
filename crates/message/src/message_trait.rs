@@ -4,7 +4,7 @@ use crate::state::State;
 use crate::target::Target;
 use crate::track::Track;
 
-pub enum Massage {
+pub enum Message {
     State(State),
     Target(Target),
     Track(Track),

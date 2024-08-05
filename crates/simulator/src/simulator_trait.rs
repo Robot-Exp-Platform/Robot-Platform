@@ -1,7 +1,7 @@
 use crossbeam::queue::SegQueue;
 use std::sync::{Arc, Mutex};
 
-use massage::control_command::ControlCommand;
+use message::control_command::ControlCommand;
 use task_manager::ros_thread::ROSThread;
 
 pub trait Simulator: ROSThread {

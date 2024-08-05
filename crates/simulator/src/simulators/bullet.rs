@@ -6,7 +6,7 @@ use std::sync::{Arc, RwLock};
 use zmq;
 
 use crate::simulator_trait::Simulator;
-use massage::control_command::ControlCommand;
+use message::control_command::ControlCommand;
 use robot::robot_trait::Robot;
 use task_manager::ros_thread::ROSThread;
 
@@ -80,7 +80,9 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Bullet<R, N> {
             let context = zmq::Context::new();
             let responder = context.socket(zmq::REP).unwrap();
             // 绑定到TCP地址
-            responder.bind("tcp://*:5555").expect("Failed to bind socket");
+            responder
+                .bind("tcp://*:5555")
+                .expect("Failed to bind socket");
 
             loop {
                 let message = responder

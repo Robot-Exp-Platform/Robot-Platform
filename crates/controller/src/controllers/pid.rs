@@ -4,7 +4,7 @@ use serde::{Deserialize, Deserializer};
 use std::sync::{Arc, Mutex, RwLock};
 
 use crate::controller_trait::Controller;
-use massage::{control_command::ControlCommand, track::Track};
+use message::{control_command::ControlCommand, track::Track};
 use robot::robot_trait::Robot;
 use task_manager::ros_thread::ROSThread;
 
