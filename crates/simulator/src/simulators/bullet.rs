@@ -73,7 +73,7 @@ impl<R: Robot + 'static, const N: usize> Simulator for Bullet<R, N> {
 // 为 Bullet 实现 ROSThread 特征，使得其可以被类似 ros 的线程管理器调用，而实际上并不一定用到了ros，只是结构相似罢了
 impl<R: Robot + 'static, const N: usize> ROSThread for Bullet<R, N> {
     fn init(&mut self) {
-        #[cfg(feature = "zmq")]
+        #[cfg(feature = "rszmq")]
         {
             // ! 使用 zmq 写的订阅者通讯
             // ! zmq 不容许在多个线程中使用同一个 Socket ,虽然我们只会在一个线程中调用他,但是尚且没有想到规避的办法,暂且取悦编译器,可能会导致阻塞！！！
