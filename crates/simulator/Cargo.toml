@@ -11,9 +11,11 @@ typenum = { workspace = true }
 zmq = { workspace = true, optional = true }
 rosrust = { workspace = true, optional = true }
 rosrust_msg = { workspace = true, optional = true }
+crossbeam.workspace = true
 
-robot = { workspace = true }
-task_manager = { workspace = true }
+robot.workspace = true
+task_manager.workspace = true
+massage.workspace = true
 
 [features]
 noros = []

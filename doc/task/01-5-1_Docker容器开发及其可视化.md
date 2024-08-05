@@ -45,7 +45,7 @@ docker pull registry.cn-hangzhou.aliyuncs.com/yixing312/robot_exp:0.3.7
 ![图 2](images/docker%E6%8B%89%E5%8F%96.png)  
 
 一会儿之后在插件中就会显现一个名字巨长的 image
-![图 0](images/%E8%BF%99%E5%B0%B1%E6%98%AFimage%E5%93%87.png)  
+![图 0](images/%E8%BF%99%E5%B0%B1%E6%98%AFimage%E5%93%87.png)
 
 在命令行中运行
 

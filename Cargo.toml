@@ -85,6 +85,7 @@ ros = [
     "controller/ros",
     "planner/ros",
     "simulator/ros",
+    "massage/ros",
 ]
 ros2 = [
     "task_manager/ros2",

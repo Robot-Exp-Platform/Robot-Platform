@@ -1,14 +1,25 @@
 {
-  "task_type": "targets",
-  "targets_list": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
-  "params": [
+  "tasks": [
+    {
+      "name": "robot_1",
+      "task_type": "target",
+      "target_type": "pose",
+      "target_list": [
+        { "rotation": [0, 0, 0, 1], "translation": [0, 0, 0, 0] },
+        { "rotation": [0, 0, 0, 1], "translation": [0, 0, 0, 0] },
+        { "rotation": [0, 0, 0, 1], "translation": [0, 0, 0, 0] }
+      ]
+    }
+  ],
+
+  "nodes": [
     {
       "node_type": "controller",
-      "path": "/controller/panda_controler"
+      "name": "pid:panda_1"
     },
     {
       "node_type": "planner",
-      "path": "/planner/panda_planner"
+      "name": "linear:panda_1"
     }
   ]
 }

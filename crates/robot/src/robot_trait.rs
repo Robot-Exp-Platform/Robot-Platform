@@ -1,19 +1,8 @@
 use nalgebra as na;
 
-#[derive(Clone, Copy)]
-pub struct Pose {
-    pub position: na::Point3<f64>,
-    pub orientation: na::UnitQuaternion<f64>,
-}
-
-impl Pose {
-    pub fn new() -> Pose {
-        Pose {
-            position: na::Point3::new(0.0, 0.0, 0.0),
-            orientation: na::UnitQuaternion::identity(),
-        }
-    }
-}
+// 考虑使用 na::Isometry3 代替 Pose
+// #[derive(Clone, Copy)]
+pub type Pose = na::Isometry3<f64>;
 
 pub trait Robot: Send + Sync {
     fn get_name(&self) -> String;
