@@ -74,6 +74,7 @@ impl<R: Robot + 'static, const N: usize> Simulator for Bullet<R, N> {
 // 为 Bullet 实现 ROSThread 特征，使得其可以被类似 ros 的线程管理器调用，而实际上并不一定用到了ros，只是结构相似罢了
 impl<R: Robot + 'static, const N: usize> ROSThread for Bullet<R, N> {
     fn init(&mut self) {
+        println!("{} 向您问好. {} says hello.", self.name, self.name);
         #[cfg(feature = "rszmq")]
         {
             // 使用zmq实现程序通信，通信协议暂定为TCP

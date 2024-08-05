@@ -1,6 +1,6 @@
 use crossbeam::queue::SegQueue;
 use nalgebra as na;
-use serde::{Deserialize, Deserializer};
+use serde::Deserialize;
 use std::sync::{Arc, Mutex, RwLock};
 
 use crate::controller_trait::Controller;
@@ -8,7 +8,6 @@ use message::{control_command::ControlCommand, track::Track};
 use robot::robot_trait::Robot;
 use task_manager::ros_thread::ROSThread;
 
-#[allow(dead_code)]
 pub struct Pid<R: Robot + 'static, const N: usize> {
     name: String,
     path: String,
@@ -19,7 +18,7 @@ pub struct Pid<R: Robot + 'static, const N: usize> {
     msgnode: PidNode,
     robot: Arc<RwLock<R>>,
 }
-#[allow(dead_code)]
+
 #[derive(Clone, Copy)]
 pub struct PidState<const N: usize> {
     target: na::SVector<f64, N>,
@@ -28,7 +27,7 @@ pub struct PidState<const N: usize> {
     derivative: na::SVector<f64, N>,
 }
 
-#[allow(dead_code)]
+#[derive(Deserialize)]
 pub struct PidParams<const N: usize> {
     period: f64,
     kp: na::SMatrix<f64, N, N>,
@@ -39,38 +38,6 @@ pub struct PidParams<const N: usize> {
 pub struct PidNode {
     track_queue: Arc<SegQueue<Track>>,
     control_command_queue: Arc<SegQueue<ControlCommand>>,
-    // #[cfg(feature = "zmq")]
-    // pub sub_list: Vec<zmq::Socket>,
-    #[cfg(feature = "ros")]
-    pub sub_list: Vec<rosrust::Subscriber>,
-}
-
-impl<'de, const N: usize> Deserialize<'de> for PidParams<N> {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        #[derive(Deserialize)]
-        struct PidParamsData {
-            period: f64,
-            kp: Vec<f64>,
-            ki: Vec<f64>,
-            kd: Vec<f64>,
-        }
-
-        let data = PidParamsData::deserialize(deserializer)?;
-
-        assert_eq!(data.kp.len(), N * N, "Matrix data has incorrect length");
-        assert_eq!(data.ki.len(), N * N, "Matrix data has incorrect length");
-        assert_eq!(data.kd.len(), N * N, "Matrix data has incorrect length");
-
-        Ok(PidParams {
-            period: data.period,
-            kp: na::SMatrix::from_vec(data.kp),
-            ki: na::SMatrix::from_vec(data.ki),
-            kd: na::SMatrix::from_vec(data.kd),
-        })
-    }
 }
 
 impl<R: Robot + 'static, const N: usize> Pid<R, N> {
@@ -95,10 +62,6 @@ impl<R: Robot + 'static, const N: usize> Pid<R, N> {
             msgnode: PidNode {
                 track_queue: Arc::new(SegQueue::new()),
                 control_command_queue: Arc::new(SegQueue::new()),
-                // #[cfg(feature = "zmq")]
-                // sub_list: Vec::new(),
-                #[cfg(feature = "ros")]
-                sub_list: Vec::new(),
             },
             robot,
         }
@@ -117,16 +80,6 @@ impl<R: Robot + 'static, const N: usize> Pid<R, N> {
             robot,
         )
     }
-
-    // fn set_kp(&mut self, kp: na::SMatrix<f64, N, N>) {
-    //     self.params.kp = kp;
-    // }
-    // fn set_ki(&mut self, ki: na::SMatrix<f64, N, N>) {
-    //     self.params.ki = ki;
-    // }
-    // fn set_kd(&mut self, kd: na::SMatrix<f64, N, N>) {
-    //     self.params.kd = kd;
-    // }
 }
 
 impl<R: Robot + 'static, const N: usize> Controller for Pid<R, N> {
@@ -136,6 +89,7 @@ impl<R: Robot + 'static, const N: usize> Controller for Pid<R, N> {
     fn get_path(&self) -> String {
         self.path.clone()
     }
+
     fn set_params(&mut self, params: String) {
         let params: PidParams<N> = serde_json::from_str(&params).unwrap();
         self.params = params;
@@ -155,15 +109,7 @@ impl<R: Robot + 'static, const N: usize> Controller for Pid<R, N> {
 
 impl<R: Robot + 'static, const N: usize> ROSThread for Pid<R, N> {
     fn init(&mut self) {
-        #[cfg(feature = "ros")]
-        {
-            self.msgnode.sub_list.push(
-                rosrust::subscribe(&self.name, 1, move |_: rosrust_msg::std_msgs::Float32| {
-                    // TODO 从消息中提取数据
-                })
-                .unwrap(),
-            );
-        }
+        println!("{} 向您问好. {} says hello.", self.name, self.name);
     }
     fn start(&mut self) {}
 
