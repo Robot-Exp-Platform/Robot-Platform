@@ -1,12 +1,14 @@
-use crate::simulator_trait::Simulator;
-use robot::robot_trait::Robot;
+use crossbeam::queue::SegQueue;
 #[cfg(feature = "ros")]
 use rosrust as ros;
 use std::sync::{Arc, RwLock};
-use task_manager::ros_thread::ROSThread;
-
 #[cfg(feature = "rszmq")]
 use zmq;
+
+use crate::simulator_trait::Simulator;
+use massage::control_command::ControlCommand;
+use robot::robot_trait::Robot;
+use task_manager::ros_thread::ROSThread;
 
 #[allow(dead_code)]
 pub struct Bullet<R: Robot + 'static, const N: usize> {
@@ -19,6 +21,7 @@ pub struct Bullet<R: Robot + 'static, const N: usize> {
 
 #[allow(dead_code)]
 struct BulletNode {
+    control_command_queue: Arc<SegQueue<ControlCommand>>,
     // #[cfg(feature = "zmq")]
     // pub sub_list: Vec<zmq::Socket>,
     #[cfg(feature = "ros")]
@@ -31,6 +34,7 @@ impl<R: Robot + 'static, const N: usize> Bullet<R, N> {
             name,
             path,
             msgnode: BulletNode {
+                control_command_queue: Arc::new(SegQueue::new()),
                 // #[cfg(feature = "zmq")]
                 // sub_list: Vec::new(),
                 #[cfg(feature = "ros")]
@@ -40,17 +44,7 @@ impl<R: Robot + 'static, const N: usize> Bullet<R, N> {
         }
     }
     pub fn new_without_params(name: String, path: String, robot: Arc<RwLock<R>>) -> Bullet<R, N> {
-        Bullet {
-            name,
-            path,
-            msgnode: BulletNode {
-                // #[cfg(feature = "zmq")]
-                // sub_list: Vec::new(),
-                #[cfg(feature = "ros")]
-                sub_list: Vec::new(),
-            },
-            robot,
-        }
+        Bullet::new(name, path, robot)
     }
 }
 
@@ -60,6 +54,13 @@ impl<R: Robot + 'static, const N: usize> Simulator for Bullet<R, N> {
     }
     fn get_path(&self) -> String {
         self.path.clone()
+    }
+
+    fn set_controller_command_queue(
+        &mut self,
+        controller_command_queue: Arc<SegQueue<ControlCommand>>,
+    ) {
+        self.msgnode.control_command_queue = controller_command_queue;
     }
 
     fn add_simulator(&mut self, _: Arc<std::sync::Mutex<dyn Simulator>>) {}
