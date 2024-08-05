@@ -22,8 +22,8 @@ pub struct Exp {
     pub task_manage: Option<Task>,
 
     pub robot_exp: Arc<RwLock<dyn robot::Robot>>,
-    pub controller_exp: Arc<Mutex<dyn controller::Controller>>,
     pub planner_exp: Arc<Mutex<dyn planner::Planner>>,
+    pub controller_exp: Arc<Mutex<dyn controller::Controller>>,
     pub simulator_exp: Arc<Mutex<dyn simulator::Simulator>>,
 }
 
@@ -32,8 +32,8 @@ struct Config {
     // Config 从 CONFIG_PATH/config.json 中读取的配置以如下结构保存
     name: String,
     robot_type: String,
-    controller: String,
     planner: String,
+    controller: String,
     simulator: String,
     robots: Option<Vec<Config>>,
 }
@@ -46,14 +46,14 @@ impl Exp {
 
         // 根据配置文件生成机器人树
         let mut thread_manage = ThreadManage::new();
-        let (robot, controller, planner, simulator) =
+        let (robot, planner, controller, simulator) =
             Exp::build_exp_tree(config, "".to_string(), &mut thread_manage);
         Exp {
             thread_manage,
             task_manage: None,
             robot_exp: robot,
-            controller_exp: controller,
             planner_exp: planner,
+            controller_exp: controller,
             simulator_exp: simulator,
         }
     }
@@ -64,20 +64,20 @@ impl Exp {
         path: &str,
         robot: Arc<RwLock<T>>,
     ) -> (
-        Arc<Mutex<dyn controller::Controller>>,
         Arc<Mutex<dyn planner::Planner>>,
+        Arc<Mutex<dyn controller::Controller>>,
         Arc<Mutex<dyn simulator::Simulator>>,
     ) {
-        let controller = create_controller::<T, N>(
-            config.controller.clone(),
-            config.name.clone(),
-            format!("/controller/{}", path),
-            robot.clone(),
-        );
         let planner = create_planner::<T, N>(
             config.planner.clone(),
             config.name.clone(),
             format!("/planner/{}", path),
+            robot.clone(),
+        );
+        let controller = create_controller::<T, N>(
+            config.controller.clone(),
+            config.name.clone(),
+            format!("/controller/{}", path),
             robot.clone(),
         );
         let simulator = create_simulator::<T, N>(
@@ -87,7 +87,7 @@ impl Exp {
             robot.clone(),
         );
 
-        (controller, planner, simulator)
+        (planner, controller, simulator)
     }
 
     #[allow(clippy::type_complexity)]
@@ -97,8 +97,8 @@ impl Exp {
         thread_manage: &mut ThreadManage,
     ) -> (
         Arc<RwLock<dyn robot::Robot>>,
-        Arc<Mutex<dyn controller::Controller>>,
         Arc<Mutex<dyn planner::Planner>>,
+        Arc<Mutex<dyn controller::Controller>>,
         Arc<Mutex<dyn simulator::Simulator>>,
     ) {
         // 由于 Exp 的树状结构，所以这里需要递归的生成树状结构，每款机器人的 常数参量并不相同，所以需要在这里枚举以创建不同大小的 控制器、规划器 等
@@ -109,30 +109,30 @@ impl Exp {
                 let robot = Arc::new(RwLock::new(robot));
 
                 // 分别判断 controller 和 planner 的类型，然后创建对应的 controller 和 planner
-                let (controller, planner, simulator) =
+                let (planner, controller, simulator) =
                     Exp::create_nodes::<RobotList, 0>(&config, &path, robot.clone());
 
                 // ! 递归!树就是从这里长起来的
                 for robot_config in config.robots.unwrap() {
-                    let (child_robot, child_controller, child_planner, child_simulator) =
+                    let (child_robot, child_planner, child_controller, child_simulator) =
                         Exp::build_exp_tree(
                             robot_config,
                             format!("{}/robot_list", path),
                             thread_manage,
                         );
                     robot.write().unwrap().add_robot(child_robot);
-                    controller.lock().unwrap().add_controller(child_controller);
                     planner.lock().unwrap().add_planner(child_planner);
+                    controller.lock().unwrap().add_controller(child_controller);
                     simulator.lock().unwrap().add_simulator(child_simulator);
                 }
-                (robot, controller, planner, simulator)
+                (robot, planner, controller, simulator)
             }
             "panda" => {
                 // ! 经典的 Franka Emika Panda 机器人 panda::PANDA_DOF
                 let robot = panda::Panda::new(config.name.clone(), format!("/robot/{}", path));
                 let robot = Arc::new(RwLock::new(robot));
 
-                let (controller, planner, simulator) = Exp::create_nodes::<
+                let (planner, controller, simulator) = Exp::create_nodes::<
                     panda::Panda,
                     { panda::PANDA_DOF },
                 >(
@@ -140,47 +140,36 @@ impl Exp {
                 );
 
                 // 需要给控制器和规划器开辟独立的线程
-                thread_manage.add_thread(controller.clone());
                 thread_manage.add_thread(planner.clone());
+                thread_manage.add_thread(controller.clone());
                 thread_manage.add_thread(simulator.clone());
 
                 let target_queue = Arc::new(SegQueue::new());
                 let track_queue = Arc::new(SegQueue::new());
+                let control_command_queue = Arc::new(SegQueue::new());
 
-                controller
-                    .lock()
-                    .unwrap()
-                    .set_track_queue(track_queue.clone());
                 planner
                     .lock()
                     .unwrap()
                     .set_target_queue(target_queue.clone());
                 planner.lock().unwrap().set_track_queue(track_queue.clone());
+                controller
+                    .lock()
+                    .unwrap()
+                    .set_track_queue(track_queue.clone());
+                controller
+                    .lock()
+                    .unwrap()
+                    .set_controller_command_queue(control_command_queue.clone());
+                simulator
+                    .lock()
+                    .unwrap()
+                    .set_controller_command_queue(control_command_queue.clone());
 
-                (robot, controller, planner, simulator)
+                (robot, planner, controller, simulator)
             }
             _ => panic!("Unknown robot type"),
         }
-    }
-
-    pub fn get_controller_by_path(
-        controller: &Arc<Mutex<dyn controller::Controller>>,
-        path: String,
-    ) -> Option<Arc<Mutex<dyn controller::Controller>>> {
-        // !从 controller 树中根据 path 获取 controller,辅助函数,之后可能作为私有函数.这个函数本身不依赖 exp 所以之后可以考虑从 exp 中那出去
-        let parts: Vec<&str> = path.trim_start_matches("/").split('/').collect();
-
-        if parts.len() == 1 {
-            return Some(controller.clone());
-        }
-
-        for child in controller.lock().unwrap().get_controller().iter() {
-            if child.lock().unwrap().get_name() == parts[0] {
-                return Exp::get_controller_by_path(controller, parts[1..].join("/"));
-            }
-        }
-
-        None
     }
 
     pub fn get_planner_by_path(
@@ -203,6 +192,26 @@ impl Exp {
         None
     }
 
+    pub fn get_controller_by_path(
+        controller: &Arc<Mutex<dyn controller::Controller>>,
+        path: String,
+    ) -> Option<Arc<Mutex<dyn controller::Controller>>> {
+        // !从 controller 树中根据 path 获取 controller,辅助函数,之后可能作为私有函数.这个函数本身不依赖 exp 所以之后可以考虑从 exp 中那出去
+        let parts: Vec<&str> = path.trim_start_matches("/").split('/').collect();
+
+        if parts.len() == 1 {
+            return Some(controller.clone());
+        }
+
+        for child in controller.lock().unwrap().get_controller().iter() {
+            if child.lock().unwrap().get_name() == parts[0] {
+                return Exp::get_controller_by_path(controller, parts[1..].join("/"));
+            }
+        }
+
+        None
+    }
+
     fn update_tesk(&mut self) {
         // ! 从 task.json 中读取任务,然后,将对应的参数设置到对应的节点中去,这将有助于在后期反复迭代任务,但是就目前来说,只有更新参数的功能了
         let task_file = File::open(path::Path::new("task.json")).expect("Failed to open task file");
@@ -213,14 +222,14 @@ impl Exp {
 
         for param in &task.params {
             match param.node_type.as_str() {
+                "planner" => {
+                    let planner = Exp::get_planner_by_path(&planner, param.path.clone()).unwrap();
+                    planner.lock().unwrap().set_params(param.param.clone());
+                }
                 "controller" => {
                     let controller =
                         Exp::get_controller_by_path(&controller, param.path.clone()).unwrap();
                     controller.lock().unwrap().set_params(param.param.clone());
-                }
-                "planner" => {
-                    let planner = Exp::get_planner_by_path(&planner, param.path.clone()).unwrap();
-                    planner.lock().unwrap().set_params(param.param.clone());
                 }
                 _ => panic!("Unknown node type"),
             }
