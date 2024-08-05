@@ -1,8 +1,7 @@
 use crossbeam::queue::SegQueue;
-use nalgebra as na;
 use std::sync::{Arc, RwLock};
 
-use massage::control_command::{ControlCommand::Joint7, Joint};
+use massage::control_command::ControlCommand::Joint;
 use robot::robots::panda::Panda;
 use simulator::{simulators::bullet::Bullet, Simulator};
 use task_manager::ros_thread::ROSThread;
@@ -18,10 +17,8 @@ fn main() {
     let controller_command_queue = Arc::new(SegQueue::new());
 
     // 随便往队列里面塞点数据
-    controller_command_queue.push(Joint7(Joint::new(na::SVector::<f64, 7>::from_element(0.0))));
-    controller_command_queue.push(Joint7(Joint::new(na::SVector::<f64, 7>::from_vec(vec![
-        0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6,
-    ]))));
+    controller_command_queue.push(Joint(vec![0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]));
+    controller_command_queue.push(Joint(vec![0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6]));
 
     simulator.set_controller_command_queue(controller_command_queue);
 
