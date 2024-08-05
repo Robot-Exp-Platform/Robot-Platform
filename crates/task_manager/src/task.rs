@@ -1,51 +1,20 @@
-use serde::de;
-use serde::{Deserialize, Deserializer};
+use serde::Deserialize;
 
+use robot::robot_trait::Pose;
 #[derive(Debug, Deserialize)]
-pub enum TaskType {
-    #[serde(rename = "targets")]
-    Targets(Vec<f64>),
+pub struct RobotTasks {
+    pub name: String,
+    pub targets: Vec<Pose>,
 }
-
 #[derive(Debug, Deserialize)]
-pub struct TaskParam {
+pub struct Node {
     pub node_type: String,
-    pub path: String,
+    pub name: String,
     pub param: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize)]
 pub struct Task {
-    pub task_type: TaskType,
-    pub params: Vec<TaskParam>,
-}
-
-// 实现 Task 的自定义反序列化
-impl<'de> Deserialize<'de> for Task {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        #[derive(Deserialize)]
-        struct TaskHelper {
-            task_type: String,
-            targets_list: Option<Vec<f64>>,
-            params: Vec<TaskParam>,
-        }
-
-        let helper = TaskHelper::deserialize(deserializer)?;
-        let task_type = match helper.task_type.as_str() {
-            "targets" => TaskType::Targets(
-                helper
-                    .targets_list
-                    .ok_or_else(|| de::Error::missing_field("targets_list"))?,
-            ),
-            _ => return Err(de::Error::unknown_variant(&helper.task_type, &["targets"])),
-        };
-
-        Ok(Task {
-            task_type,
-            params: helper.params,
-        })
-    }
+    pub robot_tasks: Vec<RobotTasks>,
+    pub nodes: Vec<Node>,
 }

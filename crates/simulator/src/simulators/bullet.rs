@@ -60,6 +60,7 @@ impl<R: Robot + 'static, const N: usize> Simulator for Bullet<R, N> {
         self.path.clone()
     }
 
+    fn set_params(&mut self, _: String) {}
     fn set_controller_command_queue(
         &mut self,
         controller_command_queue: Arc<SegQueue<ControlCommand>>,

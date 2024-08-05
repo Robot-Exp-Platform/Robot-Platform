@@ -172,40 +172,54 @@ impl Exp {
         }
     }
 
-    pub fn get_planner_by_path(
+    pub fn get_planner_with_name(
         planner: &Arc<Mutex<dyn planner::Planner>>,
-        path: String,
+        name: &str,
     ) -> Option<Arc<Mutex<dyn planner::Planner>>> {
-        // !从 planner 树中根据 path 获取 planner,辅助函数,之后可能作为私有函数.这个函数本身不依赖 exp 所以之后可以考虑从 exp 中那出去
-        let parts: Vec<&str> = path.trim_start_matches("/").split('/').collect();
-
-        if parts.len() == 1 {
+        // !从 planner 树中根据 name 获取 planner,辅助函数,之后可能作为私有函数.这个函数本身不依赖 exp 所以之后可以考虑从 exp 中那出去
+        if planner.lock().unwrap().get_name() == name {
             return Some(planner.clone());
         }
 
         for child in planner.lock().unwrap().get_planner().iter() {
-            if child.lock().unwrap().get_name() == parts[0] {
-                return Exp::get_planner_by_path(planner, parts[1..].join("/"));
+            if child.lock().unwrap().get_name() == name {
+                return Some(child.clone());
             }
         }
 
         None
     }
 
-    pub fn get_controller_by_path(
+    pub fn get_controller_with_name(
         controller: &Arc<Mutex<dyn controller::Controller>>,
-        path: String,
+        name: &str,
     ) -> Option<Arc<Mutex<dyn controller::Controller>>> {
-        // !从 controller 树中根据 path 获取 controller,辅助函数,之后可能作为私有函数.这个函数本身不依赖 exp 所以之后可以考虑从 exp 中那出去
-        let parts: Vec<&str> = path.trim_start_matches("/").split('/').collect();
-
-        if parts.len() == 1 {
+        // !从 controller 树中根据 name 获取 controller,辅助函数,之后可能作为私有函数.这个函数本身不依赖 exp 所以之后可以考虑从 exp 中那出去
+        if controller.lock().unwrap().get_name() == name {
             return Some(controller.clone());
         }
 
         for child in controller.lock().unwrap().get_controller().iter() {
-            if child.lock().unwrap().get_name() == parts[0] {
-                return Exp::get_controller_by_path(controller, parts[1..].join("/"));
+            if child.lock().unwrap().get_name() == name {
+                return Some(child.clone());
+            }
+        }
+
+        None
+    }
+
+    pub fn get_simulator_with_name(
+        simulator: &Arc<Mutex<dyn simulator::Simulator>>,
+        name: &str,
+    ) -> Option<Arc<Mutex<dyn simulator::Simulator>>> {
+        // !从 simulator 树中根据 name 获取 simulator,辅助函数,之后可能作为私有函数.这个函数本身不依赖 exp 所以之后可以考虑从 exp 中那出去
+        if simulator.lock().unwrap().get_name() == name {
+            return Some(simulator.clone());
+        }
+
+        for child in simulator.lock().unwrap().get_simulator().iter() {
+            if child.lock().unwrap().get_name() == name {
+                return Some(child.clone());
             }
         }
 
@@ -220,16 +234,22 @@ impl Exp {
         let controller = self.controller_exp.clone();
         let planner = self.planner_exp.clone();
 
-        for param in &task.params {
-            match param.node_type.as_str() {
+        for node in &task.nodes {
+            match node.node_type.as_str() {
                 "planner" => {
-                    let planner = Exp::get_planner_by_path(&planner, param.path.clone()).unwrap();
-                    planner.lock().unwrap().set_params(param.param.clone());
+                    let planner = Exp::get_planner_with_name(&planner, node.name.as_str()).unwrap();
+                    planner.lock().unwrap().set_params(node.param.clone());
                 }
                 "controller" => {
                     let controller =
-                        Exp::get_controller_by_path(&controller, param.path.clone()).unwrap();
-                    controller.lock().unwrap().set_params(param.param.clone());
+                        Exp::get_controller_with_name(&controller, node.name.as_str()).unwrap();
+                    controller.lock().unwrap().set_params(node.param.clone());
+                }
+                "simulator" => {
+                    let simulator =
+                        Exp::get_simulator_with_name(&self.simulator_exp, node.name.as_str())
+                            .unwrap();
+                    simulator.lock().unwrap().set_params(node.param.clone());
                 }
                 _ => panic!("Unknown node type"),
             }

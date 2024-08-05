@@ -24,13 +24,14 @@ build = "build.rs"
 [workspace.dependencies]
 serde = { version = '*', features = ["derive"] }
 serde_json = "*"
-nalgebra = "*"
+nalgebra = { version = "*", features = ["serde-serialize"] }
 typenum = "*"
 rosrust = '*'
 rosrust_msg = '*'
 zmq = "*"
 zeromq = "*"
 crossbeam = "*"
+rand = "*"
 
 robot = { path = "./crates/robot" }
 controller = { path = "./crates/controller" }
@@ -45,6 +46,7 @@ serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
 nalgebra.workspace = true
 crossbeam.workspace = true
+rand.workspace = true
 zmq = { workspace = true, optional = true }
 rosrust = { workspace = true, optional = true }
 rosrust_msg = { workspace = true, optional = true }
