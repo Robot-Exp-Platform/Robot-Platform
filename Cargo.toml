@@ -45,7 +45,7 @@ serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
 nalgebra.workspace = true
 crossbeam.workspace = true
-zmq = { workspace = true, optional = true }
+zmq = { version = "0.10", workspace = true, optional = true }
 rosrust = { workspace = true, optional = true }
 rosrust_msg = { workspace = true, optional = true }
 
@@ -62,7 +62,7 @@ massage.workspace = true
 
 
 [features]
-# default = ["rszmq"]
+default = ["rszmq"]
 # default = ["ros"]
 # default = ["ros2"]
 rszmq = [

@@ -1,36 +1,30 @@
-mod plant_trait;
-mod plants;
-
-use crate::plants::{first_order_lti::FirstOrderLTI, linear_system::LinearSystem};
-use nalgebra as na;
-use plant_trait::Plant;
+use zmq::Context;
+use zmq::Socket;
 
 fn main() {
-    const N: usize = 7;
-    let mut plant_list: Vec<Box<dyn Plant<N, N, N>>> = vec![Box::new(FirstOrderLTI::<N>::new())];
-    plant_list.push(Box::new(LinearSystem::<N, N, N>::new()));
+    // 创建一个新的zmq上下文
+    let context = Context::new();
 
-    for plant in &mut plant_list {
-        plant.update(na::SVector::zeros());
-        // 做想做的事情
-    }
+    // 创建一个REP套接字
+    let socket = context.socket(zmq::REP).expect("Failed to create socket");
 
-    #[cfg(target_os = "linux")]
-    {
-        // ros::init("simuator");
+    // 绑定到tcp地址
+    socket.bind("tcp://*:5555").expect("Failed to bind socket");
 
-        // let pub_robot_state = ros::publish("robot_state", 100).unwrap();
+    println!("Server is running and waiting for requests...");
 
-        // let mut plant = FirstOrderLTI::<7>::new();
+    loop {
+        // 等待接收请求
+        let message = socket.recv_string(0).expect("Failed to receive message").unwrap();
+        println!("Received request: {}", message);
 
-        // let rate = ros::rate(10.0);
-        // print!("ros is ok");
-        // while ros::is_ok() {
-        //     let mut msg = ros_msg::std_msgs::String::default();
+        // 模拟处理一些工作
+        std::thread::sleep(std::time::Duration::from_secs(1));
 
-        //     plant.update(na::SVector::from_element(1.0));
-        //     // plant.publish_state(&pub_robot_state);
-        //     rate.sleep();
-        // }
+        // 发送回复
+        let reply = "World";
+        socket.send(reply, 0).expect("Failed to send reply");
+        println!("Sent reply: {}", reply);
     }
 }
+
