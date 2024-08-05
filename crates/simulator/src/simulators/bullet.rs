@@ -8,6 +8,7 @@ use task_manager::ros_thread::ROSThread;
 #[cfg(feature = "rszmq")]
 use zmq;
 
+// bullet 结构体声明，包含其名称，路径，消息节点，以及机器人
 #[allow(dead_code)]
 pub struct Bullet<R: Robot + 'static, const N: usize> {
     name: String,
@@ -17,6 +18,7 @@ pub struct Bullet<R: Robot + 'static, const N: usize> {
     robot: Arc<RwLock<R>>,
 }
 
+// 消息节点结构体声明，随条件编译的不同而不同，条件编译将决定其使用什么通讯方式
 #[allow(dead_code)]
 struct BulletNode {
     // #[cfg(feature = "zmq")]
@@ -25,6 +27,7 @@ struct BulletNode {
     sub_list: Vec<ros::Subscriber>,
 }
 
+// 为结构体 Bullet 实现方法，这里主要是初始化方法
 impl<R: Robot + 'static, const N: usize> Bullet<R, N> {
     pub fn new(name: String, path: String, robot: Arc<RwLock<R>>) -> Bullet<R, N> {
         Bullet {
@@ -54,6 +57,7 @@ impl<R: Robot + 'static, const N: usize> Bullet<R, N> {
     }
 }
 
+// 为 Bullet 实现 Simulator 特征，使得其是一个仿真器
 impl<R: Robot + 'static, const N: usize> Simulator for Bullet<R, N> {
     fn get_name(&self) -> String {
         self.name.clone()
@@ -65,6 +69,7 @@ impl<R: Robot + 'static, const N: usize> Simulator for Bullet<R, N> {
     fn add_simulator(&mut self, _: Arc<std::sync::Mutex<dyn Simulator>>) {}
 }
 
+// 为 Bullet 实现 ROSThread 特征，使得其可以被类似 ros 的线程管理器调用，而实际上并不一定用到了ros，只是结构相似罢了
 impl<R: Robot + 'static, const N: usize> ROSThread for Bullet<R, N> {
     fn init(&mut self) {
         #[cfg(feature = "zmq")]
