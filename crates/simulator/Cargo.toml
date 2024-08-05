@@ -8,8 +8,8 @@ edition = "2021"
 [dependencies]
 nalgebra = { workspace = true }
 typenum = { workspace = true }
-# zmq = { workspace = true, optional = true }
-zmq = "*"
+zmq = { workspace = true, optional = true }
+# zmq = "*"
 rosrust = { workspace = true, optional = true }
 rosrust_msg = { workspace = true, optional = true }
 crossbeam.workspace = true
@@ -19,7 +19,8 @@ task_manager.workspace = true
 massage.workspace = true
 
 [features]
+default = ["rszmq"]
 noros = []
-rszmq = []
+rszmq = ["zmq"]
 ros = ["rosrust", "rosrust_msg"]
 ros2 = []
