@@ -74,22 +74,19 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Bullet<R, N> {
     fn init(&mut self) {
         #[cfg(feature = "rszmq")]
         {
-            // ! 使用 zmq 写的订阅者通讯
-            // ! zmq 不容许在多个线程中使用同一个 Socket ,虽然我们只会在一个线程中调用他,但是尚且没有想到规避的办法,暂且取悦编译器,可能会导致阻塞！！！
-            // TODO 找到绕开的办法了,但是需要 unsafe 代码,还没搓好,unsafe impl Send for Context {},unsafe impl Sync for Context {}
-            // 在这里进行订阅者的声明
+            // 使用zmq实现程序通信，通信协议暂定为TCP
+            // 以下为responder端
             let context = zmq::Context::new();
-            let subscriber = context.socket(zmq::SUB).unwrap();
-            // TODO ipc 通讯需要一个实际存在的文件路径,当前标记方案无法保证其唯一性和存在性
-            assert!(subscriber
-                .connect(&format!("ipc:///tmp/{}", self.name))
-                .is_ok());
-            // 设置过滤器并启动,所有的订阅者都需要set,当没有其他参数时表明过滤功能
-            assert!(subscriber.set_subscribe("".as_bytes()).is_ok());
+            let responder = context.socket(zmq::REP).unwrap();
+            // 绑定到TCP地址
+            responder.bind("tcp://*:5555").expect("Failed to bind socket");
 
             loop {
-                let msg = subscriber.recv_string(0).unwrap().unwrap();
-                let robot_state: Vec<f64> = msg
+                let message = responder
+                    .recv_string(0)
+                    .expect("Failed to receive message")
+                    .unwrap();
+                let robot_state: Vec<f64> = message
                     .split(' ')
                     .map(|s| s.parse::<f64>().unwrap()) // 将每个拆分的部分解析为 f64
                     .collect();
