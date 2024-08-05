@@ -1,5 +1,4 @@
 use zmq::Context;
-use zmq::Socket;
 
 fn main() {
     // 创建一个新的zmq上下文
@@ -15,7 +14,10 @@ fn main() {
 
     loop {
         // 等待接收请求
-        let message = socket.recv_string(0).expect("Failed to receive message").unwrap();
+        let message = socket
+            .recv_string(0)
+            .expect("Failed to receive message")
+            .unwrap();
         println!("Received request: {}", message);
 
         // 模拟处理一些工作
@@ -27,4 +29,3 @@ fn main() {
         println!("Sent reply: {}", reply);
     }
 }
-
