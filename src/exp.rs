@@ -1,3 +1,4 @@
+use chrono;
 use crossbeam::queue::SegQueue;
 use serde::Deserialize;
 use serde_json::from_reader;
@@ -7,6 +8,7 @@ use std::sync::{Arc, Mutex, RwLock};
 
 use crate::config::CONFIG_PATH;
 use controller::config::create_controller;
+use message::target::Target::Pose;
 use planner::config::create_planner;
 use robot::robots::panda;
 use robot::robots::robot_list::RobotList;
@@ -254,6 +256,24 @@ impl Exp {
                 _ => panic!("Unknown node type"),
             }
         }
+
+        for robot_task in &task.robot_tasks {
+            // TODO 当前的 robot_task 不对劲，应该是一个枚举类型，但是枚举类型的反序列化还没写。以下的代码仅限于临时使用
+            let target_queue = Arc::new(SegQueue::new());
+            let planner = Exp::get_planner_with_name(
+                &planner,
+                format!("linear:{}", robot_task.name).as_str(),
+            )
+            .unwrap();
+            for target in &robot_task.targets {
+                target_queue.push(Pose(target.clone()));
+            }
+            planner
+                .lock()
+                .unwrap()
+                .set_target_queue(target_queue.clone());
+        }
+
         self.task_manage = Some(task);
     }
 
@@ -266,7 +286,12 @@ impl Exp {
 
 impl ROSThread for Exp {
     // ! 为 Exp 实现 ROSThread trait,这将使得 Exp 可以被 ThreadManage 管理,同时也具备基本的运行函数
-    fn init(&mut self) {}
+    fn init(&mut self) {
+        println!(
+            "现在是 {}，先生，祝您早上、中午、晚上好",
+            chrono::Local::now().format("%Y-%m-%d %H:%M:%S")
+        );
+    }
 
     fn start(&mut self) {
         // ! 所有线程停一会儿，等待下个任务到来

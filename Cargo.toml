@@ -32,6 +32,7 @@ zmq = "*"
 zeromq = "*"
 crossbeam = "*"
 rand = "*"
+chrono = "*"
 
 robot = { path = "./crates/robot" }
 controller = { path = "./crates/controller" }
@@ -47,6 +48,7 @@ serde_json.workspace = true
 nalgebra.workspace = true
 crossbeam.workspace = true
 rand.workspace = true
+chrono.workspace = true
 zmq = { workspace = true, optional = true }
 rosrust = { workspace = true, optional = true }
 rosrust_msg = { workspace = true, optional = true }
