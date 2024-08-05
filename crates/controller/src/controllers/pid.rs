@@ -4,7 +4,7 @@ use serde::{Deserialize, Deserializer};
 use std::sync::{Arc, Mutex, RwLock};
 
 use crate::controller_trait::Controller;
-use massage::track::Track;
+use massage::{control_command::ControlCommand, track::Track};
 use robot::robot_trait::Robot;
 use task_manager::ros_thread::ROSThread;
 
@@ -36,6 +36,15 @@ pub struct PidParams<const N: usize> {
     kd: na::SMatrix<f64, N, N>,
 }
 
+pub struct PidNode {
+    track_queue: Arc<SegQueue<Track>>,
+    control_command_queue: Arc<SegQueue<ControlCommand>>,
+    // #[cfg(feature = "zmq")]
+    // pub sub_list: Vec<zmq::Socket>,
+    #[cfg(feature = "ros")]
+    pub sub_list: Vec<rosrust::Subscriber>,
+}
+
 impl<'de, const N: usize> Deserialize<'de> for PidParams<N> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -64,14 +73,6 @@ impl<'de, const N: usize> Deserialize<'de> for PidParams<N> {
     }
 }
 
-pub struct PidNode {
-    track_queue: Arc<SegQueue<Track>>,
-    // #[cfg(feature = "zmq")]
-    // pub sub_list: Vec<zmq::Socket>,
-    #[cfg(feature = "ros")]
-    pub sub_list: Vec<rosrust::Subscriber>,
-}
-
 impl<R: Robot + 'static, const N: usize> Pid<R, N> {
     pub fn new(
         name: String,
@@ -93,8 +94,9 @@ impl<R: Robot + 'static, const N: usize> Pid<R, N> {
 
             msgnode: PidNode {
                 track_queue: Arc::new(SegQueue::new()),
-                #[cfg(feature = "zmq")]
-                sub_list: Vec::new(),
+                control_command_queue: Arc::new(SegQueue::new()),
+                // #[cfg(feature = "zmq")]
+                // sub_list: Vec::new(),
                 #[cfg(feature = "ros")]
                 sub_list: Vec::new(),
             },
@@ -140,6 +142,12 @@ impl<R: Robot + 'static, const N: usize> Controller for Pid<R, N> {
     }
     fn set_track_queue(&mut self, track_queue: Arc<SegQueue<Track>>) {
         self.msgnode.track_queue = track_queue;
+    }
+    fn set_controller_command_queue(
+        &mut self,
+        controller_command_queue: Arc<SegQueue<ControlCommand>>,
+    ) {
+        self.msgnode.control_command_queue = controller_command_queue;
     }
 
     fn add_controller(&mut self, _: Arc<Mutex<dyn Controller>>) {}

@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use std::thread::{self};
+    use std::thread;
     #[cfg(feature = "rszmq")]
     use zmq;
     #[test]
@@ -24,7 +24,7 @@ mod tests {
                 let publisher = context.socket(zmq::PUB).unwrap();
                 assert!(publisher.bind("tcp://*:5556").is_ok());
                 print!("there is a publisher\n");
-                sleep(std::time::Duration::from_secs(1));
+                thread::sleep(std::time::Duration::from_secs(1));
                 for i in 0..5 {
                     publisher
                         .send(format!("Hello, {}", i).as_bytes(), 0)
