@@ -20,6 +20,7 @@ p.setAdditionalSearchPath(pybullet_data.getDataPath())
 planeId = p.loadURDF("plane.urdf")
 panda_path = "franka_panda/panda.urdf"
 robot_id = p.loadURDF(panda_path, useFixedBase=True)
+robot_id2 = p.loadURDF(panda_path, useFixedBase=True)
 
 # 关节数量，Panda 机器人有 7 个自由度
 num_joints = p.getNumJoints(robot_id)
