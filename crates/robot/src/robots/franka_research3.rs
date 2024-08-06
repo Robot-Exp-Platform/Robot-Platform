@@ -4,29 +4,27 @@ use std::f64::consts::PI;
 use crate::robots::robot_n_dof::RobotNDof;
 use crate::robots::robot_n_dof::RobotNDofParams;
 
-pub const PANDA_DOF: usize = 7;
+pub const RESEARCH3_DOF: usize = 7;
 
-pub type Panda = RobotNDof<PANDA_DOF, { PANDA_DOF + 1 }>;
+pub type FrankaResearch3 = RobotNDof<RESEARCH3_DOF, { RESEARCH3_DOF + 1 }>;
 
-impl Panda {
-    pub fn new_panda(name: String, path: String) -> Panda {
+impl FrankaResearch3 {
+    pub fn new_research3(name: String, path: String) -> FrankaResearch3 {
         RobotNDof::new_from_params(
             name,
             path,
             RobotNDofParams {
-                nlink: PANDA_DOF,
+                nlink: RESEARCH3_DOF,
                 q_min_bound: na::SVector::from_vec(vec![
-                    -2.8973, -1.7628, -2.8973, -3.0718, -2.8973, -0.0175, -2.8973,
+                    -2.7437, -1.7837, -2.9007, -3.0421, -2.8065, 0.5445, -3.0159,
                 ]),
                 q_max_bound: na::SVector::from_vec(vec![
-                    2.8973, 1.7628, 2.8973, -0.0698, 2.8973, 3.7525, 2.8973,
+                    2.7437, 1.7837, 2.9007, -0.1518, 2.8065, 4.5169, 3.0159,
                 ]),
-                q_dot_bound: na::SVector::from_vec(vec![
-                    2.1750, 2.1750, 2.1750, 2.1750, 2.6100, 2.6100, 2.6100,
-                ]),
-                q_ddot_bound: na::SVector::from_vec(vec![15.0, 7.5, 10.0, 12.5, 15.0, 20.0, 20.0]),
+                q_dot_bound: na::SVector::from_vec(vec![2.62, 2.62, 2.62, 2.62, 5.26, 4.18, 5.26]),
+                q_ddot_bound: na::SVector::from_vec(vec![10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0]),
                 q_jerk_bound: na::SVector::from_vec(vec![
-                    7500.0, 3750.0, 5000.0, 6250.0, 7500.0, 10000.0, 10000.0,
+                    5000.0, 5000.0, 5000.0, 5000.0, 5000.0, 5000.0, 5000.0,
                 ]),
                 tau_bound: na::SVector::from_vec(vec![87.0, 87.0, 87.0, 87.0, 12.0, 12.0, 12.0]),
                 tau_dot_bound: na::SVector::from_vec(vec![

@@ -4,17 +4,17 @@ use std::f64::consts::PI;
 use crate::robots::robot_n_dof::RobotNDof;
 use crate::robots::robot_n_dof::RobotNDofParams;
 
-pub const PANDA_DOF: usize = 7;
+pub const EMIKA_DOF: usize = 7;
 
-pub type Panda = RobotNDof<PANDA_DOF, { PANDA_DOF + 1 }>;
+pub type FrankaEmika = RobotNDof<EMIKA_DOF, { EMIKA_DOF + 1 }>;
 
-impl Panda {
-    pub fn new_panda(name: String, path: String) -> Panda {
+impl FrankaEmika {
+    pub fn new_emika(name: String, path: String) -> FrankaEmika {
         RobotNDof::new_from_params(
             name,
             path,
             RobotNDofParams {
-                nlink: PANDA_DOF,
+                nlink: EMIKA_DOF,
                 q_min_bound: na::SVector::from_vec(vec![
                     -2.8973, -1.7628, -2.8973, -3.0718, -2.8973, -0.0175, -2.8973,
                 ]),

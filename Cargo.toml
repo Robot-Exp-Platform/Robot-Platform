@@ -24,6 +24,7 @@ build = "build.rs"
 [workspace.dependencies]
 serde = { version = '*', features = ["derive"] }
 serde_json = "*"
+serde_yaml = "*"
 nalgebra = { version = "*", features = ["serde-serialize"] }
 typenum = "*"
 rosrust = '*'
@@ -45,6 +46,7 @@ message = { path = "./crates/message" }
 [dependencies]
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
+serde_yaml.workspace = true
 nalgebra.workspace = true
 crossbeam.workspace = true
 rand.workspace = true

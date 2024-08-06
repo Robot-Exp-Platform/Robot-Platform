@@ -6,6 +6,7 @@ use crate::planner_trait::Planner;
 use message::target::Target;
 use message::track::Track;
 use robot::robot_trait::Robot;
+use serde_json::Value as JsonValue;
 use task_manager::ros_thread::ROSThread;
 
 #[derive(Serialize, Deserialize)]
@@ -68,8 +69,8 @@ impl<R: Robot + 'static, const N: usize> Planner for Linear<R, N> {
         vec![self.params.interpolation as f64]
     }
 
-    fn set_params(&mut self, params: String) {
-        let params: LinearParams = serde_json::from_str(&params).unwrap();
+    fn set_params(&mut self, params: JsonValue) {
+        let params: LinearParams = serde_json::from_value(params).unwrap();
         self.params = params;
     }
     fn set_target_queue(&mut self, target_queue: Arc<SegQueue<Target>>) {
