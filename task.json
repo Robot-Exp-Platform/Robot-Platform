@@ -1,7 +1,7 @@
 {
   "robot_tasks": [
     {
-      "name": "robot_1",
+      "name": "linear:panda_1",
       "targets": [
         { "Pose": { "rotation": [0, 0, 0, 1.0], "translation": [0, 0, 0] } },
         { "Pose": { "rotation": [0, 0, 0, 1.0], "translation": [0, 0, 0] } },

@@ -5,8 +5,9 @@ edition = "2021"
 
 [dependencies]
 serde = { workspace = true, features = ["derive"] }
-serde_json = { workspace = true }
-nalgebra = { workspace = true }
+serde_json.workspace = true
+nalgebra.workspace = true
+crossbeam.workspace = true
 zmq = { workspace = true, optional = true }
 
 robot.workspace = true

@@ -1,5 +1,8 @@
 use chrono;
+use core::task;
 use crossbeam::queue::SegQueue;
+use crossbeam::thread;
+use message::target;
 use serde::Deserialize;
 use serde_json::from_reader;
 use std::fs::File;
@@ -14,13 +17,14 @@ use robot::robots::robot_list::RobotList;
 use simulator::config::create_simulator;
 use task_manager::ros_thread::ROSThread;
 use task_manager::task::Task;
+use task_manager::task_manage::TaskManager;
 use task_manager::thread_manage::ThreadManage;
 
 #[allow(dead_code)]
 pub struct Exp {
     // Exp 是一个森林状的结构，其中的包含 robot tree, controller tree, planner tree 等等树状结构的根节点，通过管理 exp 实现管理整个结构的目的
     pub thread_manage: ThreadManage,
-    pub task_manage: Option<Task>,
+    pub task_manage: TaskManager,
 
     pub robot_exp: Arc<RwLock<dyn robot::Robot>>,
     pub planner_exp: Arc<Mutex<dyn planner::Planner>>,
@@ -47,11 +51,12 @@ impl Exp {
 
         // 根据配置文件生成机器人树
         let mut thread_manage = ThreadManage::new();
+        let mut task_manage = TaskManager::new();
         let (robot, planner, controller, simulator) =
-            Exp::build_exp_tree(config, "".to_string(), &mut thread_manage);
+            Exp::build_exp_tree(config, "".to_string(), &mut thread_manage, &mut task_manage);
         Exp {
             thread_manage,
-            task_manage: None,
+            task_manage,
             robot_exp: robot,
             planner_exp: planner,
             controller_exp: controller,
@@ -96,6 +101,7 @@ impl Exp {
         config: Config,
         path: String,
         thread_manage: &mut ThreadManage,
+        task_manager: &mut TaskManager,
     ) -> (
         Arc<RwLock<dyn robot::Robot>>,
         Arc<Mutex<dyn planner::Planner>>,
@@ -120,6 +126,7 @@ impl Exp {
                             robot_config,
                             format!("{}/robot_list", path),
                             thread_manage,
+                            task_manager,
                         );
                     robot.write().unwrap().add_robot(child_robot);
                     planner.lock().unwrap().add_planner(child_planner);
@@ -139,11 +146,6 @@ impl Exp {
                 >(
                     &config, &path, robot.clone()
                 );
-
-                // 需要给控制器和规划器开辟独立的线程
-                thread_manage.add_thread(planner.clone());
-                thread_manage.add_thread(controller.clone());
-                thread_manage.add_thread(simulator.clone());
 
                 let target_queue = Arc::new(SegQueue::new());
                 let track_queue = Arc::new(SegQueue::new());
@@ -166,6 +168,14 @@ impl Exp {
                     .lock()
                     .unwrap()
                     .set_controller_command_queue(control_command_queue.clone());
+
+                task_manager
+                    .add_target_node(planner.lock().unwrap().get_name(), target_queue.clone());
+
+                // 需要给控制器和规划器开辟独立的线程
+                thread_manage.add_thread(planner.clone());
+                thread_manage.add_thread(controller.clone());
+                thread_manage.add_thread(simulator.clone());
 
                 (robot, planner, controller, simulator)
             }
@@ -257,26 +267,22 @@ impl Exp {
         }
 
         for robot_task in &task.robot_tasks {
-            let target_queue = Arc::new(SegQueue::new());
-            let planner = Exp::get_planner_with_name(
-                &planner,
-                format!("linear:{}", robot_task.name).as_str(),
-            )
-            .unwrap();
+            let target_queue = self
+                .task_manage
+                .get_queue_with_name(robot_task.name.clone())
+                .unwrap();
             for target in &robot_task.targets {
                 target_queue.push(target.clone());
             }
-
-            planner.lock().unwrap().set_target_queue(target_queue);
         }
 
-        self.task_manage = Some(task);
+        self.task_manage.set_task(task);
     }
 
     pub fn is_running(&self) -> bool {
         // ! 一个状态判断函数,如果运行终端或者当前 task 已经运行完成,则返回 false,开始下一轮的任务安排
         // unimplemented!();
-        false
+        true
     }
 }
 
