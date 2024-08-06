@@ -7,7 +7,7 @@ use simulator::{simulators::bullet::Bullet, Simulator};
 use task_manager::ros_thread::ROSThread;
 
 fn main() {
-    let robot = Panda::new("panda_1".to_string(), "/robot".to_string());
+    let robot = Panda::new_panda("panda_1".to_string(), "/robot".to_string());
     let mut simulator = Bullet::<Panda, 7>::new(
         "bullet:panda_1".to_string(),
         "/simulator".to_string(),

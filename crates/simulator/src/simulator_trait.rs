@@ -1,4 +1,5 @@
 use crossbeam::queue::SegQueue;
+use serde_json::Value as JsonValue;
 use std::sync::{Arc, Mutex};
 
 use message::control_command::ControlCommand;
@@ -11,7 +12,7 @@ pub trait Simulator: ROSThread {
         unimplemented!()
     }
 
-    fn set_params(&mut self, params: String);
+    fn set_params(&mut self, params: JsonValue);
     fn set_controller_command_queue(
         &mut self,
         controller_command_queue: Arc<SegQueue<ControlCommand>>,

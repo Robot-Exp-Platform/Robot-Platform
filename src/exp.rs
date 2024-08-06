@@ -9,6 +9,8 @@ use std::sync::{Arc, Mutex, RwLock};
 use crate::config::CONFIG_PATH;
 use controller::config::create_controller;
 use planner::config::create_planner;
+use robot::robots::franka_emika;
+use robot::robots::franka_research3;
 use robot::robots::panda;
 use robot::robots::robot_list::RobotList;
 use simulator::config::create_simulator;
@@ -62,38 +64,6 @@ impl Exp {
     }
 
     #[allow(clippy::type_complexity)]
-    fn create_nodes<T: robot::Robot + 'static, const N: usize>(
-        config: &Config,
-        path: &str,
-        robot: Arc<RwLock<T>>,
-    ) -> (
-        Arc<Mutex<dyn planner::Planner>>,
-        Arc<Mutex<dyn controller::Controller>>,
-        Arc<Mutex<dyn simulator::Simulator>>,
-    ) {
-        let planner = create_planner::<T, N>(
-            config.planner.clone(),
-            config.name.clone(),
-            format!("/planner/{}", path),
-            robot.clone(),
-        );
-        let controller = create_controller::<T, N>(
-            config.controller.clone(),
-            config.name.clone(),
-            format!("/controller/{}", path),
-            robot.clone(),
-        );
-        let simulator = create_simulator::<T, N>(
-            config.simulator.clone(),
-            config.name.clone(),
-            format!("/simulator/{}", path),
-            robot.clone(),
-        );
-
-        (planner, controller, simulator)
-    }
-
-    #[allow(clippy::type_complexity)]
     fn build_exp_tree(
         config: Config,
         path: String,
@@ -114,7 +84,7 @@ impl Exp {
 
                 // 分别判断 controller 和 planner 的类型，然后创建对应的 controller 和 planner
                 let (planner, controller, simulator) =
-                    Exp::create_nodes::<RobotList, 0>(&config, &path, robot.clone());
+                    create_nodes::<RobotList, 0>(&config, &path, robot.clone());
 
                 // ! 递归!树就是从这里长起来的
                 for robot_config in config.robots.unwrap() {
@@ -132,17 +102,9 @@ impl Exp {
                 }
                 (robot, planner, controller, simulator)
             }
-            "panda" => {
-                // ! 经典的 Franka Emika Panda 机器人 panda::PANDA_DOF
-                let robot = panda::Panda::new(config.name.clone(), format!("/robot/{}", path));
-                let robot = Arc::new(RwLock::new(robot));
-
-                let (planner, controller, simulator) = Exp::create_nodes::<
-                    panda::Panda,
-                    { panda::PANDA_DOF },
-                >(
-                    &config, &path, robot.clone()
-                );
+            // 特判各种机器人
+            _ => {
+                let (robot, (planner, controller, simulator)) = create_robot(&config, &path);
 
                 let target_queue = Arc::new(SegQueue::new());
                 let track_queue = Arc::new(SegQueue::new());
@@ -176,62 +138,7 @@ impl Exp {
 
                 (robot, planner, controller, simulator)
             }
-            _ => panic!("Unknown robot type"),
         }
-    }
-
-    pub fn get_planner_with_name(
-        planner: &Arc<Mutex<dyn planner::Planner>>,
-        name: &str,
-    ) -> Option<Arc<Mutex<dyn planner::Planner>>> {
-        // !从 planner 树中根据 name 获取 planner,辅助函数,之后可能作为私有函数.这个函数本身不依赖 exp 所以之后可以考虑从 exp 中那出去
-        if planner.lock().unwrap().get_name() == name {
-            return Some(planner.clone());
-        }
-
-        for child in planner.lock().unwrap().get_planner().iter() {
-            if child.lock().unwrap().get_name() == name {
-                return Some(child.clone());
-            }
-        }
-
-        None
-    }
-
-    pub fn get_controller_with_name(
-        controller: &Arc<Mutex<dyn controller::Controller>>,
-        name: &str,
-    ) -> Option<Arc<Mutex<dyn controller::Controller>>> {
-        // !从 controller 树中根据 name 获取 controller,辅助函数,之后可能作为私有函数.这个函数本身不依赖 exp 所以之后可以考虑从 exp 中那出去
-        if controller.lock().unwrap().get_name() == name {
-            return Some(controller.clone());
-        }
-
-        for child in controller.lock().unwrap().get_controller().iter() {
-            if child.lock().unwrap().get_name() == name {
-                return Some(child.clone());
-            }
-        }
-
-        None
-    }
-
-    pub fn get_simulator_with_name(
-        simulator: &Arc<Mutex<dyn simulator::Simulator>>,
-        name: &str,
-    ) -> Option<Arc<Mutex<dyn simulator::Simulator>>> {
-        // !从 simulator 树中根据 name 获取 simulator,辅助函数,之后可能作为私有函数.这个函数本身不依赖 exp 所以之后可以考虑从 exp 中那出去
-        if simulator.lock().unwrap().get_name() == name {
-            return Some(simulator.clone());
-        }
-
-        for child in simulator.lock().unwrap().get_simulator().iter() {
-            if child.lock().unwrap().get_name() == name {
-                return Some(child.clone());
-            }
-        }
-
-        None
     }
 
     fn update_tesk(&mut self) {
@@ -245,18 +152,17 @@ impl Exp {
         for node in &task.nodes {
             match node.node_type.as_str() {
                 "planner" => {
-                    let planner = Exp::get_planner_with_name(&planner, node.name.as_str()).unwrap();
+                    let planner = get_planner_with_name(&planner, node.name.as_str()).unwrap();
                     planner.lock().unwrap().set_params(node.param.clone());
                 }
                 "controller" => {
                     let controller =
-                        Exp::get_controller_with_name(&controller, node.name.as_str()).unwrap();
+                        get_controller_with_name(&controller, node.name.as_str()).unwrap();
                     controller.lock().unwrap().set_params(node.param.clone());
                 }
                 "simulator" => {
                     let simulator =
-                        Exp::get_simulator_with_name(&self.simulator_exp, node.name.as_str())
-                            .unwrap();
+                        get_simulator_with_name(&self.simulator_exp, node.name.as_str()).unwrap();
                     simulator.lock().unwrap().set_params(node.param.clone());
                 }
                 _ => panic!("Unknown node type"),
@@ -303,4 +209,142 @@ impl ROSThread for Exp {
     }
 
     fn update(&mut self) {}
+}
+
+#[allow(clippy::type_complexity)]
+fn create_nodes<T: robot::Robot + 'static, const N: usize>(
+    config: &Config,
+    path: &str,
+    robot: Arc<RwLock<T>>,
+) -> (
+    Arc<Mutex<dyn planner::Planner>>,
+    Arc<Mutex<dyn controller::Controller>>,
+    Arc<Mutex<dyn simulator::Simulator>>,
+) {
+    let planner = create_planner::<T, N>(
+        config.planner.clone(),
+        config.name.clone(),
+        format!("/planner/{}", path),
+        robot.clone(),
+    );
+    let controller = create_controller::<T, N>(
+        config.controller.clone(),
+        config.name.clone(),
+        format!("/controller/{}", path),
+        robot.clone(),
+    );
+    let simulator = create_simulator::<T, N>(
+        config.simulator.clone(),
+        config.name.clone(),
+        format!("/simulator/{}", path),
+        robot.clone(),
+    );
+
+    (planner, controller, simulator)
+}
+
+#[allow(clippy::type_complexity)]
+fn create_robot(
+    config: &Config,
+    path: &str,
+) -> (
+    Arc<RwLock<dyn robot::Robot>>,
+    (
+        Arc<Mutex<dyn planner::Planner>>,
+        Arc<Mutex<dyn controller::Controller>>,
+        Arc<Mutex<dyn simulator::Simulator>>,
+    ),
+) {
+    match config.robot_type.as_str() {
+        "panda" => {
+            let robot = panda::Panda::new_panda(config.name.clone(), format!("/robot/{}", path));
+            let robot = Arc::new(RwLock::new(robot));
+            (
+                robot.clone(),
+                create_nodes::<panda::Panda, { panda::PANDA_DOF }>(&config, &path, robot),
+            )
+        }
+        "franka_emika" => {
+            let robot = franka_emika::FrankaEmika::new_emika(
+                config.name.clone(),
+                format!("/robot/{}", path),
+            );
+            let robot = Arc::new(RwLock::new(robot));
+            (
+                robot.clone(),
+                create_nodes::<franka_emika::FrankaEmika, { franka_emika::EMIKA_DOF }>(
+                    &config, &path, robot,
+                ),
+            )
+        }
+        "franka_search3" => {
+            let robot = franka_research3::FrankaResearch3::new_research3(
+                config.name.clone(),
+                format!("/robot/{}", path),
+            );
+            let robot = Arc::new(RwLock::new(robot));
+            (
+                robot.clone(),
+                create_nodes::<
+                    franka_research3::FrankaResearch3,
+                    { franka_research3::RESEARCH3_DOF },
+                >(&config, &path, robot),
+            )
+        }
+        _ => panic!("Unknown robot type"),
+    }
+}
+
+pub fn get_planner_with_name(
+    planner: &Arc<Mutex<dyn planner::Planner>>,
+    name: &str,
+) -> Option<Arc<Mutex<dyn planner::Planner>>> {
+    // !从 planner 树中根据 name 获取 planner,辅助函数
+    if planner.lock().unwrap().get_name() == name {
+        return Some(planner.clone());
+    }
+
+    for child in planner.lock().unwrap().get_planner().iter() {
+        if child.lock().unwrap().get_name() == name {
+            return Some(child.clone());
+        }
+    }
+
+    None
+}
+
+pub fn get_controller_with_name(
+    controller: &Arc<Mutex<dyn controller::Controller>>,
+    name: &str,
+) -> Option<Arc<Mutex<dyn controller::Controller>>> {
+    // !从 controller 树中根据 name 获取 controller,辅助函数
+    if controller.lock().unwrap().get_name() == name {
+        return Some(controller.clone());
+    }
+
+    for child in controller.lock().unwrap().get_controller().iter() {
+        if child.lock().unwrap().get_name() == name {
+            return Some(child.clone());
+        }
+    }
+
+    None
+}
+
+pub fn get_simulator_with_name(
+    simulator: &Arc<Mutex<dyn simulator::Simulator>>,
+    name: &str,
+) -> Option<Arc<Mutex<dyn simulator::Simulator>>> {
+    // !从 simulator 树中根据 name 获取 simulator,辅助函数
+    if simulator.lock().unwrap().get_name() == name {
+        return Some(simulator.clone());
+    }
+
+    for child in simulator.lock().unwrap().get_simulator().iter() {
+        if child.lock().unwrap().get_name() == name {
+            return Some(child.clone());
+        }
+    }
+
+    None
 }

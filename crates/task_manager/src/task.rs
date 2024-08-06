@@ -1,5 +1,6 @@
 use message::target::Target;
 use serde::Deserialize;
+use serde_json::Value as JsonValue;
 
 #[derive(Debug, Deserialize)]
 pub struct RobotTasks {
@@ -10,7 +11,7 @@ pub struct RobotTasks {
 pub struct Node {
     pub node_type: String,
     pub name: String,
-    pub param: String,
+    pub param: JsonValue,
 }
 
 #[derive(Debug, Deserialize)]

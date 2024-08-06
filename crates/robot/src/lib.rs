@@ -1,6 +1,7 @@
 pub mod robot_trait;
 pub mod robots;
 pub use robot_trait::Robot;
+pub mod config;
 
 #[cfg(test)]
 mod tests {
