@@ -3,6 +3,7 @@ use crossbeam::queue::SegQueue;
 use rosrust as ros;
 use serde_json::Value as JsonValue;
 use std::sync::{Arc, Mutex, RwLock};
+use serde_json::json;
 #[cfg(feature = "rszmq")]
 use zmq;
 
@@ -50,8 +51,7 @@ impl<R: Robot + 'static, const N: usize> Bullet<R, N> {
                 sub_list: Vec::new(),
             },
             robot,
-            // 使用zmq实现程序通信，通信协议暂定为TCP
-            // 以下为responder端
+            
         }
     }
     pub fn new_without_params(name: String, path: String, robot: Arc<RwLock<R>>) -> Bullet<R, N> {
@@ -84,7 +84,9 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Bullet<R, N> {
     fn init(&mut self) {
         println!("{} 向您问好. {} says hello.", self.name, self.name);
         #[cfg(feature = "rszmq")]
-        {
+        {   
+            // 使用zmq实现程序通信，通信协议暂定为TCP
+            // 以下为responder端
             // 使用锁来访问 responder
             let responder = self.msgnode.responder.clone(); // 克隆 Arc 引用
             let responder_lock = responder.lock().unwrap(); // 锁定 Mutex 并解锁获得可变引用
@@ -119,21 +121,47 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Bullet<R, N> {
 
     fn update(&mut self) {
         #[cfg(feature = "rszmq")]
+        // {
+        //     let responder = self.msgnode.responder.lock().unwrap();
+        //     let message = responder
+        //         .recv_string(0)
+        //         .expect("Failed to receive message")
+        //         .unwrap();
+        //     drop(responder); // 在处理消息前释放锁，允许其他线程在此期间操作
+        //     let robot_state: Vec<f64> = message
+        //         .split(' ')
+        //         .map(|s| s.parse::<f64>().unwrap()) // 将每个拆分的部分解析为 f64
+        //         .collect();
+        //     {
+        //         let mut robot_write = self.robot.write().unwrap();
+        //         robot_write.set_q(robot_state[0..N].to_vec());
+        //         robot_write.set_q_dot(robot_state[N..2 * N].to_vec());
+        //     }
+        // }
         {
             let responder = self.msgnode.responder.lock().unwrap();
-            let message = responder
-                .recv_string(0)
-                .expect("Failed to receive message")
-                .unwrap();
-            drop(responder); // 在处理消息前释放锁，允许其他线程在此期间操作
-            let robot_state: Vec<f64> = message
-                .split(' ')
-                .map(|s| s.parse::<f64>().unwrap()) // 将每个拆分的部分解析为 f64
-                .collect();
-            {
-                let mut robot_write = self.robot.write().unwrap();
-                robot_write.set_q(robot_state[0..N].to_vec());
-                robot_write.set_q_dot(robot_state[N..2 * N].to_vec());
+            match responder.recv_string(0) {
+                Ok(Ok(message)) => {
+                    // 成功接收到消息，并且消息是一个有效的 UTF-8 字符串
+                    println!("Received message: {}", message);
+                     // 反序列化为 JSON 值
+                    let array: Vec<f64> = serde_json::from_str(&message).unwrap();
+                    println!("Received array: {:?}", array);
+                    // 定义一个数组
+                    let array = vec![1.3, 2.4, 3.5, 4.6, 5.7];
+                    // 序列化为 JSON 字符串
+                    let reply = json!(array).to_string();
+                    // 发送一个简单的确认回复，保持请求-回复模式完整性
+                    responder.send(&reply, 0).expect("Failed to send reply");
+                }
+                Ok(Err(_)) => {
+                    // 成功接收到消息，但消息不是有效的 UTF-8 字符串
+                    eprintln!("Received a message that is not a valid UTF-8 string.");
+                }
+                Err(e) => {
+                    // 处理 zmq 相关的错误
+                    eprintln!("Failed to receive message: {}", e);
+                }
             }
         }
     }

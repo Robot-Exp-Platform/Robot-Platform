@@ -58,7 +58,7 @@ class Joint:
         self.update_state()
         return self.position, self.velocity
     
-    def set_velocity(self, velocity, force = 100):
+    def set_velocity(self, velocity, force = 500):
         p.setJointMotorControl2(
                 bodyUniqueId=self.robot_id,
                 jointIndex=self.joint_index,
@@ -70,11 +70,13 @@ class Joint:
 
 
 class Panda:
-    def __init__(self) -> None:
+    def __init__(self, base_position = [0, 0 ,0]) -> None:
         self.panda_path = "franka_panda/panda.urdf"
-        self.id = p.loadURDF(self.panda_path, useFixedBase=True)
+        self.base_position = base_position
+        self.id = p.loadURDF(self.panda_path, useFixedBase=True, basePosition = base_position)
+        self.joints_num = 7
         self.control_joint = [] # 存储控制的关节的列表
-        for i in range(0, 7):
+        for i in range(0, self.joints_num):
             self.control_joint.append(Joint(self.id, i))
         self.reset_panda_state()
     
@@ -82,10 +84,19 @@ class Panda:
         for joint in self.control_joint:
             joint.reset_joint_state()
     
+    def print_panda_info(self):
+        print("*"*50)
+        print("Robot Id: ", self.id)
+        print("Robot Position: ", self.base_position)
+        print("Robot joints num: ", self.joints_num)
+        for joint in self.control_joint:
+            print(f"Joint {joint.joint_index} ({joint.name}): Limits = ({joint.lower_limit}, {joint.upper_limit})")
+        print("*"*50)
+
     def get_joint_state(self, joint_index):
         return self.control_joint[joint_index].get_state()
     
-    def get_joint_state(self):
+    def get_joints_state(self):
         joint_positions = []
         joint_velocities = []
         for joint in self.control_joint:
@@ -97,13 +108,11 @@ class Panda:
     def set_joint_velocity(self, joint_index, velocity):
         self.control_joint[joint_index].set_velocity(velocity)
 
-    def set_joint_velocity(self, velocities):
-        for i in range(0, 7):
+    def set_joints_velocity(self, velocities):
+        for i in range(0, self.joints_num):
             self.control_joint[i].set_velocity(velocities[i])
 
     def print_panda_state(self):
-        joint_positions, joint_velocities = self.get_joint_state()
+        joint_positions, joint_velocities = self.get_joints_state()
         for i in range(0, 7):
             print(f"Joint {i}: Angle = {joint_positions[i]:.2f}, Velocity = {joint_velocities[i]:.2f}")
-
-

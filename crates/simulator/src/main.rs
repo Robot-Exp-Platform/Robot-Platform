@@ -23,4 +23,8 @@ fn main() {
     simulator.set_controller_command_queue(controller_command_queue);
 
     simulator.init();
+
+    loop{
+        simulator.update();
+    }
 }
