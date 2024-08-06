@@ -784,6 +784,7 @@ dependencies = [
  "nalgebra",
  "robot",
  "rosrust",
+ "serde",
 ]
 
 [[package]]
