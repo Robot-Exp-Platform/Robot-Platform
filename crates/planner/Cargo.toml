@@ -11,6 +11,7 @@ recoder.workspace = true
 task_manager.workspace = true
 message.workspace = true
 crossbeam.workspace = true
+nalgebra.workspace = true
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
 serde_yaml.workspace = true

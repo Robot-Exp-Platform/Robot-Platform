@@ -3,28 +3,9 @@ use crossbeam::queue::SegQueue;
 use serde_yaml::Value;
 use std::sync::{Arc, Mutex};
 
-use crate::controllers::pid::{PidParams, PidState};
 use message::control_command::ControlCommand;
 use message::track::Track;
-use robot::robots::panda::PANDA_DOF;
 use task_manager::ros_thread::ROSThread;
-
-pub type PidParamsForPanda = PidParams<PANDA_DOF>;
-pub type PidStateForPanda = PidState<PANDA_DOF>;
-
-#[derive(Clone)]
-pub enum ControllerState {
-    Unknow,
-    ControllerList,
-    // PidState(PidState<N>),
-    PidStateForPanda(Box<PidState<PANDA_DOF>>),
-}
-
-pub enum ControllerParams {
-    ControllerList(Vec<ControllerParams>),
-    // PidParams(PidParams<N>),
-    PidParamsForPanda(Box<PidParamsForPanda>),
-}
 
 pub trait Controller: ROSThread {
     fn get_name(&self) -> String;
@@ -41,4 +22,35 @@ pub trait Controller: ROSThread {
     fn get_controller(&self) -> &Vec<Arc<Mutex<dyn Controller>>> {
         unimplemented!()
     }
+}
+
+#[allow(unused_macros)]
+macro_rules! generate_controller_methods {
+    () => {
+        fn get_name(&self) -> String {
+            self.name.clone()
+        }
+
+        fn get_path(&self) -> String {
+            self.path.clone()
+        }
+
+        fn set_params(&mut self, params: Value) {
+            let params: PidParams<N> = from_value(params).unwrap();
+            self.params = params;
+        }
+
+        fn set_track_queue(&mut self, track_queue: Arc<SegQueue<Track>>) {
+            self.msgnode.track_queue = track_queue;
+        }
+
+        fn set_controller_command_queue(
+            &mut self,
+            controller_command_queue: Arc<SegQueue<ControlCommand>>,
+        ) {
+            self.msgnode.control_command_queue = controller_command_queue;
+        }
+
+        fn add_controller(&mut self, _: Arc<Mutex<dyn Controller>>) {}
+    };
 }

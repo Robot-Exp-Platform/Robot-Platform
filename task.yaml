@@ -1,15 +1,8 @@
 robot_tasks:
   - name: "linear:panda_1"
     targets:
-      - Pose:
-          rotation: [0, 0, 0, 1.0]
-          translation: [0, 0, 0]
-      - Pose:
-          rotation: [0, 0, 0, 1.0]
-          translation: [0, 0, 0]
-      - Pose:
-          rotation: [0, 0, 0, 1.0]
-          translation: [0, 0, 0]
+      - Joint:
+          - 0, -0.7854, 0, -2.3562, 0, 1.5708, 0.7854
 
 nodes:
   - node_type: "planner"

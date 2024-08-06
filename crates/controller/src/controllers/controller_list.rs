@@ -1,8 +1,11 @@
 // use serde_json::Value;
+use crossbeam::queue::SegQueue;
 use serde_yaml::Value;
 use std::sync::{Arc, Mutex};
 
 use crate::controller_trait::Controller;
+use message::control_command::ControlCommand;
+use message::track::Track;
 use task_manager::ros_thread::ROSThread;
 
 pub struct ControllerList {
@@ -50,12 +53,8 @@ impl Controller for ControllerList {
     }
 
     fn set_params(&mut self, _: Value) {}
-    fn set_track_queue(&mut self, _: Arc<crossbeam::queue::SegQueue<message::track::Track>>) {}
-    fn set_controller_command_queue(
-        &mut self,
-        _: Arc<crossbeam::queue::SegQueue<message::control_command::ControlCommand>>,
-    ) {
-    }
+    fn set_track_queue(&mut self, _: Arc<SegQueue<Track>>) {}
+    fn set_controller_command_queue(&mut self, _: Arc<SegQueue<ControlCommand>>) {}
 
     fn add_controller(&mut self, controller: Arc<Mutex<dyn Controller>>) {
         self.controllers.push(controller)
