@@ -9,11 +9,10 @@ mod tests {
 
     #[test]
     fn yaml_to_json() {
-        let yaml_file = File::open(Path::new("tests/yaml_file.yaml")).unwrap();
-        let json_file = File::create(Path::new("tests/json_file.json")).unwrap();
+        let yaml_file = File::open(Path::new("tests/task.yaml")).unwrap();
+        let json_file = File::create(Path::new("tests/task.json")).unwrap();
         let yaml: YamlValue = serde_yaml::from_reader(yaml_file).unwrap();
-        let json = serde_json::to_string(&yaml).unwrap();
-        serde_json::to_writer(json_file, &json).unwrap();
+        serde_json::to_writer(json_file, &yaml).unwrap();
     }
 
     #[test]
