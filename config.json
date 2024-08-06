@@ -1,5 +1,5 @@
 {
-  "name": "panda",
+  "name": "panda_1",
   "robot_type": "panda",
   "controller": "pid",
   "planner": "linear",
