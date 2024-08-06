@@ -1,13 +1,24 @@
 import zmq
-import sys
+import json
 
 context = zmq.Context()
 socket = context.socket(zmq.REQ)  # 请求（Request）套接字
 socket.connect("tcp://localhost:5555")
-while True:
-    data = input("input your data: ")
-    if data == "q":
-        sys.exit()
-    socket.send_string(data)
-    response = socket.recv_string()
-    print(response)
+# 定义一个整数数组
+array = [1.1, 2.2, 3.3, 4.4, 5.5]
+
+# 将数组序列化为 JSON 字符串
+message = json.dumps(array)
+
+# 发送 JSON 字符串
+socket.send_string(message)
+print("Sent array:", array)
+
+# 等待接收回复
+message = socket.recv_string()
+print("Received JSON string:", message)
+
+# 反序列化为 Python 列表
+array = json.loads(message)
+for i in array:
+    print(i)
