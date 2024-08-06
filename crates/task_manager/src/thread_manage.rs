@@ -1,6 +1,7 @@
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Condvar, Mutex};
 use std::thread;
+use std::time::Instant;
 
 use crate::ros_thread::ROSThread;
 pub struct ThreadManage {
@@ -34,8 +35,16 @@ impl ThreadManage {
 
                 let mut node_lock = node.lock().unwrap();
                 node_lock.start();
+                let period = node_lock.get_period();
                 while flag.load(Ordering::SeqCst) {
+                    let start_time = Instant::now();
+
                     node_lock.update();
+
+                    let elapsed_time = start_time.elapsed();
+                    if period > elapsed_time {
+                        thread::sleep(period - elapsed_time);
+                    }
                 }
                 drop(node_lock);
             }

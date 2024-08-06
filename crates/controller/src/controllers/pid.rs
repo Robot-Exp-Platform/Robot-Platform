@@ -4,6 +4,7 @@ use serde::Deserialize;
 // use serde_json::{from_value, Value};
 use serde_yaml::{from_value, Value};
 use std::sync::{Arc, Mutex, RwLock};
+use std::time::Duration;
 
 use crate::controller_trait::Controller;
 use message::{control_command::ControlCommand, track::Track};
@@ -43,7 +44,20 @@ pub struct PidNode {
 }
 
 impl<R: Robot + 'static, const N: usize> Pid<R, N> {
-    pub fn new(
+    pub fn new(name: String, path: String, robot: Arc<RwLock<R>>) -> Pid<R, N> {
+        Pid::from_params(
+            name,
+            path,
+            PidParams {
+                period: 0.0,
+                kp: na::SMatrix::from_element(0.0),
+                ki: na::SMatrix::from_element(0.0),
+                kd: na::SMatrix::from_element(0.0),
+            },
+            robot,
+        )
+    }
+    pub fn from_params(
         name: String,
         path: String,
         params: PidParams<N>,
@@ -67,20 +81,6 @@ impl<R: Robot + 'static, const N: usize> Pid<R, N> {
             },
             robot,
         }
-    }
-
-    pub fn new_without_params(name: String, path: String, robot: Arc<RwLock<R>>) -> Pid<R, N> {
-        Pid::new(
-            name,
-            path,
-            PidParams {
-                period: 0.0,
-                kp: na::SMatrix::from_element(0.0),
-                ki: na::SMatrix::from_element(0.0),
-                kd: na::SMatrix::from_element(0.0),
-            },
-            robot,
-        )
     }
 }
 
@@ -127,5 +127,9 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Pid<R, N> {
         let _control_output = self.params.kp * self.state.error
             + self.params.ki * self.state.integral
             + self.params.kd * self.state.derivative;
+    }
+
+    fn get_period(&self) -> Duration {
+        Duration::from_secs_f64(self.params.period)
     }
 }

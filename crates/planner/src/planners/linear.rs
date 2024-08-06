@@ -1,8 +1,9 @@
 use crossbeam::queue::SegQueue;
 use serde::{Deserialize, Serialize};
-use std::sync::{Arc, Mutex, RwLock};
 // use serde_json::{Value, from_value};
 use serde_yaml::{from_value, Value};
+use std::sync::{Arc, Mutex, RwLock};
+use std::time::Duration;
 
 use crate::planner_trait::Planner;
 use message::target::Target;
@@ -12,7 +13,7 @@ use task_manager::ros_thread::ROSThread;
 
 #[derive(Serialize, Deserialize)]
 pub struct LinearParams {
-    // TODO params should be vec of 64,which has deferent length for deferent Robot
+    period: f64,
     interpolation: i32,
 }
 
@@ -34,7 +35,18 @@ pub struct Linear<R: Robot + 'static, const N: usize> {
 }
 
 impl<R: Robot + 'static, const N: usize> Linear<R, N> {
-    pub fn new(
+    pub fn new(name: String, path: String, robot: Arc<RwLock<R>>) -> Linear<R, N> {
+        Linear::from_params(
+            name,
+            path,
+            LinearParams {
+                period: 0.0,
+                interpolation: 0,
+            },
+            robot,
+        )
+    }
+    pub fn from_params(
         name: String,
         path: String,
         params: LinearParams,
@@ -52,10 +64,6 @@ impl<R: Robot + 'static, const N: usize> Linear<R, N> {
             },
             robot,
         }
-    }
-
-    pub fn new_without_params(name: String, path: String, robot: Arc<RwLock<R>>) -> Linear<R, N> {
-        Linear::new(name, path, LinearParams { interpolation: 0 }, robot)
     }
 }
 
@@ -90,4 +98,7 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Linear<R, N> {
     }
     fn start(&mut self) {}
     fn update(&mut self) {}
+    fn get_period(&self) -> Duration {
+        Duration::from_secs_f64(self.params.period)
+    }
 }

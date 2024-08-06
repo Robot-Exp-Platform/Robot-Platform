@@ -13,9 +13,7 @@ pub fn create_planner<R: Robot + 'static, const N: usize>(
     // !跟着文家新建 Planner 啦啦啦
     let name = format!("{}:{}", planner_type, robot_name);
     match planner_type.as_str() {
-        "linear" => Arc::new(Mutex::new(Linear::<R, N>::new_without_params(
-            name, path, robot,
-        ))),
+        "linear" => Arc::new(Mutex::new(Linear::<R, N>::new(name, path, robot))),
         _ => panic!("Planner type not found"),
     }
 }

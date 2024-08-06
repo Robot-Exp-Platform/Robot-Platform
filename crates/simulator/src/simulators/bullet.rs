@@ -39,6 +39,9 @@ struct BulletNode {
 // 为结构体 Bullet 实现方法，这里主要是初始化方法
 impl<R: Robot + 'static, const N: usize> Bullet<R, N> {
     pub fn new(name: String, path: String, robot: Arc<RwLock<R>>) -> Bullet<R, N> {
+        Bullet::from_params(name, path, robot)
+    }
+    pub fn from_params(name: String, path: String, robot: Arc<RwLock<R>>) -> Bullet<R, N> {
         #[cfg(feature = "rszmq")]
         {
             let context = Arc::new(zmq::Context::new());
@@ -60,9 +63,6 @@ impl<R: Robot + 'static, const N: usize> Bullet<R, N> {
             // 使用zmq实现程序通信，通信协议暂定为TCP
             // 以下为responder端
         }
-    }
-    pub fn new_without_params(name: String, path: String, robot: Arc<RwLock<R>>) -> Bullet<R, N> {
-        Bullet::new(name, path, robot)
     }
 }
 

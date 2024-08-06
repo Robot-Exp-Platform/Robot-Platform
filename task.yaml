@@ -15,12 +15,13 @@ nodes:
   - node_type: "planner"
     name: "linear:panda_1"
     param:
-      interpolation: 5
+      period: 0.05
+      interpolation: 10
 
   - node_type: "controller"
     name: "pid:panda_1"
     param:
-      period: 0.01
+      period: 0.005
       kp:
         - 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
           0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0,

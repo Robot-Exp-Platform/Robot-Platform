@@ -20,10 +20,10 @@ macro_rules! apply_closure_to_iter {
 
 impl ControllerList {
     pub fn new(name: String, path: String) -> ControllerList {
-        ControllerList::new_with_controllers(name, path, Vec::new())
+        ControllerList::from_controllers(name, path, Vec::new())
     }
 
-    pub fn new_with_controllers(
+    pub fn from_controllers(
         name: String,
         path: String,
         controllers: Vec<Arc<Mutex<dyn Controller>>>,
@@ -33,10 +33,6 @@ impl ControllerList {
             path,
             controllers,
         }
-    }
-
-    pub fn add_controller(&mut self, controller: Arc<Mutex<dyn Controller>>) {
-        self.controllers.push(controller)
     }
 }
 
