@@ -18,7 +18,7 @@ task_manager.workspace = true
 message.workspace = true
 
 [features]
-# default = ["rszmq"]
+default = ["rszmq"]
 noros = []
 rszmq = ["zmq"]
 ros = ["rosrust", "rosrust_msg"]
