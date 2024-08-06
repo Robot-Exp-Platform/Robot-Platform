@@ -2,7 +2,7 @@ import pybullet as p
 import pybullet_data
 import time
 
-USE_GUI = True
+USE_GUI = False
 if USE_GUI:
     p.connect(p.GUI)
 else:
@@ -23,6 +23,7 @@ robot_id = p.loadURDF(panda_path, useFixedBase=True)
 
 # 关节数量，Panda 机器人有 7 个自由度
 num_joints = p.getNumJoints(robot_id)
+print("num_joints: ", num_joints)
 
 # 模拟器步进
 p.setGravity(0, 0, -9.81)
@@ -30,6 +31,7 @@ p.setRealTimeSimulation(0)
 
 # 设置初始位置和控制目标
 initial_joint_positions = [0.0] * num_joints
+print("initial_joint_positions: ", initial_joint_positions)
 for joint_index in range(num_joints):
     p.resetJointState(robot_id, joint_index, initial_joint_positions[joint_index])
 
