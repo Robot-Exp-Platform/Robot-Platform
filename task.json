@@ -1,5 +1,5 @@
 {
-  "robots": [
+  "robot_tasks": [
     {
       "name": "robot_1",
       "task_type": "target",
