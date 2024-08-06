@@ -1,4 +1,5 @@
 use crossbeam::queue::SegQueue;
+use serde_json::Value as JsonValue;
 use std::sync::{Arc, Mutex};
 
 use crate::controllers::pid::{PidParams, PidState};
@@ -28,7 +29,7 @@ pub trait Controller: ROSThread {
     fn get_name(&self) -> String;
     fn get_path(&self) -> String;
 
-    fn set_params(&mut self, params: String);
+    fn set_params(&mut self, params: JsonValue);
     fn set_track_queue(&mut self, track_queue: Arc<SegQueue<Track>>);
     fn set_controller_command_queue(
         &mut self,
