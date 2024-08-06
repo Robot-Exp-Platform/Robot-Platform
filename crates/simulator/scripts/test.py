@@ -8,10 +8,16 @@ if USE_GUI:
 else:
     p.connect(p.DIRECT)
 
+# 渲染逻辑
+p.configureDebugVisualizer(p.COV_ENABLE_RENDERING, 0)
+p.configureDebugVisualizer(p.COV_ENABLE_GUI, 0)
+p.configureDebugVisualizer(p.COV_ENABLE_RENDERING, 1)
+
 # 设置 PyBullet 的数据路径
 p.setAdditionalSearchPath(pybullet_data.getDataPath())
 
 # 加载 Panda 机器人 URDF 文件
+planeId = p.loadURDF("plane.urdf")
 panda_path = "franka_panda/panda.urdf"
 robot_id = p.loadURDF(panda_path, useFixedBase=True)
 
@@ -35,20 +41,32 @@ for joint_index in range(0, 7):
 
 
 # 设置关节的速度
-target_velocity = -1.0  # rad/s for revolute joints or m/s for prismatic joints
-for joint_index in range(0, 7):
-    p.setJointMotorControl2(
-        bodyUniqueId=robot_id,
-        jointIndex=joint_index,
-        controlMode=p.VELOCITY_CONTROL,
-        targetVelocity=target_velocity,
-        force=100.0  # 设置最大力矩或推力
-    )
+target_velocities = [0.5, 1.0, 1.5, -1.0, -0.5, 0.7, -0.3] 
 
-# 模拟几秒以便观察
-for _ in range(2400):
-    p.stepSimulation()
-    time.sleep(1.0 / 240.0)
+for joint_index in range(0, 7):
+    # 启动一个关节的运动
+    for index in range(0, 7):
+        if index == joint_index:
+            p.setJointMotorControl2(
+                bodyUniqueId=robot_id,
+                jointIndex=index,
+                controlMode=p.VELOCITY_CONTROL,
+                targetVelocity=target_velocities[index],
+                force=100.0  # 设置最大力矩或推力
+            )
+        else:
+            p.setJointMotorControl2(
+                bodyUniqueId=robot_id,
+                jointIndex=index,
+                controlMode=p.VELOCITY_CONTROL,
+                targetVelocity=0,
+                force=100.0  # 设置最大力矩或推力
+            )
+    # 模拟几秒以便观察
+    for _ in range(500):
+        p.stepSimulation()
+        # time.sleep(1.0 / 240.0)
+        time.sleep(1.0 / 240.0)
 
 # 获取并打印关节角度与速度
 joint_angles = []
