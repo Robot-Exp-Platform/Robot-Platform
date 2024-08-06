@@ -11,7 +11,7 @@ use std::sync::{Arc, RwLock};
 use zmq;
 
 use crate::simulator_trait::Simulator;
-use message::control_command::ControlCommand;
+use message::control_command::{self, ControlCommand};
 use robot::robot_trait::Robot;
 use task_manager::ros_thread::ROSThread;
 
@@ -145,6 +145,17 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Bullet<R, N> {
         //     }
         // }
         {
+            // 更新 control command
+            let (period, control_command) = match self.msgnode.control_command_queue.pop().unwrap()
+            {
+                ControlCommand::Joint(joint) => (0.0, joint),
+                ControlCommand::JointWithPeriod(joint_with_period) => {
+                    (joint_with_period.period, joint_with_period.joint)
+                }
+                _ => panic!("Invalid control command type"),
+            };
+
+            // 获取 robot 状态
             let responder = self.msgnode.responder.lock().unwrap();
             match responder.recv_string(0) {
                 Ok(Ok(message)) => {
@@ -169,6 +180,10 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Bullet<R, N> {
                     eprintln!("Failed to receive message: {}", e);
                 }
             }
+
+            // 将 robot state 反序列化为 State 消息类型，并写入 robot 中去
+
+            // 向仿真器发送控制指令
         }
     }
 }
