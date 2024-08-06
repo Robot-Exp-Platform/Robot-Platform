@@ -78,4 +78,62 @@ mod tests {
         assert_eq!(dmat2x2, dmat2x2_deserialized_json);
         assert_eq!(iso3, iso3_deserialized_json);
     }
+
+    use serde::{Deserialize, Serialize};
+    #[test]
+    fn enum_serialize_check() {
+        #[derive(Serialize, Deserialize, Debug, PartialEq)]
+        enum MyEnum {
+            Int(i32),
+            Float(f64),
+            String(String),
+        }
+
+        let int = MyEnum::Int(42);
+        let float = MyEnum::Float(3.14);
+        let string = MyEnum::String("hello".to_string());
+
+        let int_serialized = serde_json::to_string(&int).unwrap();
+        let float_serialized = serde_json::to_string(&float).unwrap();
+        let string_serialized = serde_json::to_string(&string).unwrap();
+
+        let int_json: serde_json::Value = serde_json::to_value(&int).unwrap();
+        let float_json: serde_json::Value = serde_json::to_value(&float).unwrap();
+        let string_json: serde_json::Value = serde_json::to_value(&string).unwrap();
+
+        println!("print Int: {:?}", int);
+        println!("serialized: {}", int_serialized);
+        println!("json: {}", int_json);
+
+        println!("print Float: {:?}", float);
+        println!("serialized: {}", float_serialized);
+        println!("json: {}", float_json);
+
+        println!("print String: {:?}", string);
+        println!("serialized: {}", string_serialized);
+        println!("json: {}", string_json);
+    }
+
+    #[test]
+    fn enum_vec_serialize_check() {
+        #[derive(Serialize, Deserialize, Debug, PartialEq)]
+        enum MyEnum {
+            Int(i32),
+            Float(f64),
+            String(String),
+        }
+
+        let vec = vec![
+            MyEnum::Int(42),
+            MyEnum::Float(3.14),
+            MyEnum::String("hello".to_string()),
+        ];
+
+        let vec_serialized = serde_json::to_string(&vec).unwrap();
+        let vec_json: serde_json::Value = serde_json::to_value(&vec).unwrap();
+
+        println!("print Vec: {:?}", vec);
+        println!("serialized: {}", vec_serialized);
+        println!("json: {}", vec_json);
+    }
 }

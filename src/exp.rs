@@ -8,7 +8,6 @@ use std::sync::{Arc, Mutex, RwLock};
 
 use crate::config::CONFIG_PATH;
 use controller::config::create_controller;
-use message::target::Target::Pose;
 use planner::config::create_planner;
 use robot::robots::panda;
 use robot::robots::robot_list::RobotList;
@@ -258,7 +257,6 @@ impl Exp {
         }
 
         for robot_task in &task.robot_tasks {
-            // TODO 当前的 robot_task 不对劲，应该是一个枚举类型，但是枚举类型的反序列化还没写。以下的代码仅限于临时使用
             let target_queue = Arc::new(SegQueue::new());
             let planner = Exp::get_planner_with_name(
                 &planner,
@@ -266,12 +264,10 @@ impl Exp {
             )
             .unwrap();
             for target in &robot_task.targets {
-                target_queue.push(Pose(target.clone()));
+                target_queue.push(target.clone());
             }
-            planner
-                .lock()
-                .unwrap()
-                .set_target_queue(target_queue.clone());
+
+            planner.lock().unwrap().set_target_queue(target_queue);
         }
 
         self.task_manage = Some(task);
