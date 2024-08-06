@@ -50,8 +50,7 @@ impl<R: Robot + 'static, const N: usize> Bullet<R, N> {
                 sub_list: Vec::new(),
             },
             robot,
-            // 使用zmq实现程序通信，通信协议暂定为TCP
-            // 以下为responder端
+            
         }
     }
     pub fn new_without_params(name: String, path: String, robot: Arc<RwLock<R>>) -> Bullet<R, N> {
@@ -84,7 +83,9 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Bullet<R, N> {
     fn init(&mut self) {
         println!("{} 向您问好. {} says hello.", self.name, self.name);
         #[cfg(feature = "rszmq")]
-        {
+        {   
+            // 使用zmq实现程序通信，通信协议暂定为TCP
+            // 以下为responder端
             // 使用锁来访问 responder
             let responder = self.msgnode.responder.clone(); // 克隆 Arc 引用
             let responder_lock = responder.lock().unwrap(); // 锁定 Mutex 并解锁获得可变引用

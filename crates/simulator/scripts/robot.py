@@ -116,5 +116,3 @@ class Panda:
         joint_positions, joint_velocities = self.get_joints_state()
         for i in range(0, 7):
             print(f"Joint {i}: Angle = {joint_positions[i]:.2f}, Velocity = {joint_velocities[i]:.2f}")
-
-

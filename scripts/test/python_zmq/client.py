@@ -1,6 +1,5 @@
 import zmq
 import json
-import sys
 
 context = zmq.Context()
 socket = context.socket(zmq.REQ)  # 请求（Request）套接字
