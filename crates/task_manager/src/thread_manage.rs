@@ -21,8 +21,9 @@ impl ThreadManage {
         let condvar = self.condvar.clone();
         let node = node.clone();
         let thread = thread::spawn(move || {
-            let mut node = node.lock().unwrap();
-            node.init();
+            let mut node_lock = node.lock().unwrap();
+            node_lock.init();
+            drop(node_lock);
             let (flag, cvar, lock) = &*condvar;
             loop {
                 let mut locked = lock.lock().unwrap();
@@ -31,11 +32,12 @@ impl ThreadManage {
                 }
                 drop(locked);
 
-                node.start();
-
+                let mut node_lock = node.lock().unwrap();
+                node_lock.start();
                 while flag.load(Ordering::SeqCst) {
-                    node.update();
+                    node_lock.update();
                 }
+                drop(node_lock);
             }
         });
         self.threads.push(thread);
