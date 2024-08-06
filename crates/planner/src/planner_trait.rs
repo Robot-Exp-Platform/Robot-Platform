@@ -1,7 +1,8 @@
 use crossbeam::queue::SegQueue;
 use message::target::Target;
 use message::track::Track;
-use serde_json::Value as JsonValue;
+// use serde_json::Value
+use serde_yaml::Value;
 use std::sync::{Arc, Mutex};
 use task_manager::ros_thread::ROSThread;
 
@@ -23,7 +24,7 @@ pub trait Planner: ROSThread {
         unimplemented!()
     }
 
-    fn set_params(&mut self, params: JsonValue);
+    fn set_params(&mut self, params: Value);
     fn set_target_queue(&mut self, target_queue: Arc<SegQueue<Target>>);
     fn set_track_queue(&mut self, track_queue: Arc<SegQueue<Track>>);
 

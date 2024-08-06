@@ -1,7 +1,8 @@
 use chrono;
 use crossbeam::queue::SegQueue;
 use serde::Deserialize;
-use serde_json::from_reader;
+// use serde_json::from_reader;
+use serde_yaml::from_reader;
 use std::fs::File;
 use std::path;
 use std::sync::{Arc, Mutex, RwLock};

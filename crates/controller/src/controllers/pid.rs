@@ -1,8 +1,11 @@
 use crossbeam::queue::SegQueue;
+use message::control_command::JointWithPeriod;
 use nalgebra as na;
 use serde::Deserialize;
-use serde_json::Value as JsonValue;
+// use serde_json::{from_value, Value};
+use serde_yaml::{from_value, Value};
 use std::sync::{Arc, Mutex, RwLock};
+use std::time::Duration;
 
 use crate::controller_trait::Controller;
 use message::{control_command::ControlCommand, track::Track};
@@ -20,9 +23,8 @@ pub struct Pid<R: Robot + 'static, const N: usize> {
     robot: Arc<RwLock<R>>,
 }
 
-#[derive(Clone, Copy)]
 pub struct PidState<const N: usize> {
-    target: na::SVector<f64, N>,
+    track: na::SVector<f64, N>,
     error: na::SVector<f64, N>,
     integral: na::SVector<f64, N>,
     derivative: na::SVector<f64, N>,
@@ -42,7 +44,20 @@ pub struct PidNode {
 }
 
 impl<R: Robot + 'static, const N: usize> Pid<R, N> {
-    pub fn new(
+    pub fn new(name: String, path: String, robot: Arc<RwLock<R>>) -> Pid<R, N> {
+        Pid::from_params(
+            name,
+            path,
+            PidParams {
+                period: 0.0,
+                kp: na::SMatrix::from_element(0.0),
+                ki: na::SMatrix::from_element(0.0),
+                kd: na::SMatrix::from_element(0.0),
+            },
+            robot,
+        )
+    }
+    pub fn from_params(
         name: String,
         path: String,
         params: PidParams<N>,
@@ -53,7 +68,7 @@ impl<R: Robot + 'static, const N: usize> Pid<R, N> {
             path,
 
             state: PidState {
-                target: na::SVector::from_element(0.0),
+                track: na::SVector::from_element(0.0),
                 error: na::SVector::from_element(0.0),
                 integral: na::SVector::from_element(0.0),
                 derivative: na::SVector::from_element(0.0),
@@ -67,20 +82,6 @@ impl<R: Robot + 'static, const N: usize> Pid<R, N> {
             robot,
         }
     }
-
-    pub fn new_without_params(name: String, path: String, robot: Arc<RwLock<R>>) -> Pid<R, N> {
-        Pid::new(
-            name,
-            path,
-            PidParams {
-                period: 0.0,
-                kp: na::SMatrix::from_element(0.0),
-                ki: na::SMatrix::from_element(0.0),
-                kd: na::SMatrix::from_element(0.0),
-            },
-            robot,
-        )
-    }
 }
 
 impl<R: Robot + 'static, const N: usize> Controller for Pid<R, N> {
@@ -91,8 +92,8 @@ impl<R: Robot + 'static, const N: usize> Controller for Pid<R, N> {
         self.path.clone()
     }
 
-    fn set_params(&mut self, params: JsonValue) {
-        let params: PidParams<N> = serde_json::from_value(params).unwrap();
+    fn set_params(&mut self, params: Value) {
+        let params: PidParams<N> = from_value(params).unwrap();
         self.params = params;
     }
     fn set_track_queue(&mut self, track_queue: Arc<SegQueue<Track>>) {
@@ -115,16 +116,33 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Pid<R, N> {
     fn start(&mut self) {}
 
     fn update(&mut self) {
-        let robot_read = self.robot.read().unwrap();
-        let q = na::SVector::from_row_slice(&robot_read.get_q()[..N]);
+        // 更新 track
+        let Track::Joint(track) = self.msgnode.track_queue.pop().unwrap();
+        self.state.track = na::SVector::from_vec(track);
 
-        let new_error = self.state.target - q;
+        // 获取 robot 状态
+        let robot_read = self.robot.read().unwrap();
+        let q = na::SVector::from_vec(robot_read.get_q());
+
+        // 执行 pid 逻辑
+        let new_error = self.state.track - q;
         self.state.integral += new_error * self.params.period;
         self.state.derivative = (new_error - self.state.error) / self.params.period;
         self.state.error = new_error;
 
-        let _control_output = self.params.kp * self.state.error
+        let control_output = self.params.kp * self.state.error
             + self.params.ki * self.state.integral
             + self.params.kd * self.state.derivative;
+
+        // 发送控制指令
+        let control_command = ControlCommand::JointWithPeriod(JointWithPeriod {
+            period: self.params.period,
+            joint: control_output.as_slice().to_vec(),
+        });
+        self.msgnode.control_command_queue.push(control_command);
+    }
+
+    fn get_period(&self) -> Duration {
+        Duration::from_secs_f64(self.params.period)
     }
 }

@@ -11,6 +11,7 @@ typenum.workspace = true
 crossbeam.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+serde_yaml.workspace = true
 zmq = { workspace = true, optional = true }
 rosrust = { workspace = true, optional = true }
 rosrust_msg = { workspace = true, optional = true }
@@ -21,7 +22,7 @@ task_manager.workspace = true
 message.workspace = true
 
 [features]
-default = ["rszmq"]
+# default = ["rszmq"]
 noros = []
 rszmq = ["zmq"]
 ros = ["rosrust", "rosrust_msg"]

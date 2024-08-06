@@ -1,14 +1,17 @@
 use crossbeam::queue::SegQueue;
 #[cfg(feature = "ros")]
 use rosrust as ros;
-use serde_json::Value as JsonValue;
-use std::sync::{Arc, Mutex, RwLock};
+// use serde_json::Value;
 use serde_json::json;
+use serde_yaml::Value;
+#[cfg(feature = "rszmq")]
+use std::sync::Mutex;
+use std::sync::{Arc, RwLock};
 #[cfg(feature = "rszmq")]
 use zmq;
 
 use crate::simulator_trait::Simulator;
-use message::control_command::ControlCommand;
+use message::control_command::{self, ControlCommand};
 use robot::robot_trait::Robot;
 use task_manager::ros_thread::ROSThread;
 
@@ -28,6 +31,7 @@ struct BulletNode {
     control_command_queue: Arc<SegQueue<ControlCommand>>,
     #[cfg(feature = "rszmq")]
     context: Arc<zmq::Context>,
+    #[cfg(feature = "rszmq")]
     responder: Arc<Mutex<zmq::Socket>>,
     #[cfg(feature = "ros")]
     sub_list: Vec<ros::Subscriber>,
@@ -36,26 +40,28 @@ struct BulletNode {
 // 为结构体 Bullet 实现方法，这里主要是初始化方法
 impl<R: Robot + 'static, const N: usize> Bullet<R, N> {
     pub fn new(name: String, path: String, robot: Arc<RwLock<R>>) -> Bullet<R, N> {
-        let context = Arc::new(zmq::Context::new());
-        let responder = context.socket(zmq::REP).unwrap();
+        Bullet::from_params(name, path, robot)
+    }
+    pub fn from_params(name: String, path: String, robot: Arc<RwLock<R>>) -> Bullet<R, N> {
+        #[cfg(feature = "rszmq")]
+        {
+            let context = Arc::new(zmq::Context::new());
+            let responder = context.socket(zmq::REP).unwrap();
+        }
         Bullet {
             name,
             path,
             msgnode: BulletNode {
                 control_command_queue: Arc::new(SegQueue::new()),
                 #[cfg(feature = "rszmq")]
-                context,
+                context: Arc::new(zmq::Context::new()),
+                #[cfg(feature = "rszmq")]
                 responder: Arc::new(Mutex::new(responder)),
-                // sub_list: Vec::new(),
                 #[cfg(feature = "ros")]
                 sub_list: Vec::new(),
             },
             robot,
-            
         }
-    }
-    pub fn new_without_params(name: String, path: String, robot: Arc<RwLock<R>>) -> Bullet<R, N> {
-        Bullet::new(name, path, robot)
     }
 }
 
@@ -68,7 +74,7 @@ impl<R: Robot + 'static, const N: usize> Simulator for Bullet<R, N> {
         self.path.clone()
     }
 
-    fn set_params(&mut self, _: JsonValue) {}
+    fn set_params(&mut self, _: Value) {}
     fn set_controller_command_queue(
         &mut self,
         controller_command_queue: Arc<SegQueue<ControlCommand>>,
@@ -84,7 +90,7 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Bullet<R, N> {
     fn init(&mut self) {
         println!("{} 向您问好. {} says hello.", self.name, self.name);
         #[cfg(feature = "rszmq")]
-        {   
+        {
             // 使用zmq实现程序通信，通信协议暂定为TCP
             // 以下为responder端
             // 使用锁来访问 responder
@@ -139,12 +145,23 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Bullet<R, N> {
         //     }
         // }
         {
+            // 更新 control command
+            let (period, control_command) = match self.msgnode.control_command_queue.pop().unwrap()
+            {
+                ControlCommand::Joint(joint) => (0.0, joint),
+                ControlCommand::JointWithPeriod(joint_with_period) => {
+                    (joint_with_period.period, joint_with_period.joint)
+                }
+                _ => panic!("Invalid control command type"),
+            };
+
+            // 获取 robot 状态
             let responder = self.msgnode.responder.lock().unwrap();
             match responder.recv_string(0) {
                 Ok(Ok(message)) => {
                     // 成功接收到消息，并且消息是一个有效的 UTF-8 字符串
                     println!("Received message: {}", message);
-                     // 反序列化为 JSON 值
+                    // 反序列化为 JSON 值
                     let array: Vec<f64> = serde_json::from_str(&message).unwrap();
                     println!("Received array: {:?}", array);
                     // 定义一个数组
@@ -163,6 +180,10 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Bullet<R, N> {
                     eprintln!("Failed to receive message: {}", e);
                 }
             }
+
+            // 将 robot state 反序列化为 State 消息类型，并写入 robot 中去
+
+            // 向仿真器发送控制指令
         }
     }
 }
