@@ -1437,6 +1437,8 @@ dependencies = [
  "robot",
  "rosrust",
  "rosrust_msg",
+ "serde",
+ "serde_json",
  "task_manager",
  "typenum",
  "zmq",
