@@ -1,7 +1,8 @@
 use crossbeam::queue::SegQueue;
 #[cfg(feature = "ros")]
 use rosrust as ros;
-use serde_json::Value as JsonValue;
+// use serde_json::Value;
+use serde_yaml::Value;
 use std::sync::{Arc, Mutex, RwLock};
 #[cfg(feature = "rszmq")]
 use zmq;
@@ -68,7 +69,7 @@ impl<R: Robot + 'static, const N: usize> Simulator for Bullet<R, N> {
         self.path.clone()
     }
 
-    fn set_params(&mut self, _: JsonValue) {}
+    fn set_params(&mut self, _: Value) {}
     fn set_controller_command_queue(
         &mut self,
         controller_command_queue: Arc<SegQueue<ControlCommand>>,

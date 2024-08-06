@@ -296,6 +296,7 @@ dependencies = [
  "rosrust_msg",
  "serde",
  "serde_json",
+ "serde_yaml",
  "task_manager",
  "zmq",
 ]
@@ -1008,6 +1009,7 @@ dependencies = [
  "robot",
  "serde",
  "serde_json",
+ "serde_yaml",
  "task_manager",
 ]
 
@@ -1453,6 +1455,7 @@ dependencies = [
  "rosrust_msg",
  "serde",
  "serde_json",
+ "serde_yaml",
  "task_manager",
  "typenum",
  "zmq",
@@ -1529,6 +1532,7 @@ dependencies = [
  "robot",
  "serde",
  "serde_json",
+ "serde_yaml",
  "zmq",
 ]
 

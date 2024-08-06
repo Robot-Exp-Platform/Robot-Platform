@@ -1,4 +1,5 @@
-use serde_json::Value as JsonValue;
+// use serde_json::Value;
+use serde_yaml::Value;
 use std::sync::{Arc, Mutex};
 
 use crate::controller_trait::Controller;
@@ -52,7 +53,7 @@ impl Controller for ControllerList {
         self.path.clone()
     }
 
-    fn set_params(&mut self, _: JsonValue) {}
+    fn set_params(&mut self, _: Value) {}
     fn set_track_queue(&mut self, _: Arc<crossbeam::queue::SegQueue<message::track::Track>>) {}
     fn set_controller_command_queue(
         &mut self,

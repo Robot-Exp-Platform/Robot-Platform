@@ -1,7 +1,8 @@
 use crossbeam::queue::SegQueue;
 use nalgebra as na;
 use serde::Deserialize;
-use serde_json::Value as JsonValue;
+// use serde_json::{from_value, Value};
+use serde_yaml::{from_value, Value};
 use std::sync::{Arc, Mutex, RwLock};
 
 use crate::controller_trait::Controller;
@@ -91,8 +92,8 @@ impl<R: Robot + 'static, const N: usize> Controller for Pid<R, N> {
         self.path.clone()
     }
 
-    fn set_params(&mut self, params: JsonValue) {
-        let params: PidParams<N> = serde_json::from_value(params).unwrap();
+    fn set_params(&mut self, params: Value) {
+        let params: PidParams<N> = from_value(params).unwrap();
         self.params = params;
     }
     fn set_track_queue(&mut self, track_queue: Arc<SegQueue<Track>>) {

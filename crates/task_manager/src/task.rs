@@ -1,6 +1,7 @@
 use message::target::Target;
 use serde::Deserialize;
-use serde_json::Value as JsonValue;
+// use serde_json::Value as JsonValue;
+use serde_yaml::Value as YamlValue;
 
 #[derive(Debug, Deserialize)]
 pub struct RobotTasks {
@@ -11,7 +12,7 @@ pub struct RobotTasks {
 pub struct Node {
     pub node_type: String,
     pub name: String,
-    pub param: JsonValue,
+    pub param: YamlValue,
 }
 
 #[derive(Debug, Deserialize)]

@@ -93,25 +93,39 @@ mod tests {
         let float = MyEnum::Float(3.14);
         let string = MyEnum::String("hello".to_string());
 
-        let int_serialized = serde_json::to_string(&int).unwrap();
-        let float_serialized = serde_json::to_string(&float).unwrap();
-        let string_serialized = serde_json::to_string(&string).unwrap();
+        let int_serialized_json = serde_json::to_string(&int).unwrap();
+        let float_serialized_json = serde_json::to_string(&float).unwrap();
+        let string_serialized_json = serde_json::to_string(&string).unwrap();
+
+        let int_serialized_yaml = serde_yaml::to_string(&int).unwrap();
+        let float_serialized_yaml = serde_yaml::to_string(&float).unwrap();
+        let string_serialized_yaml = serde_yaml::to_string(&string).unwrap();
 
         let int_json: serde_json::Value = serde_json::to_value(&int).unwrap();
         let float_json: serde_json::Value = serde_json::to_value(&float).unwrap();
         let string_json: serde_json::Value = serde_json::to_value(&string).unwrap();
 
+        let int_yaml: serde_yaml::Value = serde_yaml::to_value(&int).unwrap();
+        let float_yaml: serde_yaml::Value = serde_yaml::to_value(&float).unwrap();
+        let string_yaml: serde_yaml::Value = serde_yaml::to_value(&string).unwrap();
+
         println!("print Int: {:?}", int);
-        println!("serialized: {}", int_serialized);
+        println!("serialized json: {}", int_serialized_json);
+        println!("serialized yaml: {}", int_serialized_yaml);
         println!("json: {}", int_json);
+        println!("yaml: {:?}", int_yaml);
 
         println!("print Float: {:?}", float);
-        println!("serialized: {}", float_serialized);
+        println!("serialized json: {}", float_serialized_json);
+        println!("serialized yaml: {}", float_serialized_yaml);
         println!("json: {}", float_json);
+        println!("yaml: {:?}", float_yaml);
 
         println!("print String: {:?}", string);
-        println!("serialized: {}", string_serialized);
+        println!("serialized json: {}", string_serialized_json);
+        println!("serialized yaml: {}", string_serialized_yaml);
         println!("json: {}", string_json);
+        println!("yaml: {:?}", string_yaml);
     }
 
     #[test]
