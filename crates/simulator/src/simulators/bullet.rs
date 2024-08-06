@@ -3,7 +3,9 @@ use crossbeam::queue::SegQueue;
 use rosrust as ros;
 // use serde_json::Value;
 use serde_yaml::Value;
-use std::sync::{Arc, Mutex, RwLock};
+#[cfg(feature = "rszmq")]
+use std::sync::Mutex;
+use std::sync::{Arc, RwLock};
 #[cfg(feature = "rszmq")]
 use zmq;
 
@@ -28,6 +30,7 @@ struct BulletNode {
     control_command_queue: Arc<SegQueue<ControlCommand>>,
     #[cfg(feature = "rszmq")]
     context: Arc<zmq::Context>,
+    #[cfg(feature = "rszmq")]
     responder: Arc<Mutex<zmq::Socket>>,
     #[cfg(feature = "ros")]
     sub_list: Vec<ros::Subscriber>,
@@ -36,17 +39,20 @@ struct BulletNode {
 // 为结构体 Bullet 实现方法，这里主要是初始化方法
 impl<R: Robot + 'static, const N: usize> Bullet<R, N> {
     pub fn new(name: String, path: String, robot: Arc<RwLock<R>>) -> Bullet<R, N> {
-        let context = Arc::new(zmq::Context::new());
-        let responder = context.socket(zmq::REP).unwrap();
+        #[cfg(feature = "rszmq")]
+        {
+            let context = Arc::new(zmq::Context::new());
+            let responder = context.socket(zmq::REP).unwrap();
+        }
         Bullet {
             name,
             path,
             msgnode: BulletNode {
                 control_command_queue: Arc::new(SegQueue::new()),
                 #[cfg(feature = "rszmq")]
-                context,
+                context: Arc::new(zmq::Context::new()),
+                #[cfg(feature = "rszmq")]
                 responder: Arc::new(Mutex::new(responder)),
-                // sub_list: Vec::new(),
                 #[cfg(feature = "ros")]
                 sub_list: Vec::new(),
             },
