@@ -14,9 +14,7 @@ serde_json.workspace = true
 zmq = { workspace = true, optional = true }
 rosrust = { workspace = true, optional = true }
 rosrust_msg = { workspace = true, optional = true }
-crossbeam.workspace = true
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
+
 
 robot.workspace = true
 task_manager.workspace = true
