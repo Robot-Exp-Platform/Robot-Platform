@@ -1,10 +1,10 @@
+use message::target::Target;
 use serde::Deserialize;
 
-use robot::robot_trait::Pose;
 #[derive(Debug, Deserialize)]
 pub struct RobotTasks {
     pub name: String,
-    pub targets: Vec<Pose>,
+    pub targets: Vec<Target>,
 }
 #[derive(Debug, Deserialize)]
 pub struct Node {

@@ -6,6 +6,7 @@ repository.workspace = true
 
 [dependencies]
 nalgebra.workspace = true
+serde = { version = "1.0", features = ["derive"] }
 rosrust = { workspace = true, optional = true }
 
 robot.workspace = true
