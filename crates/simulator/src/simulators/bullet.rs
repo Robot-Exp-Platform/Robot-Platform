@@ -18,17 +18,15 @@ pub struct Bullet<R: Robot + 'static, const N: usize> {
 
     msgnode: BulletNode,
     robot: Arc<RwLock<R>>,
-
-    context: Arc<zmq::Context>,
-    responder: Arc<Mutex<zmq::Socket>>, 
 }
 
 // 消息节点结构体声明，随条件编译的不同而不同，条件编译将决定其使用什么通讯方式
 #[allow(dead_code)]
 struct BulletNode {
     control_command_queue: Arc<SegQueue<ControlCommand>>,
-    // #[cfg(feature = "zmq")]
-    // pub sub_list: Vec<zmq::Socket>,
+    #[cfg(feature = "zmq")]
+    context: Arc<zmq::Context>,
+    responder: Arc<Mutex<zmq::Socket>>, 
     #[cfg(feature = "ros")]
     sub_list: Vec<ros::Subscriber>,
 }
@@ -43,7 +41,9 @@ impl<R: Robot + 'static, const N: usize> Bullet<R, N> {
             path,
             msgnode: BulletNode {
                 control_command_queue: Arc::new(SegQueue::new()),
-                // #[cfg(feature = "zmq")]
+                #[cfg(feature = "zmq")]
+                context,
+                responder: Arc::new(Mutex::new(responder)),
                 // sub_list: Vec::new(),
                 #[cfg(feature = "ros")]
                 sub_list: Vec::new(),
@@ -51,8 +51,7 @@ impl<R: Robot + 'static, const N: usize> Bullet<R, N> {
             robot,
             // 使用zmq实现程序通信，通信协议暂定为TCP
             // 以下为responder端
-            context,
-            responder: Arc::new(Mutex::new(responder)),
+            
             
         }
     }
@@ -88,7 +87,7 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Bullet<R, N> {
         #[cfg(feature = "rszmq")]
         {   
             // 使用锁来访问 responder
-            let responder = self.responder.clone(); // 克隆 Arc 引用
+            let responder = self.msgnode.responder.clone(); // 克隆 Arc 引用
             let responder_lock = responder.lock().unwrap(); // 锁定 Mutex 并解锁获得可变引用
             // 绑定到TCP地址
             match responder_lock.bind("tcp://*:5555") {
@@ -118,27 +117,27 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Bullet<R, N> {
     }
 
     fn start(&mut self) {
-        #[cfg(feature = "rszmq")]{
-            let responder = self.responder.clone();
-            loop {
-                let responder_lock = responder.lock().unwrap(); // 获取锁
-                let message = responder_lock
-                    .recv_string(0)
-                    .expect("Failed to receive message")
-                    .unwrap();
-                drop(responder_lock); // 在处理消息前释放锁，允许其他线程在此期间操作
-                let robot_state: Vec<f64> = message
-                    .split(' ')
-                    .map(|s| s.parse::<f64>().unwrap()) // 将每个拆分的部分解析为 f64
-                    .collect();
-                {
-                    let mut robot_write = self.robot.write().unwrap();
-                    robot_write.set_q(robot_state[0..N].to_vec());
-                    robot_write.set_q_dot(robot_state[N..2 * N].to_vec());
-                }
-            }
-        }
+        
     }
 
-    fn update(&mut self) {}
+    fn update(&mut self) {
+        #[cfg(feature = "rszmq")]{
+            let responder = self.msgnode.responder.clone();
+            let responder_lock = responder.lock().unwrap(); // 获取锁
+            let message = responder_lock
+                .recv_string(0)
+                .expect("Failed to receive message")
+                .unwrap();
+            drop(responder_lock); // 在处理消息前释放锁，允许其他线程在此期间操作
+            let robot_state: Vec<f64> = message
+                .split(' ')
+                .map(|s| s.parse::<f64>().unwrap()) // 将每个拆分的部分解析为 f64
+                .collect();
+            {
+                let mut robot_write = self.robot.write().unwrap();
+                robot_write.set_q(robot_state[0..N].to_vec());
+                robot_write.set_q_dot(robot_state[N..2 * N].to_vec());
+            }
+    }
+    }
 }
