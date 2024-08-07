@@ -18,6 +18,6 @@ pub trait Simulator: ROSThread {
         &mut self,
         controller_command_queue: Arc<SegQueue<ControlCommand>>,
     );
-
+    fn check_queue_empty(&mut self)  -> bool;
     fn add_simulator(&mut self, _: Arc<Mutex<dyn Simulator>>) {}
 }

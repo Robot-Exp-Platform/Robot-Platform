@@ -12,9 +12,8 @@ class ZMQ_REQ:
         message = json.dumps(data)
         # 发送 JSON 字符串
         self.socket.send_string(message)
-        print("Sent array:", data)
 
-    def receive_array(self):
+    def receive_command(self):
         # 等待接收回复
         message = self.socket.recv_string()
         # 反序列化为 Python 列表
