@@ -31,7 +31,10 @@ fn main() {
 
     simulator.init();
 
-    loop{
+    loop {
+        if simulator.check_queue_empty() {
+            break;
+        }
         simulator.update();
     }
 }

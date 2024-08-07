@@ -16,7 +16,6 @@ zmq = { workspace = true, optional = true }
 rosrust = { workspace = true, optional = true }
 rosrust_msg = { workspace = true, optional = true }
 
-
 robot.workspace = true
 task_manager.workspace = true
 message.workspace = true

@@ -1,9 +1,8 @@
 use crossbeam::queue::SegQueue;
 #[cfg(feature = "ros")]
 use rosrust as ros;
-// use serde_json::Value;
-use serde_json::json;
-use serde_yaml::Value;
+use serde_json::Value;
+// use serde_yaml::Value;
 #[cfg(feature = "rszmq")]
 use std::sync::Mutex;
 use std::sync::{Arc, RwLock};
@@ -11,7 +10,7 @@ use std::sync::{Arc, RwLock};
 use zmq;
 
 use crate::simulator_trait::Simulator;
-use message::control_command::{self, ControlCommand};
+use message::control_command::ControlCommand;
 use robot::robot_trait::Robot;
 use task_manager::ros_thread::ROSThread;
 
@@ -44,10 +43,10 @@ impl<R: Robot + 'static, const N: usize> Bullet<R, N> {
     }
     pub fn from_params(name: String, path: String, robot: Arc<RwLock<R>>) -> Bullet<R, N> {
         #[cfg(feature = "rszmq")]
-        {
-            let context = Arc::new(zmq::Context::new());
-            let responder = context.socket(zmq::REP).unwrap();
-        }
+        let context = Arc::new(zmq::Context::new());
+        #[cfg(feature = "rszmq")]
+        let responder = context.socket(zmq::REP).unwrap();
+
         Bullet {
             name,
             path,
@@ -82,6 +81,9 @@ impl<R: Robot + 'static, const N: usize> Simulator for Bullet<R, N> {
         self.msgnode.control_command_queue = controller_command_queue;
     }
 
+    fn check_queue_empty(&mut self) -> bool {
+        self.msgnode.control_command_queue.is_empty()
+    }
     fn add_simulator(&mut self, _: Arc<std::sync::Mutex<dyn Simulator>>) {}
 }
 
@@ -126,64 +128,62 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Bullet<R, N> {
     fn start(&mut self) {}
 
     fn update(&mut self) {
-        #[cfg(feature = "rszmq")]
-        // {
-        //     let responder = self.msgnode.responder.lock().unwrap();
-        //     let message = responder
-        //         .recv_string(0)
-        //         .expect("Failed to receive message")
-        //         .unwrap();
-        //     drop(responder); // 在处理消息前释放锁，允许其他线程在此期间操作
-        //     let robot_state: Vec<f64> = message
-        //         .split(' ')
-        //         .map(|s| s.parse::<f64>().unwrap()) // 将每个拆分的部分解析为 f64
-        //         .collect();
-        //     {
-        //         let mut robot_write = self.robot.write().unwrap();
-        //         robot_write.set_q(robot_state[0..N].to_vec());
-        //         robot_write.set_q_dot(robot_state[N..2 * N].to_vec());
-        //     }
-        // }
-        {
-            // 更新 control command
-            let (period, control_command) = match self.msgnode.control_command_queue.pop().unwrap()
-            {
-                ControlCommand::Joint(joint) => (0.0, joint),
-                ControlCommand::JointWithPeriod(joint_with_period) => {
-                    (joint_with_period.period, joint_with_period.joint)
-                }
-                _ => panic!("Invalid control command type"),
-            };
+        println!("{} updating!", self.name);
 
-            // 获取 robot 状态
-            let responder = self.msgnode.responder.lock().unwrap();
-            match responder.recv_string(0) {
-                Ok(Ok(message)) => {
-                    // 成功接收到消息，并且消息是一个有效的 UTF-8 字符串
-                    println!("Received message: {}", message);
-                    // 反序列化为 JSON 值
-                    let array: Vec<f64> = serde_json::from_str(&message).unwrap();
-                    println!("Received array: {:?}", array);
-                    // 定义一个数组
-                    let array = vec![1.3, 2.4, 3.5, 4.6, 5.7];
-                    // 序列化为 JSON 字符串
-                    let reply = json!(array).to_string();
-                    // 发送一个简单的确认回复，保持请求-回复模式完整性
-                    responder.send(&reply, 0).expect("Failed to send reply");
-                }
-                Ok(Err(_)) => {
-                    // 成功接收到消息，但消息不是有效的 UTF-8 字符串
-                    eprintln!("Received a message that is not a valid UTF-8 string.");
-                }
-                Err(e) => {
-                    // 处理 zmq 相关的错误
-                    eprintln!("Failed to receive message: {}", e);
-                }
+        // 更新 control command
+        let (_period, _control_command) = match self.msgnode.control_command_queue.pop().unwrap() {
+            ControlCommand::Joint(joint) => (0.0, joint),
+            ControlCommand::JointWithPeriod(joint_with_period) => {
+                (joint_with_period.period, joint_with_period.joint)
             }
+        };
 
-            // 将 robot state 反序列化为 State 消息类型，并写入 robot 中去
-
-            // 向仿真器发送控制指令
+        #[cfg(feature = "rszmq")]
+        {
+            // 定义一个可选的消息变量，用于在作用域外存储消息
+            let message_opt: Option<String>;
+            // 获取 robot 状态
+            {
+                let responder = self.msgnode.responder.lock().unwrap();
+                match responder.recv_string(0) {
+                    Ok(Ok(message)) => {
+                        // 成功接收到消息，并且消息是一个有效的 UTF-8 字符串
+                        println!("Received message!");
+                        message_opt = Some(message); // 将消息存储到外部变量中
+                    }
+                    Ok(Err(_)) => {
+                        eprintln!("Received a message that is not a valid UTF-8 string.");
+                        message_opt = None; // 未接收到有效消息
+                    }
+                    Err(e) => {
+                        eprintln!("Failed to receive message: {}", e);
+                        message_opt = None; // 未接收到消息
+                    }
+                }
+                // 此时 responder 锁已被释放
+            } // responder 锁在这里被自动释放
+            if let Some(message) = message_opt {
+                // 如果成功接收到消息，则进行处理
+                // 将 robot state 反序列化为 State 消息类型，并写入 robot 中去
+                let robot_state: Vec<f64> = serde_json::from_str(&message).unwrap();
+                {
+                    let mut robot_write = self.robot.write().unwrap();
+                    robot_write.set_q(robot_state[0..N].to_vec());
+                    robot_write.set_q_dot(robot_state[N..2 * N].to_vec());
+                }
+                // 向仿真器发送控制指令
+                // 将指令序列化为 JSON 字符串
+                let reply = serde_json::to_string(&(_period, _control_command))
+                    .expect("Failed to serialize tuple");
+                // 重新获取锁并发送回复
+                let responder = self.msgnode.responder.lock().unwrap();
+                responder.send(&reply, 0).expect("Failed to send reply");
+                println!("Sent message!");
+            }
         }
+    }
+
+    fn get_period(&self) -> std::time::Duration {
+        std::time::Duration::from_secs_f64(0.5)
     }
 }

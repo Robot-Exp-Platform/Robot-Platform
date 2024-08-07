@@ -150,4 +150,22 @@ mod tests {
         println!("serialized: {}", vec_serialized);
         println!("json: {}", vec_json);
     }
+
+    #[test]
+    fn enum_target_serialize() {
+        use message::target::Target;
+
+        let target_vec = vec![
+            Target::Joint(vec![0.0, -0.7854, 0.0, -2.3562, 0.0, 1.5708, 0.7854]),
+            Target::Joint(vec![0.0, -0.7854, 0.0, -2.3562, 0.0, 1.5708, 0.7854]),
+            Target::Joint(vec![0.0, -0.7854, 0.0, -2.3562, 0.0, 1.5708, 0.7854]),
+        ];
+
+        let target_vec_serialized = serde_json::to_string(&target_vec).unwrap();
+        let target_vec_json: serde_json::Value = serde_json::to_value(&target_vec).unwrap();
+
+        println!("print Vec: {:?}", target_vec);
+        println!("serialized: {}", target_vec_serialized);
+        println!("json: {}", target_vec_json);
+    }
 }

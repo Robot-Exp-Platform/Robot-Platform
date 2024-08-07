@@ -2,8 +2,8 @@ use crossbeam::queue::SegQueue;
 use message::control_command::JointWithPeriod;
 use nalgebra as na;
 use serde::Deserialize;
-// use serde_json::{from_value, Value};
-use serde_yaml::{from_value, Value};
+use serde_json::{from_value, Value};
+// use serde_yaml::{from_value, Value};
 use std::sync::{Arc, Mutex, RwLock};
 use std::time::Duration;
 
@@ -116,6 +116,8 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Pid<R, N> {
     fn start(&mut self) {}
 
     fn update(&mut self) {
+        println!("{} updating!", self.name);
+
         // 更新 track
         let Track::Joint(track) = self.msgnode.track_queue.pop().unwrap();
         self.state.track = na::SVector::from_vec(track);
