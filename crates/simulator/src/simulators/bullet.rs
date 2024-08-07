@@ -11,7 +11,7 @@ use std::sync::{Arc, RwLock};
 use zmq;
 
 use crate::simulator_trait::Simulator;
-use message::control_command::{self, ControlCommand};
+use message::control_command::ControlCommand;
 use robot::robot_trait::Robot;
 use task_manager::ros_thread::ROSThread;
 
@@ -44,10 +44,10 @@ impl<R: Robot + 'static, const N: usize> Bullet<R, N> {
     }
     pub fn from_params(name: String, path: String, robot: Arc<RwLock<R>>) -> Bullet<R, N> {
         #[cfg(feature = "rszmq")]
-        {
-            let context = Arc::new(zmq::Context::new());
-            let responder = context.socket(zmq::REP).unwrap();
-        }
+        let context = Arc::new(zmq::Context::new());
+        #[cfg(feature = "rszmq")]
+        let responder = context.socket(zmq::REP).unwrap();
+
         Bullet {
             name,
             path,
@@ -126,6 +126,14 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Bullet<R, N> {
     fn start(&mut self) {}
 
     fn update(&mut self) {
+        // 更新 control command
+        let (_period, _control_command) = match self.msgnode.control_command_queue.pop().unwrap() {
+            ControlCommand::Joint(joint) => (0.0, joint),
+            ControlCommand::JointWithPeriod(joint_with_period) => {
+                (joint_with_period.period, joint_with_period.joint)
+            }
+        };
+
         #[cfg(feature = "rszmq")]
         // {
         //     let responder = self.msgnode.responder.lock().unwrap();
@@ -145,16 +153,6 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Bullet<R, N> {
         //     }
         // }
         {
-            // 更新 control command
-            let (period, control_command) = match self.msgnode.control_command_queue.pop().unwrap()
-            {
-                ControlCommand::Joint(joint) => (0.0, joint),
-                ControlCommand::JointWithPeriod(joint_with_period) => {
-                    (joint_with_period.period, joint_with_period.joint)
-                }
-                _ => panic!("Invalid control command type"),
-            };
-
             // 获取 robot 状态
             let responder = self.msgnode.responder.lock().unwrap();
             match responder.recv_string(0) {
