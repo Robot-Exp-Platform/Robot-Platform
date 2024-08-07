@@ -1,6 +1,6 @@
 use crossbeam::queue::SegQueue;
-// use serde_json::Value;
-use serde_yaml::Value;
+use serde_json::Value;
+// use serde_yaml::Value;
 use std::sync::{Arc, Mutex};
 
 use message::control_command::ControlCommand;
@@ -18,6 +18,6 @@ pub trait Simulator: ROSThread {
         &mut self,
         controller_command_queue: Arc<SegQueue<ControlCommand>>,
     );
-    fn check_queue_empty(&mut self)  -> bool;
+    fn check_queue_empty(&mut self) -> bool;
     fn add_simulator(&mut self, _: Arc<Mutex<dyn Simulator>>) {}
 }

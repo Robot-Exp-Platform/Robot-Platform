@@ -1,7 +1,8 @@
 import pybullet as p
 import pybullet_data
 
-def pubullet_init(USE_GUI):
+
+def pybullet_init(USE_GUI):
 
     "pybullet初始化"
 
@@ -29,20 +30,21 @@ def pubullet_init(USE_GUI):
 
     return planeId
 
+
 class Joint:
     def __init__(self, robot_id, joint_index) -> None:
         # 关节基本信息
         self.robot_id = robot_id
-        self.joint_index =joint_index
+        self.joint_index = joint_index
         self.info = p.getJointInfo(robot_id, joint_index)
-        self.name = self.info[1].decode('utf-8')
+        self.name = self.info[1].decode("utf-8")
         self.lower_limit = self.info[8]
         self.upper_limit = self.info[9]
         # 关节状态参数
         self.state = p.getJointState(robot_id, joint_index)
-        self.position = self.state[0] 
+        self.position = self.state[0]
         self.velocity = self.state[1]
-    
+
     def update_state(self):
         # 更新关节状态参数
         self.state = p.getJointState(self.robot_id, self.joint_index)
@@ -57,45 +59,49 @@ class Joint:
         # 返回位置与速度
         self.update_state()
         return self.position, self.velocity
-    
-    def set_velocity(self, velocity, force = 500):
+
+    def set_velocity(self, velocity, force=500):
         p.setJointMotorControl2(
-                bodyUniqueId=self.robot_id,
-                jointIndex=self.joint_index,
-                controlMode=p.VELOCITY_CONTROL,
-                targetVelocity=velocity,
-                force=force  # 设置最大力矩或推力
-            )
+            bodyUniqueId=self.robot_id,
+            jointIndex=self.joint_index,
+            controlMode=p.VELOCITY_CONTROL,
+            targetVelocity=velocity,
+            force=force,  # 设置最大力矩或推力
+        )
         self.update_state()
 
 
 class Panda:
-    def __init__(self, base_position = [0, 0 ,0]) -> None:
+    def __init__(self, base_position=[0, 0, 0]) -> None:
         self.panda_path = "franka_panda/panda.urdf"
         self.base_position = base_position
-        self.id = p.loadURDF(self.panda_path, useFixedBase=True, basePosition = base_position)
+        self.id = p.loadURDF(
+            self.panda_path, useFixedBase=True, basePosition=base_position
+        )
         self.joints_num = 7
-        self.control_joint = [] # 存储控制的关节的列表
+        self.control_joint = []  # 存储控制的关节的列表
         for i in range(0, self.joints_num):
             self.control_joint.append(Joint(self.id, i))
         self.reset_panda_state()
-    
+
     def reset_panda_state(self):
         for joint in self.control_joint:
             joint.reset_joint_state()
-    
+
     def print_panda_info(self):
-        print("*"*50)
+        print("*" * 50)
         print("Robot Id: ", self.id)
         print("Robot Position: ", self.base_position)
         print("Robot joints num: ", self.joints_num)
         for joint in self.control_joint:
-            print(f"Joint {joint.joint_index} ({joint.name}): Limits = ({joint.lower_limit}, {joint.upper_limit})")
-        print("*"*50)
+            print(
+                f"Joint {joint.joint_index} ({joint.name}): Limits = ({joint.lower_limit}, {joint.upper_limit})"
+            )
+        print("*" * 50)
 
     def get_joint_state(self, joint_index):
         return self.control_joint[joint_index].get_state()
-    
+
     def get_joints_state(self):
         joint_positions = []
         joint_velocities = []
@@ -115,4 +121,6 @@ class Panda:
     def print_panda_state(self):
         joint_positions, joint_velocities = self.get_joints_state()
         for i in range(0, 7):
-            print(f"Joint {i}: Angle = {joint_positions[i]:.2f}, Velocity = {joint_velocities[i]:.2f}")
+            print(
+                f"Joint {i}: Angle = {joint_positions[i]:.2f}, Velocity = {joint_velocities[i]:.2f}"
+            )

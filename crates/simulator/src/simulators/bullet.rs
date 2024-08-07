@@ -1,9 +1,8 @@
 use crossbeam::queue::SegQueue;
 #[cfg(feature = "ros")]
 use rosrust as ros;
-// use serde_json::Value;
-use serde_json::json;
-use serde_yaml::Value;
+use serde_json::Value;
+// use serde_yaml::Value;
 #[cfg(feature = "rszmq")]
 use std::sync::Mutex;
 use std::sync::{Arc, RwLock};
@@ -82,7 +81,7 @@ impl<R: Robot + 'static, const N: usize> Simulator for Bullet<R, N> {
         self.msgnode.control_command_queue = controller_command_queue;
     }
 
-    fn check_queue_empty(&mut self) -> bool{
+    fn check_queue_empty(&mut self) -> bool {
         self.msgnode.control_command_queue.is_empty()
     }
     fn add_simulator(&mut self, _: Arc<std::sync::Mutex<dyn Simulator>>) {}
@@ -129,6 +128,8 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Bullet<R, N> {
     fn start(&mut self) {}
 
     fn update(&mut self) {
+        println!("{} updating!", self.name);
+
         // 更新 control command
         let (_period, _control_command) = match self.msgnode.control_command_queue.pop().unwrap() {
             ControlCommand::Joint(joint) => (0.0, joint),
@@ -172,12 +173,17 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Bullet<R, N> {
                 }
                 // 向仿真器发送控制指令
                 // 将指令序列化为 JSON 字符串
-                let reply = serde_json::to_string(&(_period, _control_command)).expect("Failed to serialize tuple");
+                let reply = serde_json::to_string(&(_period, _control_command))
+                    .expect("Failed to serialize tuple");
                 // 重新获取锁并发送回复
                 let responder = self.msgnode.responder.lock().unwrap();
                 responder.send(&reply, 0).expect("Failed to send reply");
                 println!("Sent message!");
             }
         }
+    }
+
+    fn get_period(&self) -> std::time::Duration {
+        std::time::Duration::from_secs_f64(0.5)
     }
 }

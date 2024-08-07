@@ -1,8 +1,8 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use robot::robot_trait::Pose;
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum Target {
     Pose(Pose),
     Joint(Vec<f64>),

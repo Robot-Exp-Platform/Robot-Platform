@@ -1,8 +1,8 @@
 use crossbeam::queue::SegQueue;
-use serde::Deserialize;
-// use serde_json::{Value, from_value};
 use nalgebra as na;
-use serde_yaml::{from_value, Value};
+use serde::Deserialize;
+use serde_json::{from_value, Value};
+// use serde_yaml::{from_value, Value};
 use std::sync::{Arc, Mutex, RwLock};
 use std::time::Duration;
 
@@ -104,6 +104,8 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Linear<R, N> {
     fn start(&mut self) {}
 
     fn update(&mut self) {
+        println!("{} updating!", self.name);
+
         // 更新 target
         let target = match self.magnode.target_queue.pop().unwrap() {
             // 根据不同的 target 类型，执行不同的任务，也可以将不同的 Target 类型处理为相同的类型
