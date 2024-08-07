@@ -17,5 +17,5 @@ class ZMQ_REQ:
         # 等待接收回复
         message = self.socket.recv_string()
         # 反序列化为 Python 列表
-        array = json.loads(message)
-        return array
+        cmd = json.loads(message)
+        return cmd
