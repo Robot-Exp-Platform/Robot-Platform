@@ -68,7 +68,7 @@ message.workspace = true
 
 
 [features]
-# default = ["rszmq"]
+default = ["rszmq"]
 # default = ["ros"]
 # default = ["ros2"]
 rszmq = [
