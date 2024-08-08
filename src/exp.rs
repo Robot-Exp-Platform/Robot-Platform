@@ -1,4 +1,4 @@
-use chrono;
+use chrono::Local;
 use crossbeam::queue::SegQueue;
 use serde::Deserialize;
 use serde_json::from_reader;
@@ -195,7 +195,7 @@ impl ROSThread for Exp {
     fn init(&mut self) {
         println!(
             "现在是 {}，先生，祝您早上、中午、晚上好",
-            chrono::Local::now().format("%Y-%m-%d %H:%M:%S")
+            Local::now().format("%Y-%m-%d %H:%M:%S")
         );
     }
 
@@ -262,7 +262,7 @@ fn create_robot(
             let robot = Arc::new(RwLock::new(robot));
             (
                 robot.clone(),
-                create_nodes::<panda::Panda, { panda::PANDA_DOF }>(&config, &path, robot),
+                create_nodes::<panda::Panda, { panda::PANDA_DOF }>(config, path, robot),
             )
         }
         "franka_emika" => {
@@ -274,7 +274,7 @@ fn create_robot(
             (
                 robot.clone(),
                 create_nodes::<franka_emika::FrankaEmika, { franka_emika::EMIKA_DOF }>(
-                    &config, &path, robot,
+                    config, path, robot,
                 ),
             )
         }
@@ -289,7 +289,7 @@ fn create_robot(
                 create_nodes::<
                     franka_research3::FrankaResearch3,
                     { franka_research3::RESEARCH3_DOF },
-                >(&config, &path, robot),
+                >(config, path, robot),
             )
         }
         _ => panic!("Unknown robot type"),

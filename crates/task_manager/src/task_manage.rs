@@ -44,3 +44,9 @@ impl TaskManager {
         });
     }
 }
+
+impl Default for TaskManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
