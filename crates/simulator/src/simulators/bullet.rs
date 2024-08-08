@@ -81,9 +81,6 @@ impl<R: Robot + 'static, const N: usize> Simulator for Bullet<R, N> {
         self.msgnode.control_command_queue = controller_command_queue;
     }
 
-    fn check_queue_empty(&mut self) -> bool {
-        self.msgnode.control_command_queue.is_empty()
-    }
     fn add_simulator(&mut self, _: Arc<std::sync::Mutex<dyn Simulator>>) {}
 }
 
@@ -131,12 +128,18 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Bullet<R, N> {
         println!("{} updating!", self.name);
 
         // 更新 control command
-        let (_period, _control_command) = match self.msgnode.control_command_queue.pop().unwrap() {
-            ControlCommand::Joint(joint) => (0.0, joint),
-            ControlCommand::JointWithPeriod(joint_with_period) => {
+
+        let (_period, _control_command) = match self.msgnode.control_command_queue.pop() {
+            Some(ControlCommand::Joint(joint)) => (0.0, joint),
+            Some(ControlCommand::JointWithPeriod(joint_with_period)) => {
                 (joint_with_period.period, joint_with_period.joint)
             }
+            None => {
+                eprintln!("Failed to pop control command from queue.");
+                return;
+            }
         };
+        println!("{} get control command: {:?}", self.name, _control_command);
 
         #[cfg(feature = "rszmq")]
         {

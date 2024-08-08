@@ -107,12 +107,19 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Linear<R, N> {
         println!("{} updating!", self.name);
 
         // 更新 target
-        let target = match self.magnode.target_queue.pop().unwrap() {
+        let target = match self.magnode.target_queue.pop() {
             // 根据不同的 target 类型，执行不同的任务，也可以将不同的 Target 类型处理为相同的类型
-            Target::Joint(joint) => joint,
-            _ => panic!("Invalid target type"),
+            Some(Target::Joint(joint)) => joint,
+            Some(Target::Pose(_pose)) => {
+                unimplemented!("Linear planner does not support Pose target.");
+            }
+            None => {
+                eprintln!("Failed to pop control command from queue.");
+                return;
+            }
         };
         let target = na::SVector::from_vec(target);
+        println!("{} get target: {:?}", self.name, target);
 
         // 获取 robot 状态
         let robot_read = self.robot.read().unwrap();
