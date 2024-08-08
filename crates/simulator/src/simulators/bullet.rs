@@ -125,8 +125,6 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Bullet<R, N> {
     fn start(&mut self) {}
 
     fn update(&mut self) {
-        println!("{} updating!", self.name);
-
         // 更新 control command
 
         let (_period, _control_command) = match self.msgnode.control_command_queue.pop() {

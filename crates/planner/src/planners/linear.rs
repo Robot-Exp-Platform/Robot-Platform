@@ -104,8 +104,6 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Linear<R, N> {
     fn start(&mut self) {}
 
     fn update(&mut self) {
-        println!("{} updating!", self.name);
-
         // 更新 target
         let target = match self.magnode.target_queue.pop() {
             // 根据不同的 target 类型，执行不同的任务，也可以将不同的 Target 类型处理为相同的类型
