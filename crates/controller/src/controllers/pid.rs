@@ -119,8 +119,13 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Pid<R, N> {
         println!("{} updating!", self.name);
 
         // 更新 track
-        let Track::Joint(track) = self.msgnode.track_queue.pop().unwrap();
+        let track = match self.msgnode.track_queue.pop() {
+            Some(Track::Joint(track)) => track,
+            None => return,
+        };
+
         self.state.track = na::SVector::from_vec(track);
+        println!("{} get track: {:?}", self.name, self.state.track);
 
         // 获取 robot 状态
         let robot_read = self.robot.read().unwrap();
