@@ -1,5 +1,7 @@
-use crate::robot_trait::{Pose, Robot};
 use nalgebra as na;
+
+use crate::robot_trait::Robot;
+use message::state::{Pose, RobotState};
 
 #[allow(dead_code)]
 pub struct RobotNDof<const N: usize, const N_ADD_ONE: usize> {
@@ -75,6 +77,14 @@ impl<const N: usize> RobotNDofState<N> {
             q_dot: na::SVector::from_element(0.0),
             base_pose: Pose::identity(),
         }
+    }
+
+    pub fn get_q(&self) -> &na::SVector<f64, N> {
+        &self.q
+    }
+
+    pub fn get_q_dot(&self) -> &na::SVector<f64, N> {
+        &self.q_dot
     }
 }
 

@@ -1,8 +1,4 @@
-use nalgebra as na;
-
-// 考虑使用 na::Isometry3 代替 Pose
-// #[derive(Clone, Copy)]
-pub type Pose = na::Isometry3<f64>;
+use message::state::Pose;
 
 pub trait Robot: Send + Sync {
     fn get_name(&self) -> String;

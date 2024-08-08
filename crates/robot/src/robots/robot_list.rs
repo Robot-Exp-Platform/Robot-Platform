@@ -1,6 +1,7 @@
 use std::sync::{Arc, RwLock};
 
 use crate::robot_trait::Robot;
+use message::state::Pose;
 
 pub struct RobotList {
     name: String,
@@ -50,7 +51,7 @@ impl Robot for RobotList {
         Vec::new()
     }
 
-    fn get_end_effector_pose(&self) -> Vec<crate::robot_trait::Pose> {
+    fn get_end_effector_pose(&self) -> Vec<Pose> {
         self.robots
             .iter()
             .flat_map(|robot| robot.read().unwrap().get_end_effector_pose())
