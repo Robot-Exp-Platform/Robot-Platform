@@ -144,7 +144,7 @@ impl Exp {
 
     fn update_tesk(&mut self) {
         // ! 从 task.json 中读取任务,然后,将对应的参数设置到对应的节点中去,这将有助于在后期反复迭代任务,但是就目前来说,只有更新参数的功能了
-        let task_file = File::open(path::Path::new("task.yaml")).expect("Failed to open task file");
+        let task_file = File::open(path::Path::new("task.json")).expect("Failed to open task file");
         let task: Task = from_reader(task_file).expect("Failed to parse task file");
 
         let controller = self.controller_exp.clone();
