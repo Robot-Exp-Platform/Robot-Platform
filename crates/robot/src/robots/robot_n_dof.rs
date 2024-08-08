@@ -1,7 +1,7 @@
 use nalgebra as na;
 
 use crate::robot_trait::Robot;
-use message::state::{Pose, RobotState};
+use message::state::Pose;
 
 #[allow(dead_code)]
 pub struct RobotNDof<const N: usize, const N_ADD_ONE: usize> {
