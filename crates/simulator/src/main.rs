@@ -33,5 +33,6 @@ fn main() {
 
     loop {
         simulator.update();
+        time::sleep(Duration::from_secs_f64(0.5));
     }
 }
