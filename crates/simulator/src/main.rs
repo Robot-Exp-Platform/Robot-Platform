@@ -1,5 +1,7 @@
 use crossbeam::queue::SegQueue;
 use std::sync::{Arc, RwLock};
+use std::thread::sleep;
+use std::time::Duration;
 
 use message::control_command::{ControlCommand, JointWithPeriod};
 use robot::robots::panda::Panda;
@@ -33,6 +35,6 @@ fn main() {
 
     loop {
         simulator.update();
-        time::sleep(Duration::from_secs_f64(0.5));
+        sleep(Duration::from_secs_f64(0.5));
     }
 }
