@@ -116,8 +116,6 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Pid<R, N> {
     fn start(&mut self) {}
 
     fn update(&mut self) {
-        println!("{} updating!", self.name);
-
         // 更新 track
         let track = match self.msgnode.track_queue.pop() {
             Some(Track::Joint(track)) => track,
