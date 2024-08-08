@@ -1,6 +1,6 @@
 import pybullet as p
 import time
-from robot import pubullet_init, Panda
+from robot import pybullet_init, Panda
 from zmq2rust import ZMQ_REQ
 
 USE_GUI = True
@@ -9,7 +9,7 @@ NOT_USE_GUI = False
 ZMQ_HOST = "tcp://localhost:5555"
 
 if __name__ =="__main__":
-    pubullet_init(NOT_USE_GUI)
+    pybullet_init(NOT_USE_GUI)
 
     Req = ZMQ_REQ(ZMQ_HOST)
     
