@@ -168,4 +168,7 @@ mod tests {
         println!("serialized: {}", target_vec_serialized);
         println!("json: {}", target_vec_json);
     }
+
+    #[test]
+    fn task_serialize_check() {}
 }
