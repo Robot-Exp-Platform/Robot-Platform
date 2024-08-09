@@ -22,7 +22,7 @@ pub struct Linear<R: Robot + 'static, const N: usize> {
     _state: LinearState<N>,
     params: LinearParams,
 
-    magnode: LinearNode,
+    msgnode: LinearNode,
 
     #[allow(dead_code)]
     robot: Arc<RwLock<R>>,
@@ -91,7 +91,7 @@ impl<R: Robot + 'static, const N: usize> Linear<R, N> {
             _state: LinearState {},
             params,
 
-            magnode: LinearNode {
+            msgnode: LinearNode {
                 recoder: BufWriter::new(file),
                 target_queue: Arc::new(SegQueue::new()),
                 track_queue: Arc::new(SegQueue::new()),
@@ -117,10 +117,10 @@ impl<R: Robot + 'static, const N: usize> Planner for Linear<R, N> {
         self.params = params;
     }
     fn set_target_queue(&mut self, target_queue: Arc<SegQueue<Target>>) {
-        self.magnode.target_queue = target_queue;
+        self.msgnode.target_queue = target_queue;
     }
     fn set_track_queue(&mut self, _track_queue: Arc<SegQueue<Track>>) {
-        self.magnode.track_queue = _track_queue;
+        self.msgnode.track_queue = _track_queue;
     }
 
     fn add_planner(&mut self, _planner: Arc<Mutex<dyn Planner>>) {}
@@ -131,9 +131,24 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Linear<R, N> {
         println!("{} 向您问好. {} says hello.", self.name, self.name);
     }
 
+    fn start(&mut self) {
+        let file = OpenOptions::new()
+            .append(true)
+            .create(true)
+            .open(format!(
+                "data/{}/{}/{}/{}.txt",
+                *EXP_NAME,
+                *TASK_NAME.lock().unwrap(),
+                self.robot.read().unwrap().get_name(),
+                self.get_name()
+            ))
+            .unwrap();
+        self.msgnode.recoder = BufWriter::new(file);
+    }
+
     fn update(&mut self) {
         // 更新 target
-        let target = match self.magnode.target_queue.pop() {
+        let target = match self.msgnode.target_queue.pop() {
             // 根据不同的 target 类型，执行不同的任务，也可以将不同的 Target 类型处理为相同的类型
             Some(Target::Joint(joint)) => joint,
             Some(Target::Pose(_pose)) => {
@@ -156,13 +171,13 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Linear<R, N> {
 
         // 记录 track
         for track in track_list.iter() {
-            recode!(self.magnode.recoder, track);
+            recode!(self.msgnode.recoder, track);
         }
 
         // 发送 track
         for track in track_list {
             let track = Track::Joint(track.as_slice().to_vec());
-            self.magnode.track_queue.push(track);
+            self.msgnode.track_queue.push(track);
         }
     }
 

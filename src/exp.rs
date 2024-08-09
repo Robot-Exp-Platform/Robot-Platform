@@ -1,5 +1,6 @@
 use chrono::Local;
 use crossbeam::queue::SegQueue;
+use recoder::TASK_NAME;
 use serde::Deserialize;
 use serde_json::from_reader;
 // use serde_yaml::from_reader;
@@ -151,6 +152,9 @@ impl Exp {
 
         let controller = self.controller_exp.clone();
         let planner = self.planner_exp.clone();
+
+        let mut task_name = TASK_NAME.lock().unwrap();
+        *task_name = task.task_name.clone();
 
         for node in &task.nodes {
             match node.node_type.as_str() {

@@ -13,7 +13,7 @@ use zmq;
 
 use crate::simulator_trait::Simulator;
 use message::control_command::ControlCommand;
-// use recoder::*;
+use recoder::*;
 use robot::robot_trait::Robot;
 use task_manager::ros_thread::ROSThread;
 
@@ -136,6 +136,21 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Bullet<R, N> {
 
             // 新建接收者，并将他们放入list中去
         }
+    }
+
+    fn start(&mut self) {
+        let file = OpenOptions::new()
+            .append(true)
+            .create(true)
+            .open(format!(
+                "data/{}/{}/{}/{}.txt",
+                *EXP_NAME,
+                *TASK_NAME.lock().unwrap(),
+                self.robot.read().unwrap().get_name(),
+                self.get_name()
+            ))
+            .unwrap();
+        self.msgnode.recoder = BufWriter::new(file);
     }
 
     fn update(&mut self) {
