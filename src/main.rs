@@ -23,6 +23,5 @@ fn main() {
         while exp.is_running() {
             exp.update();
         }
-        break;
     }
 }
