@@ -3,7 +3,7 @@ use nalgebra as na;
 use serde::Deserialize;
 use serde_json::{from_value, Value};
 // use serde_yaml::{from_value, Value};
-use std::fs::{File, OpenOptions};
+use std::fs::{self, File, OpenOptions};
 use std::io::{BufWriter, Write};
 use std::sync::{Arc, Mutex, RwLock};
 use std::time::Duration;
@@ -37,7 +37,7 @@ pub struct LinearParams {
 }
 
 pub struct LinearNode {
-    recoder: BufWriter<File>,
+    recoder: Option<BufWriter<File>>,
     target_queue: Arc<SegQueue<Target>>,
     track_queue: Arc<SegQueue<Track>>,
 }
@@ -47,24 +47,6 @@ impl<R: Robot + 'static, const N: usize> Linear<R, N> {
         Linear::from_params(
             name,
             path,
-            format!("linear"),
-            LinearParams {
-                period: 0.0,
-                interpolation: 0,
-            },
-            robot,
-        )
-    }
-    pub fn from_file_path(
-        name: String,
-        path: String,
-        file_path: String,
-        robot: Arc<RwLock<R>>,
-    ) -> Linear<R, N> {
-        Linear::from_params(
-            name,
-            path,
-            file_path,
             LinearParams {
                 period: 0.0,
                 interpolation: 0,
@@ -75,15 +57,9 @@ impl<R: Robot + 'static, const N: usize> Linear<R, N> {
     pub fn from_params(
         name: String,
         path: String,
-        file_path: String,
         params: LinearParams,
         robot: Arc<RwLock<R>>,
     ) -> Linear<R, N> {
-        let file = OpenOptions::new()
-            .append(true)
-            .create(true)
-            .open(format!("{}/{}.txt", file_path, name))
-            .unwrap();
         Linear {
             name: name,
             path,
@@ -92,7 +68,7 @@ impl<R: Robot + 'static, const N: usize> Linear<R, N> {
             params,
 
             msgnode: LinearNode {
-                recoder: BufWriter::new(file),
+                recoder: Option::None,
                 target_queue: Arc::new(SegQueue::new()),
                 track_queue: Arc::new(SegQueue::new()),
             },
@@ -132,18 +108,24 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Linear<R, N> {
     }
 
     fn start(&mut self) {
+        fs::create_dir_all(format!(
+            "./data/{}/{}/{}",
+            *EXP_NAME,
+            *TASK_NAME.lock().unwrap(),
+            self.robot.read().unwrap().get_name()
+        ))
+        .unwrap();
         let file = OpenOptions::new()
             .append(true)
             .create(true)
             .open(format!(
-                "data/{}/{}/{}/{}.txt",
+                "./data/{}/{}/{}/linear.txt",
                 *EXP_NAME,
                 *TASK_NAME.lock().unwrap(),
                 self.robot.read().unwrap().get_name(),
-                self.get_name()
             ))
             .unwrap();
-        self.msgnode.recoder = BufWriter::new(file);
+        self.msgnode.recoder = Some(BufWriter::new(file));
     }
 
     fn update(&mut self) {
@@ -170,8 +152,10 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Linear<R, N> {
         let track_list = interpolation::<N>(&q, &target, self.params.interpolation);
 
         // 记录 track
-        for track in track_list.iter() {
-            recode!(self.msgnode.recoder, track);
+        if let Some(ref mut recoder) = self.msgnode.recoder {
+            for track in track_list.iter() {
+                recode!(recoder, track);
+            }
         }
 
         // 发送 track

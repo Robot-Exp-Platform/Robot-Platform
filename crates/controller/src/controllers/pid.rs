@@ -3,7 +3,7 @@ use nalgebra as na;
 use serde::Deserialize;
 use serde_json::{from_value, Value};
 // use serde_yaml::{from_value, Value};
-use std::fs::{File, OpenOptions};
+use std::fs::{self, File, OpenOptions};
 use std::io::{BufWriter, Write};
 use std::sync::{Arc, Mutex, RwLock};
 use std::time::Duration;
@@ -42,7 +42,7 @@ pub struct PidParams<const N: usize> {
 }
 
 pub struct PidNode {
-    recoder: BufWriter<File>,
+    recoder: Option<BufWriter<File>>,
     track_queue: Arc<SegQueue<Track>>,
     control_command_queue: Arc<SegQueue<ControlCommand>>,
 }
@@ -52,7 +52,6 @@ impl<R: Robot + 'static, const N: usize> Pid<R, N> {
         Pid::from_params(
             name,
             path,
-            format!("pid"),
             PidParams {
                 period: 0.0,
                 kp: na::SMatrix::from_element(0.0),
@@ -65,15 +64,9 @@ impl<R: Robot + 'static, const N: usize> Pid<R, N> {
     pub fn from_params(
         name: String,
         path: String,
-        file_path: String,
         params: PidParams<N>,
         robot: Arc<RwLock<R>>,
     ) -> Pid<R, N> {
-        let file = OpenOptions::new()
-            .append(true)
-            .create(true)
-            .open(format!("{}/{}.txt", file_path, name))
-            .unwrap();
         Pid {
             name: name,
             path,
@@ -87,7 +80,7 @@ impl<R: Robot + 'static, const N: usize> Pid<R, N> {
             params,
 
             msgnode: PidNode {
-                recoder: BufWriter::new(file),
+                recoder: None,
                 track_queue: Arc::new(SegQueue::new()),
                 control_command_queue: Arc::new(SegQueue::new()),
             },
@@ -126,18 +119,24 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Pid<R, N> {
         println!("{} 向您问好. {} says hello.", self.name, self.name);
     }
     fn start(&mut self) {
+        fs::create_dir_all(format!(
+            "./data/{}/{}/{}",
+            *EXP_NAME,
+            *TASK_NAME.lock().unwrap(),
+            self.robot.read().unwrap().get_name()
+        ))
+        .unwrap();
         let file = OpenOptions::new()
             .append(true)
             .create(true)
             .open(format!(
-                "data/{}/{}/{}/{}.txt",
+                "data/{}/{}/{}/pid.txt",
                 *EXP_NAME,
                 *TASK_NAME.lock().unwrap(),
                 self.robot.read().unwrap().get_name(),
-                self.get_name()
             ))
             .unwrap();
-        self.msgnode.recoder = BufWriter::new(file);
+        self.msgnode.recoder = Some(BufWriter::new(file));
     }
 
     fn update(&mut self) {
@@ -165,7 +164,10 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Pid<R, N> {
             + self.params.kd * self.state.derivative;
 
         // 记录控制指令
-        recode!(self.msgnode.recoder, control_output);
+        if let Some(ref mut recoder) = self.msgnode.recoder {
+            recode!(recoder, control_output);
+        }
+        self.msgnode.recoder.as_mut().unwrap().flush().unwrap();
 
         // 发送控制指令
         let control_command = ControlCommand::JointWithPeriod(JointWithPeriod {

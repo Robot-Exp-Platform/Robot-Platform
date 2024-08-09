@@ -4,7 +4,7 @@ use recoder::TASK_NAME;
 use serde::Deserialize;
 use serde_json::from_reader;
 // use serde_yaml::from_reader;
-use std::fs::File;
+use std::fs::{self, File};
 use std::path;
 use std::sync::{Arc, Mutex, RwLock};
 
@@ -12,6 +12,7 @@ use crate::config::CONFIG_PATH;
 use crate::config::TASK_PATH;
 use controller::config::create_controller;
 use planner::config::create_planner;
+use recoder::EXP_NAME;
 use robot::robots::franka_emika;
 use robot::robots::franka_research3;
 use robot::robots::panda;
@@ -155,6 +156,7 @@ impl Exp {
 
         let mut task_name = TASK_NAME.lock().unwrap();
         *task_name = task.task_name.clone();
+        fs::create_dir_all(format!("./data/{}/{}", *EXP_NAME, *task_name)).unwrap();
 
         for node in &task.nodes {
             match node.node_type.as_str() {

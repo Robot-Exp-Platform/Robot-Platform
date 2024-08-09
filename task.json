@@ -1,4 +1,5 @@
 {
+  "task_name": "test",
   "robot_tasks": [
     {
       "name": "linear:panda_1",

@@ -3,7 +3,7 @@ use crossbeam::queue::SegQueue;
 use rosrust as ros;
 use serde_json::Value;
 // use serde_yaml::Value;
-use std::fs::{File, OpenOptions};
+use std::fs::{self, File, OpenOptions};
 use std::io::BufWriter;
 #[cfg(feature = "rszmq")]
 use std::sync::Mutex;
@@ -30,7 +30,7 @@ pub struct Bullet<R: Robot + 'static, const N: usize> {
 // 消息节点结构体声明，随条件编译的不同而不同，条件编译将决定其使用什么通讯方式
 #[allow(dead_code)]
 struct BulletNode {
-    recoder: BufWriter<File>,
+    recoder: Option<BufWriter<File>>,
     control_command_queue: Arc<SegQueue<ControlCommand>>,
     #[cfg(feature = "rszmq")]
     context: Arc<zmq::Context>,
@@ -43,30 +43,19 @@ struct BulletNode {
 // 为结构体 Bullet 实现方法，这里主要是初始化方法
 impl<R: Robot + 'static, const N: usize> Bullet<R, N> {
     pub fn new(name: String, path: String, robot: Arc<RwLock<R>>) -> Bullet<R, N> {
-        Bullet::from_params(name, path, format!("bullet"), robot)
+        Bullet::from_params(name, path, robot)
     }
-    pub fn from_params(
-        name: String,
-        path: String,
-        file_path: String,
-        robot: Arc<RwLock<R>>,
-    ) -> Bullet<R, N> {
+    pub fn from_params(name: String, path: String, robot: Arc<RwLock<R>>) -> Bullet<R, N> {
         #[cfg(feature = "rszmq")]
         let context = Arc::new(zmq::Context::new());
         #[cfg(feature = "rszmq")]
         let responder = context.socket(zmq::REP).unwrap();
 
-        let file = OpenOptions::new()
-            .append(true)
-            .create(true)
-            .open(format!("{}/{}.txt", file_path, name))
-            .unwrap();
-
         Bullet {
             name,
             path,
             msgnode: BulletNode {
-                recoder: BufWriter::new(file),
+                recoder: None,
                 control_command_queue: Arc::new(SegQueue::new()),
                 #[cfg(feature = "rszmq")]
                 context: Arc::new(zmq::Context::new()),
@@ -139,18 +128,24 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Bullet<R, N> {
     }
 
     fn start(&mut self) {
+        fs::create_dir_all(format!(
+            "./data/{}/{}/{}",
+            *EXP_NAME,
+            *TASK_NAME.lock().unwrap(),
+            self.robot.read().unwrap().get_name()
+        ))
+        .unwrap();
         let file = OpenOptions::new()
             .append(true)
             .create(true)
             .open(format!(
-                "data/{}/{}/{}/{}.txt",
+                "data/{}/{}/{}/bullet.txt",
                 *EXP_NAME,
                 *TASK_NAME.lock().unwrap(),
                 self.robot.read().unwrap().get_name(),
-                self.get_name()
             ))
             .unwrap();
-        self.msgnode.recoder = BufWriter::new(file);
+        self.msgnode.recoder = Some(BufWriter::new(file));
     }
 
     fn update(&mut self) {
