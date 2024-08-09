@@ -146,3 +146,113 @@ cargo run
   "pylint.args": ["--disable=C0116,I1101", "--max-line-length=120"],
   "flake8.args": ["--max-line-length=120"]
 ```
+
+### 系统结构
+
+整个实验实际上是基于一个实验对象： Exp
+
+```rust
+pub struct Exp {
+    // Exp 是一个森林状的结构，其中的包含 robot tree, controller tree, planner tree 等等树状结构的根节点，通过管理 exp 实现管理整个结构的目的
+    pub thread_manage: ThreadManage,
+    pub task_manage: TaskManager,
+
+    pub robot_exp: Arc<RwLock<dyn robot::Robot>>,
+    pub planner_exp: Arc<Mutex<dyn planner::Planner>>,
+    pub controller_exp: Arc<Mutex<dyn controller::Controller>>,
+    pub simulator_exp: Arc<Mutex<dyn simulator::Simulator>>,
+}
+```
+
+其中包含一个线程管理器、一个任务管理器和一些树状结构的根节点。
+
+对于单机器人结构，其结构如流程图所是：
+
+```mermaid
+graph TD
+    T[task_manager] -->|Target| A[planner]
+    A -->|Track| B[controller]
+    B -->|ControlCommand| C[simulator]
+    C --> D[robot]
+```
+
+当多机器人时，robot 树中每个叶节点对应一个机器人，每个机器人都有其对应的 planner, controller, simulator。所以这几棵子树的形状保持一致。
+
+每个 节点，包含 planner, controller, simulator, 都实现了 RosThread 特征，线程管理器将管理所有的节点线程。
+
+```rust
+pub trait ROSThread: Send + Sync {
+    fn init(&mut self) {}
+    fn start(&mut self) {}
+    fn update(&mut self) {}
+    fn get_period(&self) -> Duration {
+        Duration::from_secs(0)
+    }
+}
+```
+
+```rust
+pub struct ThreadManage {
+    threads: Vec<thread::JoinHandle<()>>,
+    pub condvar: Arc<(AtomicBool, Condvar, Mutex<()>)>,
+}
+
+impl ThreadManage {
+  pub fn add_thread(&mut self, node: Arc<Mutex<dyn ROSThread>>) {
+        let condvar = self.condvar.clone();
+        let node = node.clone();
+        let thread = thread::spawn(move || {
+            let mut node_lock = node.lock().unwrap();
+            node_lock.init();
+            drop(node_lock);
+            let (flag, cvar, lock) = &*condvar;
+            loop {
+                let mut locked = lock.lock().unwrap();
+                while !flag.load(Ordering::SeqCst) {
+                    locked = cvar.wait(locked).unwrap();
+                }
+                drop(locked);
+
+                let mut node_lock = node.lock().unwrap();
+                node_lock.start();
+                let period = node_lock.get_period();
+                while flag.load(Ordering::SeqCst) {
+                    let start_time = Instant::now();
+
+                    node_lock.update();
+
+                    let elapsed_time = start_time.elapsed();
+                    if period > elapsed_time {
+                        thread::sleep(period - elapsed_time);
+                    }
+                }
+                drop(node_lock);
+            }
+        });
+        self.threads.push(thread);
+    }
+
+    pub fn start_all(&self) {
+        let (flag, cvar, _) = &*self.condvar;
+        flag.store(true, Ordering::SeqCst);
+        cvar.notify_all();
+    }
+
+    pub fn stop_all(&self) {
+        let (flag, _, _) = &*self.condvar;
+        flag.store(false, Ordering::SeqCst);
+    }
+}
+```
+
+这里使用了 condvar 作为线程开关， 控制所有线程的同时启动和停止。
+
+### 节点通讯与实验流程
+
+节点之间的通讯是通过消息队列实现的，在创建节点的时候为对应节点设置消息队列，节点之间通过消息队列进行通讯。
+
+目前存在的通讯有：
+
+task_manager/Exp --(Target)-> planner
+planner --(Track)-> controller
+controller --(ControlCommand)-> simulator
