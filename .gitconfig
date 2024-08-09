@@ -1,0 +1,5 @@
+[user]
+	name = yixing
+	email = yanjizhou312@163.com
+[credential]
+	helper = "!f() { /root/.vscode-server/bin/f1e16e1e6214d7c44d078b1f0607b2388f29d729/node /tmp/vscode-remote-containers-085253d3-ee87-4149-a253-f899f1c79281.js git-credential-helper $*; }; f"

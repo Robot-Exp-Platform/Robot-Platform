@@ -1,5 +1,6 @@
 use nalgebra as na;
 
+#[derive(Debug)]
 pub enum State {}
 
 pub type Pose = na::Isometry3<f64>;

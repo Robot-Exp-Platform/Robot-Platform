@@ -3,12 +3,15 @@ use nalgebra as na;
 use serde::Deserialize;
 use serde_json::{from_value, Value};
 // use serde_yaml::{from_value, Value};
+use std::fs::{File, OpenOptions};
+use std::io::{BufWriter, Write};
 use std::sync::{Arc, Mutex, RwLock};
 use std::time::Duration;
 
 use crate::planner_trait::Planner;
 use message::target::Target;
 use message::track::Track;
+use recoder::*;
 use robot::robot_trait::Robot;
 use task_manager::ros_thread::ROSThread;
 
@@ -34,6 +37,7 @@ pub struct LinearParams {
 }
 
 pub struct LinearNode {
+    recoder: BufWriter<File>,
     target_queue: Arc<SegQueue<Target>>,
     track_queue: Arc<SegQueue<Track>>,
 }
@@ -43,6 +47,7 @@ impl<R: Robot + 'static, const N: usize> Linear<R, N> {
         Linear::from_params(
             name,
             path,
+            format!("linear"),
             LinearParams {
                 period: 0.0,
                 interpolation: 0,
@@ -53,17 +58,24 @@ impl<R: Robot + 'static, const N: usize> Linear<R, N> {
     pub fn from_params(
         name: String,
         path: String,
+        file_path: String,
         params: LinearParams,
         robot: Arc<RwLock<R>>,
     ) -> Linear<R, N> {
+        let file = OpenOptions::new()
+            .append(true)
+            .create(true)
+            .open(format!("{}/{}.txt", file_path, name))
+            .unwrap();
         Linear {
-            name,
+            name: name,
             path,
 
             _state: LinearState {},
             params,
 
             magnode: LinearNode {
+                recoder: BufWriter::new(file),
                 target_queue: Arc::new(SegQueue::new()),
                 track_queue: Arc::new(SegQueue::new()),
             },
@@ -101,7 +113,6 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Linear<R, N> {
     fn init(&mut self) {
         println!("{} 向您问好. {} says hello.", self.name, self.name);
     }
-    fn start(&mut self) {}
 
     fn update(&mut self) {
         // 更新 target
@@ -125,6 +136,11 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Linear<R, N> {
 
         // 执行插值逻辑，将当前位置到目标位置的插值点和目标位置塞入 track 队列
         let track_list = interpolation::<N>(&q, &target, self.params.interpolation);
+
+        // 记录 track
+        for track in track_list.iter() {
+            recode!(self.magnode.recoder, track);
+        }
 
         // 发送 track
         for track in track_list {

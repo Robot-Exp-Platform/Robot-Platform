@@ -1,14 +1,17 @@
 use crossbeam::queue::SegQueue;
-use message::control_command::JointWithPeriod;
 use nalgebra as na;
 use serde::Deserialize;
 use serde_json::{from_value, Value};
 // use serde_yaml::{from_value, Value};
+use std::fs::{File, OpenOptions};
+use std::io::{BufWriter, Write};
 use std::sync::{Arc, Mutex, RwLock};
 use std::time::Duration;
 
 use crate::controller_trait::Controller;
+use message::control_command::JointWithPeriod;
 use message::{control_command::ControlCommand, track::Track};
+use recoder::*;
 use robot::robot_trait::Robot;
 use task_manager::ros_thread::ROSThread;
 
@@ -39,6 +42,7 @@ pub struct PidParams<const N: usize> {
 }
 
 pub struct PidNode {
+    recoder: BufWriter<File>,
     track_queue: Arc<SegQueue<Track>>,
     control_command_queue: Arc<SegQueue<ControlCommand>>,
 }
@@ -48,6 +52,26 @@ impl<R: Robot + 'static, const N: usize> Pid<R, N> {
         Pid::from_params(
             name,
             path,
+            format!("pid"),
+            PidParams {
+                period: 0.0,
+                kp: na::SMatrix::from_element(0.0),
+                ki: na::SMatrix::from_element(0.0),
+                kd: na::SMatrix::from_element(0.0),
+            },
+            robot,
+        )
+    }
+    pub fn from_file_path(
+        name: String,
+        path: String,
+        file_path: String,
+        robot: Arc<RwLock<R>>,
+    ) -> Pid<R, N> {
+        Pid::from_params(
+            name,
+            path,
+            file_path,
             PidParams {
                 period: 0.0,
                 kp: na::SMatrix::from_element(0.0),
@@ -60,11 +84,17 @@ impl<R: Robot + 'static, const N: usize> Pid<R, N> {
     pub fn from_params(
         name: String,
         path: String,
+        file_path: String,
         params: PidParams<N>,
         robot: Arc<RwLock<R>>,
     ) -> Pid<R, N> {
+        let file = OpenOptions::new()
+            .append(true)
+            .create(true)
+            .open(format!("{}/{}.txt", file_path, name))
+            .unwrap();
         Pid {
-            name,
+            name: name,
             path,
 
             state: PidState {
@@ -76,6 +106,7 @@ impl<R: Robot + 'static, const N: usize> Pid<R, N> {
             params,
 
             msgnode: PidNode {
+                recoder: BufWriter::new(file),
                 track_queue: Arc::new(SegQueue::new()),
                 control_command_queue: Arc::new(SegQueue::new()),
             },
@@ -138,6 +169,9 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Pid<R, N> {
         let control_output = self.params.kp * self.state.error
             + self.params.ki * self.state.integral
             + self.params.kd * self.state.derivative;
+
+        // 记录控制指令
+        recode!(self.msgnode.recoder, control_output);
 
         // 发送控制指令
         let control_command = ControlCommand::JointWithPeriod(JointWithPeriod {

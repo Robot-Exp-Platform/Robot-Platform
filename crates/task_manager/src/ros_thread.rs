@@ -7,4 +7,5 @@ pub trait ROSThread: Send + Sync {
     fn get_period(&self) -> Duration {
         Duration::from_secs(0)
     }
+    fn finalize(&mut self) {}
 }

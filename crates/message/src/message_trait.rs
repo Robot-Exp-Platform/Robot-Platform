@@ -4,6 +4,7 @@ use crate::state::State;
 use crate::target::Target;
 use crate::track::Track;
 
+#[derive(Debug)]
 pub enum Message {
     State(State),
     Target(Target),

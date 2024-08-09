@@ -12,6 +12,7 @@ serde_json.workspace = true
 serde_yaml.workspace = true
 nalgebra.workspace = true
 crossbeam.workspace = true
+chrono.workspace = true
 zmq = { workspace = true, optional = true }
 rosrust = { workspace = true, optional = true }
 rosrust_msg = { workspace = true, optional = true }

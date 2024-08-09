@@ -19,6 +19,7 @@ rosrust_msg = { workspace = true, optional = true }
 robot.workspace = true
 task_manager.workspace = true
 message.workspace = true
+recoder.workspace = true
 
 [features]
 # default = ["rszmq"]
