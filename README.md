@@ -143,4 +143,6 @@ cargo run
     "MD033": false,
     "MD024": false
   },
+  "pylint.args": ["--disable=C0116,I1101", "--max-line-length=120"],
+  "flake8.args": ["--max-line-length=120"]
 ```

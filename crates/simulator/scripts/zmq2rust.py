@@ -1,12 +1,13 @@
-import zmq
 import json
+import zmq
+
 
 class ZMQ_REQ:
     def __init__(self, localhost) -> None:
         self.context = zmq.Context()
         self.socket = self.context.socket(zmq.REQ)  # 请求（Request）套接字
         self.socket.connect(localhost)
-    
+
     def send_array(self, data):
         # 将数组序列化为 JSON 字符串
         message = json.dumps(data)
