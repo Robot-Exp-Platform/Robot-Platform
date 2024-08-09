@@ -55,6 +55,23 @@ impl<R: Robot + 'static, const N: usize> Linear<R, N> {
             robot,
         )
     }
+    pub fn from_file_path(
+        name: String,
+        path: String,
+        file_path: String,
+        robot: Arc<RwLock<R>>,
+    ) -> Linear<R, N> {
+        Linear::from_params(
+            name,
+            path,
+            file_path,
+            LinearParams {
+                period: 0.0,
+                interpolation: 0,
+            },
+            robot,
+        )
+    }
     pub fn from_params(
         name: String,
         path: String,

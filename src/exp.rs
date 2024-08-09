@@ -7,7 +7,7 @@ use std::fs::File;
 use std::path;
 use std::sync::{Arc, Mutex, RwLock};
 
-use crate::config::CONFIG_PATH;
+use crate::config::{CONFIG_PATH, EXP_NAME};
 use controller::config::create_controller;
 use planner::config::create_planner;
 use robot::robots::franka_emika;
@@ -84,8 +84,12 @@ impl Exp {
                 let robot = Arc::new(RwLock::new(robot));
 
                 // 分别判断 controller 和 planner 的类型，然后创建对应的 controller 和 planner
-                let (planner, controller, simulator) =
-                    create_nodes::<RobotList, 0>(&config, &path, robot.clone());
+                let (planner, controller, simulator) = create_nodes::<RobotList, 0>(
+                    &config,
+                    &path,
+                    format!("./data/{}", EXP_NAME).as_str(),
+                    robot.clone(),
+                );
 
                 // ! 递归!树就是从这里长起来的
                 for robot_config in config.robots.unwrap() {
@@ -216,6 +220,7 @@ impl ROSThread for Exp {
 fn create_nodes<T: robot::Robot + 'static, const N: usize>(
     config: &Config,
     path: &str,
+    file_path: &str,
     robot: Arc<RwLock<T>>,
 ) -> (
     Arc<Mutex<dyn planner::Planner>>,
@@ -225,18 +230,21 @@ fn create_nodes<T: robot::Robot + 'static, const N: usize>(
     let planner = create_planner::<T, N>(
         config.planner.clone(),
         config.name.clone(),
+        format!("{}/{}", file_path, config.name),
         format!("/planner/{}", path),
         robot.clone(),
     );
     let controller = create_controller::<T, N>(
         config.controller.clone(),
         config.name.clone(),
+        format!("{}/{}", file_path, config.name),
         format!("/controller/{}", path),
         robot.clone(),
     );
     let simulator = create_simulator::<T, N>(
         config.simulator.clone(),
         config.name.clone(),
+        format!("{}/{}", file_path, config.name),
         format!("/simulator/{}", path),
         robot.clone(),
     );
@@ -262,7 +270,12 @@ fn create_robot(
             let robot = Arc::new(RwLock::new(robot));
             (
                 robot.clone(),
-                create_nodes::<panda::Panda, { panda::PANDA_DOF }>(config, path, robot),
+                create_nodes::<panda::Panda, { panda::PANDA_DOF }>(
+                    config,
+                    path,
+                    format!("./data/{}", EXP_NAME).as_str(),
+                    robot,
+                ),
             )
         }
         "franka_emika" => {
@@ -274,7 +287,10 @@ fn create_robot(
             (
                 robot.clone(),
                 create_nodes::<franka_emika::FrankaEmika, { franka_emika::EMIKA_DOF }>(
-                    config, path, robot,
+                    config,
+                    path,
+                    format!("./data/{}", EXP_NAME).as_str(),
+                    robot,
                 ),
             )
         }
@@ -289,7 +305,7 @@ fn create_robot(
                 create_nodes::<
                     franka_research3::FrankaResearch3,
                     { franka_research3::RESEARCH3_DOF },
-                >(config, path, robot),
+                >(config, path, format!("./data/{}", EXP_NAME).as_str(), robot),
             )
         }
         _ => panic!("Unknown robot type"),

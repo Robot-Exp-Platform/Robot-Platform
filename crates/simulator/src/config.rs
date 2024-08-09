@@ -7,6 +7,7 @@ use robot::robot_trait::Robot;
 pub fn create_simulator<R: Robot + 'static, const N: usize>(
     simulator_type: String,
     robot_name: String,
+    _file_path: String,
     path: String,
     robot: Arc<RwLock<R>>,
 ) -> Arc<Mutex<dyn Simulator>> {
