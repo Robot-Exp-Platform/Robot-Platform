@@ -36,13 +36,15 @@ for joint_index in range(num_joints):
 
 for joint_index in range(0, 7):
     joint_info = p.getJointInfo(robot_id, joint_index)
-    joint_name = joint_info[1].decode('utf-8')
+    joint_name = joint_info[1].decode("utf-8")
     lower_limit, upper_limit = joint_info[8], joint_info[9]
-    print(f"Joint {joint_index} ({joint_name}): Limits = ({lower_limit}, {upper_limit})")
+    print(
+        f"Joint {joint_index} ({joint_name}): Limits = ({lower_limit}, {upper_limit})"
+    )
 
 
 # 设置关节的速度
-target_velocities = [0.5, 1.0, 1.5, -1.0, -0.5, 0.7, -0.3] 
+target_velocities = [0.5, 1.0, 1.5, -1.0, -0.5, 0.7, -0.3]
 
 for joint_index in range(0, 7):
     # 启动一个关节的运动
@@ -53,7 +55,7 @@ for joint_index in range(0, 7):
                 jointIndex=index,
                 controlMode=p.VELOCITY_CONTROL,
                 targetVelocity=target_velocities[index],
-                force=100.0  # 设置最大力矩或推力
+                force=100.0,  # 设置最大力矩或推力
             )
         else:
             p.setJointMotorControl2(
@@ -61,7 +63,7 @@ for joint_index in range(0, 7):
                 jointIndex=index,
                 controlMode=p.VELOCITY_CONTROL,
                 targetVelocity=0,
-                force=100.0  # 设置最大力矩或推力
+                force=100.0,  # 设置最大力矩或推力
             )
     # 模拟几秒以便观察
     for _ in range(500):
@@ -78,11 +80,13 @@ for joint_index in range(0, 7):
     joint_info = p.getJointState(robot_id, joint_index)
     joint_angle = joint_info[0]
     joint_velocity = joint_info[1]
-    
+
     joint_angles.append(joint_angle)
     joint_velocities.append(joint_velocity)
 
-    print(f"Joint {joint_index}: Angle = {joint_angle:.2f}, Velocity = {joint_velocity:.2f}")
+    print(
+        f"Joint {joint_index}: Angle = {joint_angle:.2f}, Velocity = {joint_velocity:.2f}"
+    )
 
 # 断开连接
 p.disconnect()
