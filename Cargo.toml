@@ -34,6 +34,7 @@ zeromq = "*"
 crossbeam = "*"
 rand = "*"
 chrono = "*"
+lazy_static = "*"
 
 robot = { path = "./crates/robot" }
 controller = { path = "./crates/controller" }

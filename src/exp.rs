@@ -7,7 +7,8 @@ use std::fs::File;
 use std::path;
 use std::sync::{Arc, Mutex, RwLock};
 
-use crate::config::{CONFIG_PATH, EXP_NAME};
+use crate::config::CONFIG_PATH;
+use crate::config::TASK_PATH;
 use controller::config::create_controller;
 use planner::config::create_planner;
 use robot::robots::franka_emika;
@@ -54,6 +55,7 @@ impl Exp {
         let mut task_manage = TaskManager::new();
         let (robot, planner, controller, simulator) =
             Exp::build_exp_tree(config, "".to_string(), &mut thread_manage, &mut task_manage);
+
         Exp {
             thread_manage,
             task_manage,
@@ -84,12 +86,8 @@ impl Exp {
                 let robot = Arc::new(RwLock::new(robot));
 
                 // 分别判断 controller 和 planner 的类型，然后创建对应的 controller 和 planner
-                let (planner, controller, simulator) = create_nodes::<RobotList, 0>(
-                    &config,
-                    &path,
-                    format!("./data/{}", EXP_NAME).as_str(),
-                    robot.clone(),
-                );
+                let (planner, controller, simulator) =
+                    create_nodes::<RobotList, 0>(&config, &path, robot.clone());
 
                 // ! 递归!树就是从这里长起来的
                 for robot_config in config.robots.unwrap() {
@@ -148,7 +146,7 @@ impl Exp {
 
     fn update_tesk(&mut self) {
         // ! 从 task.json 中读取任务,然后,将对应的参数设置到对应的节点中去,这将有助于在后期反复迭代任务,但是就目前来说,只有更新参数的功能了
-        let task_file = File::open(path::Path::new("task.json")).expect("Failed to open task file");
+        let task_file = File::open(path::Path::new(TASK_PATH)).expect("Failed to open task file");
         let task: Task = from_reader(task_file).expect("Failed to parse task file");
 
         let controller = self.controller_exp.clone();
@@ -220,7 +218,6 @@ impl ROSThread for Exp {
 fn create_nodes<T: robot::Robot + 'static, const N: usize>(
     config: &Config,
     path: &str,
-    file_path: &str,
     robot: Arc<RwLock<T>>,
 ) -> (
     Arc<Mutex<dyn planner::Planner>>,
@@ -230,21 +227,18 @@ fn create_nodes<T: robot::Robot + 'static, const N: usize>(
     let planner = create_planner::<T, N>(
         config.planner.clone(),
         config.name.clone(),
-        format!("{}/{}", file_path, config.name),
         format!("/planner/{}", path),
         robot.clone(),
     );
     let controller = create_controller::<T, N>(
         config.controller.clone(),
         config.name.clone(),
-        format!("{}/{}", file_path, config.name),
         format!("/controller/{}", path),
         robot.clone(),
     );
     let simulator = create_simulator::<T, N>(
         config.simulator.clone(),
         config.name.clone(),
-        format!("{}/{}", file_path, config.name),
         format!("/simulator/{}", path),
         robot.clone(),
     );
@@ -270,12 +264,7 @@ fn create_robot(
             let robot = Arc::new(RwLock::new(robot));
             (
                 robot.clone(),
-                create_nodes::<panda::Panda, { panda::PANDA_DOF }>(
-                    config,
-                    path,
-                    format!("./data/{}", EXP_NAME).as_str(),
-                    robot,
-                ),
+                create_nodes::<panda::Panda, { panda::PANDA_DOF }>(config, path, robot),
             )
         }
         "franka_emika" => {
@@ -287,10 +276,7 @@ fn create_robot(
             (
                 robot.clone(),
                 create_nodes::<franka_emika::FrankaEmika, { franka_emika::EMIKA_DOF }>(
-                    config,
-                    path,
-                    format!("./data/{}", EXP_NAME).as_str(),
-                    robot,
+                    config, path, robot,
                 ),
             )
         }
@@ -305,7 +291,7 @@ fn create_robot(
                 create_nodes::<
                     franka_research3::FrankaResearch3,
                     { franka_research3::RESEARCH3_DOF },
-                >(config, path, format!("./data/{}", EXP_NAME).as_str(), robot),
+                >(config, path, robot),
             )
         }
         _ => panic!("Unknown robot type"),

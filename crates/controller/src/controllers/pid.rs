@@ -62,25 +62,6 @@ impl<R: Robot + 'static, const N: usize> Pid<R, N> {
             robot,
         )
     }
-    pub fn from_file_path(
-        name: String,
-        path: String,
-        file_path: String,
-        robot: Arc<RwLock<R>>,
-    ) -> Pid<R, N> {
-        Pid::from_params(
-            name,
-            path,
-            file_path,
-            PidParams {
-                period: 0.0,
-                kp: na::SMatrix::from_element(0.0),
-                ki: na::SMatrix::from_element(0.0),
-                kd: na::SMatrix::from_element(0.0),
-            },
-            robot,
-        )
-    }
     pub fn from_params(
         name: String,
         path: String,
@@ -144,7 +125,20 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Pid<R, N> {
     fn init(&mut self) {
         println!("{} 向您问好. {} says hello.", self.name, self.name);
     }
-    fn start(&mut self) {}
+    fn start(&mut self) {
+        let file = OpenOptions::new()
+            .append(true)
+            .create(true)
+            .open(format!(
+                "data/{}/{}/{}/{}.txt",
+                *EXP_NAME,
+                *TASK_NAME.lock().unwrap(),
+                self.robot.read().unwrap().get_name(),
+                self.get_name()
+            ))
+            .unwrap();
+        self.msgnode.recoder = BufWriter::new(file);
+    }
 
     fn update(&mut self) {
         // 更新 track
