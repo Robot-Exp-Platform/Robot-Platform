@@ -46,6 +46,7 @@ impl ThreadManage {
                         thread::sleep(period - elapsed_time);
                     }
                 }
+                node_lock.finalize();
                 drop(node_lock);
             }
         });

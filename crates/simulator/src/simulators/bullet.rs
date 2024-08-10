@@ -4,7 +4,7 @@ use rosrust as ros;
 use serde::Deserialize;
 use serde_json::{from_value, Value};
 // use serde_yaml::Value;
-use std::fs::{self, File, OpenOptions};
+use std::fs;
 use std::io::{BufWriter, Write};
 #[cfg(feature = "rszmq")]
 use std::sync::Mutex;
@@ -15,6 +15,7 @@ use zmq;
 use crate::simulator_trait::Simulator;
 use message::control_command::ControlCommand;
 use message::state::RobotState;
+#[cfg(feature = "recode")]
 use recoder::*;
 use robot::robot_trait::Robot;
 use task_manager::generate_node_method;
@@ -38,7 +39,7 @@ pub struct BulletParams {
 
 // 消息节点结构体声明，随条件编译的不同而不同，条件编译将决定其使用什么通讯方式
 struct BulletNode {
-    recoder: Option<BufWriter<File>>,
+    recoder: Option<BufWriter<fs::File>>,
     control_command_queue: Arc<SegQueue<ControlCommand>>,
     #[cfg(feature = "rszmq")]
     responder: Arc<Mutex<zmq::Socket>>,
@@ -130,24 +131,27 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Bullet<R, N> {
     }
 
     fn start(&mut self) {
-        fs::create_dir_all(format!(
-            "./data/{}/{}/{}",
-            *EXP_NAME,
-            *TASK_NAME.lock().unwrap(),
-            self.robot.read().unwrap().get_name()
-        ))
-        .unwrap();
-        let file = OpenOptions::new()
-            .append(true)
-            .create(true)
-            .open(format!(
-                "data/{}/{}/{}/bullet.txt",
+        #[cfg(feature = "recode")]
+        {
+            fs::create_dir_all(format!(
+                "./data/{}/{}/{}",
                 *EXP_NAME,
                 *TASK_NAME.lock().unwrap(),
-                self.robot.read().unwrap().get_name(),
+                self.robot.read().unwrap().get_name()
             ))
             .unwrap();
-        self.msgnode.recoder = Some(BufWriter::new(file));
+            let file = fs::OpenOptions::new()
+                .append(true)
+                .create(true)
+                .open(format!(
+                    "data/{}/{}/{}/bullet.txt",
+                    *EXP_NAME,
+                    *TASK_NAME.lock().unwrap(),
+                    self.robot.read().unwrap().get_name(),
+                ))
+                .unwrap();
+            self.msgnode.recoder = Some(BufWriter::new(file));
+        }
     }
 
     fn update(&mut self) {

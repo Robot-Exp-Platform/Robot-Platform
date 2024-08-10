@@ -23,6 +23,7 @@ recoder.workspace = true
 
 [features]
 # default = ["rszmq"]
+recode = []
 noros = []
 rszmq = ["zmq"]
 ros = ["rosrust", "rosrust_msg"]

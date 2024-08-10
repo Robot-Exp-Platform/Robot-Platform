@@ -24,8 +24,7 @@ message.workspace = true
 
 
 [features]
-serde-serialize = ["nalgebra/serde-serialize"]
-
+recode = []
 rszmq = ["zmq"]
 noros = []
 ros = ["rosrust", "rosrust_msg"]

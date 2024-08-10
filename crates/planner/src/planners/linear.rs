@@ -3,7 +3,7 @@ use nalgebra as na;
 use serde::Deserialize;
 use serde_json::{from_value, Value};
 // use serde_yaml::{from_value, Value};
-use std::fs::{self, File, OpenOptions};
+use std::fs;
 use std::io::{BufWriter, Write};
 use std::sync::{Arc, Mutex, RwLock};
 use std::time::Duration;
@@ -11,6 +11,7 @@ use std::time::Duration;
 use crate::planner_trait::Planner;
 use message::target::Target;
 use message::track::Track;
+#[cfg(feature = "recode")]
 use recoder::*;
 use robot::robot_trait::Robot;
 use task_manager::generate_node_method;
@@ -34,7 +35,7 @@ pub struct LinearParams {
 }
 
 pub struct LinearNode {
-    recoder: Option<BufWriter<File>>,
+    recoder: Option<BufWriter<fs::File>>,
     target_queue: Arc<SegQueue<Target>>,
     track_queue: Arc<SegQueue<Track>>,
 }
@@ -92,24 +93,27 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Linear<R, N> {
     }
 
     fn start(&mut self) {
-        fs::create_dir_all(format!(
-            "./data/{}/{}/{}",
-            *EXP_NAME,
-            *TASK_NAME.lock().unwrap(),
-            self.robot.read().unwrap().get_name()
-        ))
-        .unwrap();
-        let file = OpenOptions::new()
-            .append(true)
-            .create(true)
-            .open(format!(
-                "./data/{}/{}/{}/linear.txt",
+        #[cfg(feature = "recode")]
+        {
+            fs::create_dir_all(format!(
+                "./data/{}/{}/{}",
                 *EXP_NAME,
                 *TASK_NAME.lock().unwrap(),
-                self.robot.read().unwrap().get_name(),
+                self.robot.read().unwrap().get_name()
             ))
             .unwrap();
-        self.msgnode.recoder = Some(BufWriter::new(file));
+            let file = fs::OpenOptions::new()
+                .append(true)
+                .create(true)
+                .open(format!(
+                    "./data/{}/{}/{}/linear.txt",
+                    *EXP_NAME,
+                    *TASK_NAME.lock().unwrap(),
+                    self.robot.read().unwrap().get_name(),
+                ))
+                .unwrap();
+            self.msgnode.recoder = Some(BufWriter::new(file));
+        }
     }
 
     fn update(&mut self) {
@@ -136,6 +140,7 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Linear<R, N> {
         let track_list = interpolation::<N>(&q, &target, self.params.interpolation);
 
         // 记录 track
+        #[cfg(feature = "recode")]
         if let Some(ref mut recoder) = self.msgnode.recoder {
             for track in track_list.iter() {
                 recode!(recoder, track);
