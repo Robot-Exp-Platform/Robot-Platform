@@ -12,11 +12,11 @@ use crate::planner_trait::Planner;
 use message::target::Target;
 use message::track::Track;
 use recoder::*;
-use robot::robot_trait::Robot;
+use robot::robot_trait::SeriesRobot;
 use task_manager::generate_node_method;
 use task_manager::ros_thread::ROSThread;
 
-pub struct Linear<R: Robot + 'static, const N: usize> {
+pub struct Linear<R: SeriesRobot<N> + 'static, const N: usize> {
     name: String,
     path: String,
 
@@ -39,7 +39,7 @@ pub struct LinearNode {
     track_queue: Arc<SegQueue<Track>>,
 }
 
-impl<R: Robot + 'static, const N: usize> Linear<R, N> {
+impl<R: SeriesRobot<N> + 'static, const N: usize> Linear<R, N> {
     pub fn new(name: String, path: String, robot: Arc<RwLock<R>>) -> Linear<R, N> {
         Linear::from_params(
             name,
@@ -73,7 +73,7 @@ impl<R: Robot + 'static, const N: usize> Linear<R, N> {
     }
 }
 
-impl<R: Robot + 'static, const N: usize> Planner for Linear<R, N> {
+impl<R: SeriesRobot<N> + 'static, const N: usize> Planner for Linear<R, N> {
     generate_node_method!();
 
     fn set_target_queue(&mut self, target_queue: Arc<SegQueue<Target>>) {
@@ -86,7 +86,7 @@ impl<R: Robot + 'static, const N: usize> Planner for Linear<R, N> {
     fn add_planner(&mut self, _planner: Arc<Mutex<dyn Planner>>) {}
 }
 
-impl<R: Robot + 'static, const N: usize> ROSThread for Linear<R, N> {
+impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Linear<R, N> {
     fn init(&mut self) {
         println!("{} 向您问好. {} says hello.", self.name, self.name);
     }
@@ -130,7 +130,7 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Linear<R, N> {
 
         // 获取 robot 状态
         let robot_read = self.robot.read().unwrap();
-        let q = na::SVector::from_vec(robot_read.get_q());
+        let q = robot_read.get_q_na();
 
         // 执行插值逻辑，将当前位置到目标位置的插值点和目标位置塞入 track 队列
         let track_list = interpolation::<N>(&q, &target, self.params.interpolation);

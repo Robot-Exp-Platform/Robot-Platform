@@ -21,7 +21,6 @@ use task_manager::generate_node_method;
 use task_manager::ros_thread::ROSThread;
 
 // bullet 结构体声明，包含其名称，路径，消息节点，以及机器人
-#[allow(dead_code)]
 pub struct Bullet<R: Robot + 'static, const N: usize> {
     name: String,
     path: String,
@@ -38,12 +37,9 @@ pub struct BulletParams {
 }
 
 // 消息节点结构体声明，随条件编译的不同而不同，条件编译将决定其使用什么通讯方式
-#[allow(dead_code)]
 struct BulletNode {
     recoder: Option<BufWriter<File>>,
     control_command_queue: Arc<SegQueue<ControlCommand>>,
-    #[cfg(feature = "rszmq")]
-    context: Arc<zmq::Context>,
     #[cfg(feature = "rszmq")]
     responder: Arc<Mutex<zmq::Socket>>,
     #[cfg(feature = "ros")]
@@ -73,8 +69,6 @@ impl<R: Robot + 'static, const N: usize> Bullet<R, N> {
             msgnode: BulletNode {
                 recoder: None,
                 control_command_queue: Arc::new(SegQueue::new()),
-                #[cfg(feature = "rszmq")]
-                context: Arc::new(zmq::Context::new()),
                 #[cfg(feature = "rszmq")]
                 responder: Arc::new(Mutex::new(responder)),
                 #[cfg(feature = "ros")]

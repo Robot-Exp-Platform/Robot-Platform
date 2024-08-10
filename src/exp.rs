@@ -23,13 +23,12 @@ use task_manager::task::Task;
 use task_manager::task_manage::TaskManager;
 use task_manager::thread_manage::ThreadManage;
 
-#[allow(dead_code)]
 pub struct Exp {
     // Exp 是一个森林状的结构，其中的包含 robot tree, controller tree, planner tree 等等树状结构的根节点，通过管理 exp 实现管理整个结构的目的
     pub thread_manage: ThreadManage,
     pub task_manage: TaskManager,
 
-    pub robot_exp: Arc<RwLock<dyn robot::Robot>>,
+    pub _robot_exp: Arc<RwLock<dyn robot::Robot>>,
     pub planner_exp: Arc<Mutex<dyn planner::Planner>>,
     pub controller_exp: Arc<Mutex<dyn controller::Controller>>,
     pub simulator_exp: Arc<Mutex<dyn simulator::Simulator>>,
@@ -61,7 +60,7 @@ impl Exp {
         Exp {
             thread_manage,
             task_manage,
-            robot_exp: robot,
+            _robot_exp: robot,
             planner_exp: planner,
             controller_exp: controller,
             simulator_exp: simulator,
