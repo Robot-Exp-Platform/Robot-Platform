@@ -22,6 +22,7 @@ fn main() {
 
         while exp.is_running() {
             exp.update();
+            println!("完成一次任务")
         }
     }
 }

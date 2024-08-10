@@ -5,6 +5,7 @@ use serde_json::Value;
 // use serde_yaml::Value;
 use std::sync::{Arc, Mutex};
 use task_manager::ros_thread::ROSThread;
+use task_manager::state_collector::StateCollector;
 
 #[derive(Clone, Copy)]
 pub enum PlannerState {
@@ -26,6 +27,7 @@ pub trait Planner: ROSThread {
     fn set_params(&mut self, params: Value);
     fn set_target_queue(&mut self, target_queue: Arc<SegQueue<Target>>);
     fn set_track_queue(&mut self, track_queue: Arc<SegQueue<Track>>);
+    fn set_state_collector(&mut self, state_collector: StateCollector);
 
     fn add_planner(&mut self, planner: Arc<Mutex<dyn Planner>>);
 }

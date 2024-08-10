@@ -5,7 +5,7 @@ use serde_json::from_reader;
 // use serde_yaml::from_reader;
 use std::fs;
 use std::path;
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Arc, Condvar, Mutex, RwLock};
 
 use crate::config::CONFIG_PATH;
 use crate::config::TASK_PATH;
@@ -21,6 +21,7 @@ use robot::robots::panda;
 use robot::robots::robot_list::RobotList;
 use simulator::config::create_simulator;
 use task_manager::ros_thread::ROSThread;
+use task_manager::state_collector::{NodeState, StateCollector};
 use task_manager::task::Task;
 use task_manager::task_manage::TaskManager;
 use task_manager::thread_manage::ThreadManage;
@@ -29,6 +30,7 @@ pub struct Exp {
     // Exp 是一个森林状的结构，其中的包含 robot tree, controller tree, planner tree 等等树状结构的根节点，通过管理 exp 实现管理整个结构的目的
     pub thread_manage: ThreadManage,
     pub task_manage: TaskManager,
+    pub state_collector: StateCollector,
 
     pub _robot_exp: Arc<RwLock<dyn robot::Robot>>,
     pub planner_exp: Arc<Mutex<dyn planner::Planner>>,
@@ -56,12 +58,19 @@ impl Exp {
         // 根据配置文件生成机器人树
         let mut thread_manage = ThreadManage::new();
         let mut task_manage = TaskManager::new();
-        let (robot, planner, controller, simulator) =
-            Exp::build_exp_tree(config, "".to_string(), &mut thread_manage, &mut task_manage);
+        let state_collector = Arc::new((Mutex::new(NodeState::new()), Condvar::new()));
+        let (robot, planner, controller, simulator) = Exp::build_exp_tree(
+            config,
+            "".to_string(),
+            &mut thread_manage,
+            &mut task_manage,
+            &state_collector,
+        );
 
         Exp {
             thread_manage,
             task_manage,
+            state_collector,
             _robot_exp: robot,
             planner_exp: planner,
             controller_exp: controller,
@@ -75,6 +84,7 @@ impl Exp {
         path: String,
         thread_manage: &mut ThreadManage,
         task_manager: &mut TaskManager,
+        state_collector: &StateCollector,
     ) -> (
         Arc<RwLock<dyn robot::Robot>>,
         Arc<Mutex<dyn planner::Planner>>,
@@ -100,6 +110,7 @@ impl Exp {
                             format!("{}/robot_list", path),
                             thread_manage,
                             task_manager,
+                            state_collector,
                         );
                     robot.write().unwrap().add_robot(child_robot);
                     planner.lock().unwrap().add_planner(child_planner);
@@ -116,11 +127,19 @@ impl Exp {
                 let track_queue = Arc::new(SegQueue::new());
                 let control_command_queue = Arc::new(SegQueue::new());
 
+                // 为 planner 配置信道
                 planner
                     .lock()
                     .unwrap()
                     .set_target_queue(target_queue.clone());
                 planner.lock().unwrap().set_track_queue(track_queue.clone());
+                planner
+                    .lock()
+                    .unwrap()
+                    .set_state_collector(state_collector.clone());
+                state_collector.0.lock().unwrap().add_node();
+
+                // 为 controller 配置信道
                 controller
                     .lock()
                     .unwrap()
@@ -129,6 +148,8 @@ impl Exp {
                     .lock()
                     .unwrap()
                     .set_controller_command_queue(control_command_queue.clone());
+
+                // 为 simulator 配置信道
                 simulator
                     .lock()
                     .unwrap()
@@ -212,17 +233,28 @@ impl ROSThread for Exp {
         );
     }
 
-    fn start(&mut self) {
+    fn update(&mut self) {
+        println!("开始任务");
         // ! 所有线程停一会儿，等待下个任务到来
         self.thread_manage.stop_all();
-
         self.update_tesk();
-
         // ! 所有线程启动启动启动
         self.thread_manage.start_all();
-    }
+        println!("任务目标完成");
 
-    fn update(&mut self) {}
+        // ! 获取状态收集器，等待任务完成
+        let (state, cvar) = &*self.state_collector;
+        let mut state = state.lock().unwrap();
+
+        while state.get_node_size() != state.get_finished() {
+            state = cvar.wait(state).unwrap();
+            println!("被通知提醒，此时任务完成数量为：{}", state.get_finished());
+        }
+
+        println!("任务完成，状态整理器重置");
+        state.refresh();
+        self.thread_manage.stop_all();
+    }
 }
 
 #[allow(clippy::type_complexity)]

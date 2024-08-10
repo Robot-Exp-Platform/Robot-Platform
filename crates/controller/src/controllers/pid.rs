@@ -70,7 +70,7 @@ impl<R: Robot + 'static, const N: usize> Pid<R, N> {
         robot: Arc<RwLock<R>>,
     ) -> Pid<R, N> {
         Pid {
-            name: name,
+            name,
             path,
 
             state: PidState {
