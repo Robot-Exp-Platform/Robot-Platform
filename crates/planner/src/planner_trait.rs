@@ -19,7 +19,6 @@ pub trait Planner: ROSThread {
     }
     fn get_name(&self) -> String;
     fn get_path(&self) -> String;
-    fn get_params(&self) -> Vec<f64>;
     fn get_planner(&self) -> &Vec<Arc<Mutex<dyn Planner>>> {
         unimplemented!()
     }

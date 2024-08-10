@@ -13,13 +13,13 @@ use message::target::Target;
 use message::track::Track;
 use recoder::*;
 use robot::robot_trait::Robot;
+use task_manager::generate_node_method;
 use task_manager::ros_thread::ROSThread;
 
 pub struct Linear<R: Robot + 'static, const N: usize> {
     name: String,
     path: String,
 
-    _state: LinearState<N>,
     params: LinearParams,
 
     msgnode: LinearNode,
@@ -27,8 +27,6 @@ pub struct Linear<R: Robot + 'static, const N: usize> {
     #[allow(dead_code)]
     robot: Arc<RwLock<R>>,
 }
-
-pub struct LinearState<const N: usize> {}
 
 #[derive(Deserialize)]
 pub struct LinearParams {
@@ -64,7 +62,6 @@ impl<R: Robot + 'static, const N: usize> Linear<R, N> {
             name: name,
             path,
 
-            _state: LinearState {},
             params,
 
             msgnode: LinearNode {
@@ -78,20 +75,8 @@ impl<R: Robot + 'static, const N: usize> Linear<R, N> {
 }
 
 impl<R: Robot + 'static, const N: usize> Planner for Linear<R, N> {
-    fn get_name(&self) -> String {
-        self.name.clone()
-    }
-    fn get_path(&self) -> String {
-        self.path.clone()
-    }
-    fn get_params(&self) -> Vec<f64> {
-        vec![self.params.interpolation as f64]
-    }
+    generate_node_method!();
 
-    fn set_params(&mut self, params: Value) {
-        let params: LinearParams = from_value(params).unwrap();
-        self.params = params;
-    }
     fn set_target_queue(&mut self, target_queue: Arc<SegQueue<Target>>) {
         self.msgnode.target_queue = target_queue;
     }

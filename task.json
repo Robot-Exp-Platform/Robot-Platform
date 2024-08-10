@@ -32,6 +32,6 @@
         ]
       }
     },
-    { "node_type": "simulator", "name": "bullet:panda_1", "param": "" }
+    { "node_type": "simulator", "name": "bullet:panda_1", "param": { "period": 0.5 } }
   ]
 }

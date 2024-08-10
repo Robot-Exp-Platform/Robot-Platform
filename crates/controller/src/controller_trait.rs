@@ -18,7 +18,7 @@ pub trait Controller: ROSThread {
         controller_command_queue: Arc<SegQueue<ControlCommand>>,
     );
 
-    fn add_controller(&mut self, controller: Arc<Mutex<dyn Controller>>);
+    fn add_controller(&mut self, _: Arc<Mutex<dyn Controller>>) {}
     fn get_controller(&self) -> &Vec<Arc<Mutex<dyn Controller>>> {
         unimplemented!()
     }

@@ -5,7 +5,7 @@ use serde_json::{from_value, Value};
 // use serde_yaml::{from_value, Value};
 use std::fs::{self, File, OpenOptions};
 use std::io::{BufWriter, Write};
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Arc, RwLock};
 use std::time::Duration;
 
 use crate::controller_trait::Controller;
@@ -13,6 +13,7 @@ use message::control_command::JointWithPeriod;
 use message::{control_command::ControlCommand, track::Track};
 use recoder::*;
 use robot::robot_trait::Robot;
+use task_manager::generate_node_method;
 use task_manager::ros_thread::ROSThread;
 
 pub struct Pid<R: Robot + 'static, const N: usize> {
@@ -90,17 +91,8 @@ impl<R: Robot + 'static, const N: usize> Pid<R, N> {
 }
 
 impl<R: Robot + 'static, const N: usize> Controller for Pid<R, N> {
-    fn get_name(&self) -> String {
-        self.name.clone()
-    }
-    fn get_path(&self) -> String {
-        self.path.clone()
-    }
+    generate_node_method!();
 
-    fn set_params(&mut self, params: Value) {
-        let params: PidParams<N> = from_value(params).unwrap();
-        self.params = params;
-    }
     fn set_track_queue(&mut self, track_queue: Arc<SegQueue<Track>>) {
         self.msgnode.track_queue = track_queue;
     }
@@ -110,8 +102,6 @@ impl<R: Robot + 'static, const N: usize> Controller for Pid<R, N> {
     ) {
         self.msgnode.control_command_queue = controller_command_queue;
     }
-
-    fn add_controller(&mut self, _: Arc<Mutex<dyn Controller>>) {}
 }
 
 impl<R: Robot + 'static, const N: usize> ROSThread for Pid<R, N> {
