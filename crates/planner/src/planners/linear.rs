@@ -165,6 +165,12 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Linear<R, N> {
         }
     }
 
+    fn finalize(&mut self) {
+        if let Some(ref mut recoder) = self.msgnode.recoder {
+            recoder.flush().unwrap();
+        }
+    }
+
     fn get_period(&self) -> Duration {
         Duration::from_secs_f64(self.params.period)
     }

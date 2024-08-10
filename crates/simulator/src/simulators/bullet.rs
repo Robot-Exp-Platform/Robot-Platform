@@ -1,10 +1,11 @@
 use crossbeam::queue::SegQueue;
 #[cfg(feature = "ros")]
 use rosrust as ros;
+use serde::Deserialize;
 use serde_json::Value;
 // use serde_yaml::Value;
 use std::fs::{self, File, OpenOptions};
-use std::io::BufWriter;
+use std::io::{BufWriter, Write};
 #[cfg(feature = "rszmq")]
 use std::sync::Mutex;
 use std::sync::{Arc, RwLock};
@@ -13,6 +14,7 @@ use zmq;
 
 use crate::simulator_trait::Simulator;
 use message::control_command::ControlCommand;
+use message::state::RobotState;
 use recoder::*;
 use robot::robot_trait::Robot;
 use task_manager::ros_thread::ROSThread;
@@ -23,8 +25,15 @@ pub struct Bullet<R: Robot + 'static, const N: usize> {
     name: String,
     path: String,
 
+    params: BulletParams,
+
     msgnode: BulletNode,
     robot: Arc<RwLock<R>>,
+}
+
+#[derive(Deserialize)]
+pub struct BulletParams {
+    period: f64,
 }
 
 // 消息节点结构体声明，随条件编译的不同而不同，条件编译将决定其使用什么通讯方式
@@ -43,9 +52,14 @@ struct BulletNode {
 // 为结构体 Bullet 实现方法，这里主要是初始化方法
 impl<R: Robot + 'static, const N: usize> Bullet<R, N> {
     pub fn new(name: String, path: String, robot: Arc<RwLock<R>>) -> Bullet<R, N> {
-        Bullet::from_params(name, path, robot)
+        Bullet::from_params(name, path, BulletParams { period: 0.0 }, robot)
     }
-    pub fn from_params(name: String, path: String, robot: Arc<RwLock<R>>) -> Bullet<R, N> {
+    pub fn from_params(
+        name: String,
+        path: String,
+        params: BulletParams,
+        robot: Arc<RwLock<R>>,
+    ) -> Bullet<R, N> {
         #[cfg(feature = "rszmq")]
         let context = Arc::new(zmq::Context::new());
         #[cfg(feature = "rszmq")]
@@ -54,6 +68,7 @@ impl<R: Robot + 'static, const N: usize> Bullet<R, N> {
         Bullet {
             name,
             path,
+            params,
             msgnode: BulletNode {
                 recoder: None,
                 control_command_queue: Arc::new(SegQueue::new()),
@@ -165,50 +180,39 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Bullet<R, N> {
 
         #[cfg(feature = "rszmq")]
         {
-            // 定义一个可选的消息变量，用于在作用域外存储消息
-            let message_opt: Option<String>;
-            // 获取 robot 状态
-            {
-                let responder = self.msgnode.responder.lock().unwrap();
-                match responder.recv_string(0) {
-                    Ok(Ok(message)) => {
-                        // 成功接收到消息，并且消息是一个有效的 UTF-8 字符串
-                        println!("Received message!");
-                        message_opt = Some(message); // 将消息存储到外部变量中
-                    }
-                    Ok(Err(_)) => {
-                        eprintln!("Received a message that is not a valid UTF-8 string.");
-                        message_opt = None; // 未接收到有效消息
-                    }
-                    Err(e) => {
-                        eprintln!("Failed to receive message: {}", e);
-                        message_opt = None; // 未接收到消息
-                    }
+            // 获取 responder 并接受 RobotState 消息
+            let responder = self.msgnode.responder.lock().unwrap();
+            let message = responder
+                .recv_string(0)
+                .expect("Received a message that is not a valid UTF-8 string.")
+                .expect("Failed to receive message");
+            let robot_state: RobotState = serde_json::from_str(message.as_str()).unwrap();
+
+            // 及时返回控制指令
+            let reply = serde_json::to_string(&(_period, _control_command)).unwrap();
+            responder.send(&reply, 0).expect("Failed to send reply");
+
+            // 处理消息，将消息中的状态信息写入到机器人状态中
+            let mut robot_write = self.robot.write().unwrap();
+            match robot_state {
+                RobotState::Joint(joint) => robot_write.set_q(joint),
+                RobotState::Velocity(velocity) => robot_write.set_q_dot(velocity),
+                RobotState::JointVelocity(joint, velocity) => {
+                    robot_write.set_q(joint);
+                    robot_write.set_q_dot(velocity);
                 }
-                // 此时 responder 锁已被释放
-            } // responder 锁在这里被自动释放
-            if let Some(message) = message_opt {
-                // 如果成功接收到消息，则进行处理
-                // 将 robot state 反序列化为 State 消息类型，并写入 robot 中去
-                let robot_state: Vec<f64> = serde_json::from_str(&message).unwrap();
-                {
-                    let mut robot_write = self.robot.write().unwrap();
-                    robot_write.set_q(robot_state[0..N].to_vec());
-                    robot_write.set_q_dot(robot_state[N..2 * N].to_vec());
-                }
-                // 向仿真器发送控制指令
-                // 将指令序列化为 JSON 字符串
-                let reply = serde_json::to_string(&(_period, _control_command))
-                    .expect("Failed to serialize tuple");
-                // 重新获取锁并发送回复
-                let responder = self.msgnode.responder.lock().unwrap();
-                responder.send(&reply, 0).expect("Failed to send reply");
-                println!("Sent message!");
+                _ => {}
             }
         }
     }
 
+    fn finalize(&mut self) {
+        if let Some(ref mut recoder) = self.msgnode.recoder {
+            recoder.flush().unwrap();
+        }
+    }
+
     fn get_period(&self) -> std::time::Duration {
-        std::time::Duration::from_secs_f64(0.5)
+        std::time::Duration::from_secs_f64(self.params.period)
     }
 }

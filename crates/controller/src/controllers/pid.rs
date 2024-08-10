@@ -167,7 +167,6 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Pid<R, N> {
         if let Some(ref mut recoder) = self.msgnode.recoder {
             recode!(recoder, control_output);
         }
-        self.msgnode.recoder.as_mut().unwrap().flush().unwrap();
 
         // 发送控制指令
         let control_command = ControlCommand::JointWithPeriod(JointWithPeriod {
@@ -175,6 +174,12 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Pid<R, N> {
             joint: control_output.as_slice().to_vec(),
         });
         self.msgnode.control_command_queue.push(control_command);
+    }
+
+    fn finalize(&mut self) {
+        if let Some(ref mut recoder) = self.msgnode.recoder {
+            recoder.flush().unwrap();
+        }
     }
 
     fn get_period(&self) -> Duration {
