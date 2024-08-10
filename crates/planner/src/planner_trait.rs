@@ -28,6 +28,4 @@ pub trait Planner: ROSThread {
     fn set_track_queue(&mut self, track_queue: Arc<SegQueue<Track>>);
 
     fn add_planner(&mut self, planner: Arc<Mutex<dyn Planner>>);
-
-    // TODO add plan function
 }
