@@ -120,7 +120,7 @@ cargo run
 
 ## Contribution Guidelines
 
-![System Architecture](./docs/figures/system_architecture.png)
+![System Architecture](./images/system%20architecture.png)
 
 ### 代码风格
 
