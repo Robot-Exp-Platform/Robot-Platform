@@ -1,6 +1,13 @@
 use nalgebra as na;
 use serde::Deserialize;
 
+#[derive(Debug)]
+pub enum NodeState {
+    Starting,
+    Updating,
+    Finished,
+}
+
 #[derive(Debug, Deserialize)]
 pub enum RobotState {
     Pose(Pose),

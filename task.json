@@ -12,12 +12,12 @@
   ],
 
   "nodes": [
-    { "node_type": "planner", "name": "linear:panda_1", "param": { "period": 5, "interpolation": 10 } },
+    { "node_type": "planner", "name": "linear:panda_1", "param": { "period": 0.5, "interpolation": 10 } },
     {
       "node_type": "controller",
       "name": "pid:panda_1",
       "param": {
-        "period": 0.5,
+        "period": 0.05,
         "kp": [
           1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0,
           0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0
@@ -32,6 +32,6 @@
         ]
       }
     },
-    { "node_type": "simulator", "name": "bullet:panda_1", "param": { "period": 0.5 } }
+    { "node_type": "simulator", "name": "bullet:panda_1", "param": { "period": 0.05 } }
   ]
 }

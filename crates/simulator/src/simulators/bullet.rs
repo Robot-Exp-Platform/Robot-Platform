@@ -14,6 +14,7 @@ use zmq;
 
 use crate::simulator_trait::Simulator;
 use message::control_command::ControlCommand;
+#[cfg(feature = "rszmq")]
 use message::state::RobotState;
 #[cfg(feature = "recode")]
 use recoder::*;
@@ -22,6 +23,7 @@ use task_manager::generate_node_method;
 use task_manager::ros_thread::ROSThread;
 
 // bullet 结构体声明，包含其名称，路径，消息节点，以及机器人
+#[allow(dead_code)]
 pub struct Bullet<R: Robot + 'static, const N: usize> {
     name: String,
     path: String,
@@ -176,7 +178,7 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Bullet<R, N> {
             let message = responder
                 .recv_string(0)
                 .expect("Received a message that is not a valid UTF-8 string.")
-                .expect("Failed to receive message");
+                .unwrap();
             let robot_state: RobotState = serde_json::from_str(message.as_str()).unwrap();
 
             // 及时返回控制指令
