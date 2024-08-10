@@ -17,6 +17,7 @@ impl TaskManager {
     pub fn new() -> TaskManager {
         TaskManager {
             task: Task {
+                task_name: String::new(),
                 nodes: Vec::new(),
                 robot_tasks: Vec::new(),
             },

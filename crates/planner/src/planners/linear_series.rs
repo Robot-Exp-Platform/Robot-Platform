@@ -3,7 +3,7 @@ use nalgebra as na;
 use serde::Deserialize;
 use serde_json::{from_value, Value};
 // use serde_yaml::{from_value, Value};
-use std::fs;
+use std::fs::{self, File, OpenOptions};
 use std::io::{BufWriter, Write};
 use std::sync::{Arc, Mutex, RwLock};
 use std::time::Duration;
@@ -11,13 +11,12 @@ use std::time::Duration;
 use crate::planner_trait::Planner;
 use message::target::Target;
 use message::track::Track;
-#[cfg(feature = "recode")]
 use recoder::*;
-use robot::robot_trait::Robot;
+use robot::robot_trait::SeriesRobot;
 use task_manager::generate_node_method;
 use task_manager::ros_thread::ROSThread;
 
-pub struct Linear<R: Robot + 'static, const N: usize> {
+pub struct Linear<R: SeriesRobot<N> + 'static, const N: usize> {
     name: String,
     path: String,
 
@@ -35,12 +34,12 @@ pub struct LinearParams {
 }
 
 pub struct LinearNode {
-    recoder: Option<BufWriter<fs::File>>,
+    recoder: Option<BufWriter<File>>,
     target_queue: Arc<SegQueue<Target>>,
     track_queue: Arc<SegQueue<Track>>,
 }
 
-impl<R: Robot + 'static, const N: usize> Linear<R, N> {
+impl<R: SeriesRobot<N> + 'static, const N: usize> Linear<R, N> {
     pub fn new(name: String, path: String, robot: Arc<RwLock<R>>) -> Linear<R, N> {
         Linear::from_params(
             name,
@@ -74,7 +73,7 @@ impl<R: Robot + 'static, const N: usize> Linear<R, N> {
     }
 }
 
-impl<R: Robot + 'static, const N: usize> Planner for Linear<R, N> {
+impl<R: SeriesRobot<N> + 'static, const N: usize> Planner for Linear<R, N> {
     generate_node_method!();
 
     fn set_target_queue(&mut self, target_queue: Arc<SegQueue<Target>>) {
@@ -87,33 +86,30 @@ impl<R: Robot + 'static, const N: usize> Planner for Linear<R, N> {
     fn add_planner(&mut self, _planner: Arc<Mutex<dyn Planner>>) {}
 }
 
-impl<R: Robot + 'static, const N: usize> ROSThread for Linear<R, N> {
+impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Linear<R, N> {
     fn init(&mut self) {
         println!("{} 向您问好. {} says hello.", self.name, self.name);
     }
 
     fn start(&mut self) {
-        #[cfg(feature = "recode")]
-        {
-            fs::create_dir_all(format!(
-                "./data/{}/{}/{}",
+        fs::create_dir_all(format!(
+            "./data/{}/{}/{}",
+            *EXP_NAME,
+            *TASK_NAME.lock().unwrap(),
+            self.robot.read().unwrap().get_name()
+        ))
+        .unwrap();
+        let file = OpenOptions::new()
+            .append(true)
+            .create(true)
+            .open(format!(
+                "./data/{}/{}/{}/linear.txt",
                 *EXP_NAME,
                 *TASK_NAME.lock().unwrap(),
-                self.robot.read().unwrap().get_name()
+                self.robot.read().unwrap().get_name(),
             ))
             .unwrap();
-            let file = fs::OpenOptions::new()
-                .append(true)
-                .create(true)
-                .open(format!(
-                    "./data/{}/{}/{}/linear.txt",
-                    *EXP_NAME,
-                    *TASK_NAME.lock().unwrap(),
-                    self.robot.read().unwrap().get_name(),
-                ))
-                .unwrap();
-            self.msgnode.recoder = Some(BufWriter::new(file));
-        }
+        self.msgnode.recoder = Some(BufWriter::new(file));
     }
 
     fn update(&mut self) {
@@ -134,13 +130,12 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Linear<R, N> {
 
         // 获取 robot 状态
         let robot_read = self.robot.read().unwrap();
-        let q = na::SVector::from_vec(robot_read.get_q());
+        let q = robot_read.get_q_na();
 
         // 执行插值逻辑，将当前位置到目标位置的插值点和目标位置塞入 track 队列
         let track_list = interpolation::<N>(&q, &target, self.params.interpolation);
 
         // 记录 track
-        #[cfg(feature = "recode")]
         if let Some(ref mut recoder) = self.msgnode.recoder {
             for track in track_list.iter() {
                 recode!(recoder, track);

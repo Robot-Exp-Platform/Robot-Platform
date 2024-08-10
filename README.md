@@ -253,6 +253,6 @@ impl ThreadManage {
 
 目前存在的通讯有：
 
-task_manager/Exp --(Target)-> planner
-planner --(Track)-> controller
-controller --(ControlCommand)-> simulator
+- task_manager/Exp --(Target)-> planner
+- planner --(Track)-> controller
+- controller --(ControlCommand)-> simulator

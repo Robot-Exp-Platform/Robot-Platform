@@ -19,7 +19,6 @@ pub trait Planner: ROSThread {
     }
     fn get_name(&self) -> String;
     fn get_path(&self) -> String;
-    fn get_params(&self) -> Vec<f64>;
     fn get_planner(&self) -> &Vec<Arc<Mutex<dyn Planner>>> {
         unimplemented!()
     }
@@ -29,6 +28,4 @@ pub trait Planner: ROSThread {
     fn set_track_queue(&mut self, track_queue: Arc<SegQueue<Track>>);
 
     fn add_planner(&mut self, planner: Arc<Mutex<dyn Planner>>);
-
-    // TODO add plan function
 }

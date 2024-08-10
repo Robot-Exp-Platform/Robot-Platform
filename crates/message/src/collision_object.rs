@@ -1,28 +1,28 @@
 use nalgebra as na;
 
-#[allow(dead_code)]
+#[derive(Debug)]
 pub enum CollisionObject {
     Sphere(Sphere),
     LineSegment(LineSegment),
     Capsule(Capsule),
 }
 
-#[allow(dead_code)]
+#[derive(Debug)]
 pub struct Sphere {
-    center: na::Point3<f64>,
-    radius: f64,
+    pub center: na::Point3<f64>,
+    pub radius: f64,
 }
 
-#[allow(dead_code)]
+#[derive(Debug)]
 pub struct LineSegment {
-    start: na::Point3<f64>,
-    end: na::Point3<f64>,
-    radius: f64,
+    pub start: na::Point3<f64>,
+    pub end: na::Point3<f64>,
+    pub radius: f64,
 }
 
-#[allow(dead_code)]
+#[derive(Debug)]
 pub struct Capsule {
-    start: na::Point3<f64>,
-    end: na::Point3<f64>,
-    radius: f64,
+    pub start: na::Point3<f64>,
+    pub end: na::Point3<f64>,
+    pub radius: f64,
 }

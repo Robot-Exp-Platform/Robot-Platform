@@ -1,4 +1,5 @@
 use message::state::Pose;
+use nalgebra as na;
 
 pub trait Robot: Send + Sync {
     fn get_name(&self) -> String;
@@ -19,3 +20,8 @@ pub trait Robot: Send + Sync {
 }
 
 // pub trait RobotState {}
+
+pub trait SeriesRobot<const N: usize>: Robot {
+    fn get_q_na(&self) -> na::SVector<f64, N>;
+    fn get_q_dot_na(&self) -> na::SVector<f64, N>;
+}

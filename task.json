@@ -1,4 +1,5 @@
 {
+  "task_name": "test",
   "robot_tasks": [
     {
       "name": "linear:panda_1",
@@ -31,6 +32,6 @@
         ]
       }
     },
-    { "node_type": "simulator", "name": "bullet:panda_1", "param": "" }
+    { "node_type": "simulator", "name": "bullet:panda_1", "param": { "period": 0.5 } }
   ]
 }

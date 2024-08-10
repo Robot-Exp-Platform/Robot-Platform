@@ -34,6 +34,7 @@ zeromq = "*"
 crossbeam = "*"
 rand = "*"
 chrono = "*"
+lazy_static = "*"
 
 robot = { path = "./crates/robot" }
 controller = { path = "./crates/controller" }
@@ -71,6 +72,8 @@ message.workspace = true
 default = ["rszmq"]
 # default = ["ros"]
 # default = ["ros2"]
+
+recode = ["controller/recode", "planner/recode", "simulator/recode"]
 rszmq = [
     "zmq",
     "task_manager/rszmq",
