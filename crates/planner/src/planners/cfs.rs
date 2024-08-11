@@ -30,9 +30,14 @@ pub struct Cfs<R: SeriesRobot<N> + 'static, const N: usize> {
     robot: Arc<RwLock<R>>,
 }
 
+#[allow(dead_code)]
 #[derive(Deserialize)]
 pub struct CfsParams {
     period: f64,
+    interpolation: usize,
+    q1: na::DMatrix<f64>,
+    q2: na::DMatrix<f64>,
+    q3: na::DMatrix<f64>,
 }
 
 pub struct CfsNode {
@@ -44,7 +49,18 @@ pub struct CfsNode {
 
 impl<R: SeriesRobot<N> + 'static, const N: usize> Cfs<R, N> {
     pub fn new(name: String, path: String, robot: Arc<RwLock<R>>) -> Cfs<R, N> {
-        Cfs::from_params(name, path, CfsParams { period: 0.0 }, robot)
+        Cfs::from_params(
+            name,
+            path,
+            CfsParams {
+                period: 0.0,
+                interpolation: 0,
+                q1: na::DMatrix::zeros(0, 0),
+                q2: na::DMatrix::zeros(0, 0),
+                q3: na::DMatrix::zeros(0, 0),
+            },
+            robot,
+        )
     }
     pub fn from_params(
         name: String,

@@ -32,7 +32,7 @@ pub struct Linear<R: Robot + 'static, const N: usize> {
 #[derive(Deserialize)]
 pub struct LinearParams {
     period: f64,
-    interpolation: i32,
+    interpolation: usize,
 }
 
 pub struct LinearNode {
@@ -187,7 +187,7 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Linear<R, N> {
 fn interpolation<const N: usize>(
     start: &na::SVector<f64, N>,
     end: &na::SVector<f64, N>,
-    interpolation: i32,
+    interpolation: usize,
 ) -> Vec<na::SVector<f64, N>> {
     let mut track_list = Vec::new();
     for i in 0..interpolation {
