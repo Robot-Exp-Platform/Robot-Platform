@@ -3,7 +3,9 @@ use serde::Deserialize;
 #[derive(Debug, Deserialize)]
 pub enum ControlCommand {
     Joint(Vec<f64>),
-    JointWithPeriod(JointWithPeriod),
+    JointWithPeriod(f64, Vec<f64>),
+    Tau(Vec<f64>),
+    TauWithPeriod(f64, Vec<f64>),
 }
 
 #[derive(Debug, Deserialize)]
