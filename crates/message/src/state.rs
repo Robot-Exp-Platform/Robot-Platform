@@ -20,17 +20,6 @@ pub enum RobotState {
 
 pub type Pose = na::Isometry3<f64>;
 
-pub struct JointVelocity {
-    pub q: Vec<f64>,
-    pub q_dot: Vec<f64>,
-}
-
-pub struct JointVelocityAcceleration {
-    pub q: Vec<f64>,
-    pub q_dot: Vec<f64>,
-    pub q_ddot: Vec<f64>,
-}
-
 // type Joint<const N: usize> = na::SVector<f64, N>;
 // type Velocity<const N: usize> = na::SVector<f64, N>;
 // type Acceleration<const N: usize> = na::SVector<f64, N>;

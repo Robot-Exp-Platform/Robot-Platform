@@ -9,7 +9,6 @@ use std::sync::{Arc, RwLock};
 use std::time::Duration;
 
 use crate::controller_trait::Controller;
-use message::control_command::JointWithPeriod;
 use message::{control_command::ControlCommand, track::Track};
 #[cfg(feature = "recode")]
 use recoder::*;
@@ -109,6 +108,7 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Pid<R, N> {
     fn init(&mut self) {
         println!("{} 向您问好. {} says hello.", self.name, self.name);
     }
+
     fn start(&mut self) {
         #[cfg(feature = "recode")]
         {
@@ -137,7 +137,7 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Pid<R, N> {
         // 更新 track
         let track = match self.msgnode.track_queue.pop() {
             Some(Track::Joint(track)) => track,
-            None => return,
+            _ => return,
         };
 
         self.state.track = na::SVector::from_vec(track);
@@ -164,10 +164,8 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Pid<R, N> {
         }
 
         // 发送控制指令
-        let control_command = ControlCommand::JointWithPeriod(JointWithPeriod {
-            period: self.params.period,
-            joint: control_output.as_slice().to_vec(),
-        });
+        let control_command =
+            ControlCommand::JointWithPeriod(self.params.period, control_output.as_slice().to_vec());
         self.msgnode.control_command_queue.push(control_command);
     }
 

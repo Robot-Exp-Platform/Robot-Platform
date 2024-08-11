@@ -18,6 +18,7 @@ pub struct RobotNDofState<const N: usize> {
     // 机器人状态,在运行状态下将会实时改变
     q: na::SVector<f64, N>,
     q_dot: na::SVector<f64, N>,
+    q_ddot: na::SVector<f64, N>,
     base_pose: Pose,
 }
 
@@ -76,6 +77,7 @@ impl<const N: usize> RobotNDofState<N> {
         RobotNDofState {
             q: na::SVector::from_element(0.0),
             q_dot: na::SVector::from_element(0.0),
+            q_ddot: na::SVector::from_element(0.0),
             base_pose: Pose::identity(),
         }
     }
@@ -96,6 +98,10 @@ impl<const N: usize, const N_ADD_ONE: usize> SeriesRobot<N> for RobotNDof<N, N_A
 
     fn get_q_dot_na(&self) -> na::SVector<f64, N> {
         self.state.q_dot
+    }
+
+    fn get_q_ddot_na(&self) -> na::SVector<f64, N> {
+        self.state.q_ddot
     }
 }
 
