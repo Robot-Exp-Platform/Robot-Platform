@@ -1,4 +1,5 @@
 use nalgebra as na;
+use nalgebra::Isometry;
 
 use crate::robot_trait::Robot;
 use crate::robot_trait::SeriesRobot;
@@ -131,32 +132,24 @@ impl<const N: usize, const N_ADD_ONE: usize> Robot for RobotNDof<N, N_ADD_ONE> {
     fn get_joint_capsules(&self) -> Vec<message::collision_object::Capsule> {
         let mut joint_capsules = Vec::new();
         let dh = &self.params.denavit_hartenberg;
-        let mut transform = self.state.base_pose.to_matrix();
+        let mut isometry = self.state.base_pose;
 
         for i in 0..self.params.nlink + 1 {
-            let rotation = na::Rotation3::from_euler_angles(dh[(i, 0)], 0.0, dh[(i, 3)]);
-            let translation = na::Vector3::new(
-                dh[(i, 2)],
-                -dh[(i, 1)] * dh[(i, 3)].sin(),
-                dh[(i, 1)] * dh[(i, 3)].cos(),
+            let isometry_increment = Isometry::from_parts(
+                na::Translation3::new(
+                    dh[(i, 2)],
+                    -dh[(i, 1)] * dh[(i, 3)].sin(),
+                    dh[(i, 1)] * dh[(i, 3)].cos(),
+                ),
+                na::UnitQuaternion::from_euler_angles(dh[(i, 0)], 0.0, dh[(i, 3)]),
             );
 
-            // Combine rotation and translation into a homogeneous transformation matrix
-            let mut r_t = na::Matrix4::identity();
-            r_t.fixed_view_mut::<3, 3>(0, 0)
-                .copy_from(&rotation.to_homogeneous().fixed_view::<3, 3>(0, 0));
-            r_t.fixed_view_mut::<3, 1>(0, 3).copy_from(&translation);
-
             // Update the cumulative transformation matrix
-            transform = transform * r_t;
+            isometry = isometry * isometry_increment;
 
             // Calculate the positions of the capsule's end points in the global frame
-            let capsule_start = transform.fixed_view::<3, 3>(0, 0)
-                * self.params.capsules[i].ball_center1
-                + transform.fixed_view::<3, 1>(0, 3);
-            let capsule_end = transform.fixed_view::<3, 3>(0, 0)
-                * self.params.capsules[i].ball_center2
-                + transform.fixed_view::<3, 1>(0, 3);
+            let capsule_start = isometry * self.params.capsules[i].ball_center1;
+            let capsule_end = isometry * self.params.capsules[i].ball_center1;
 
             // Create a new Capsule object and add it to the vector
             joint_capsules.push(Capsule {
