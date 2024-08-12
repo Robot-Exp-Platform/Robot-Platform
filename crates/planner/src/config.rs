@@ -2,9 +2,9 @@ use std::sync::{Arc, Mutex, RwLock};
 
 use crate::planner_trait::Planner;
 use crate::planners::linear::Linear;
-use robot::robot_trait::Robot;
+use robot::robot_trait::SeriesRobot;
 
-pub fn create_planner<R: Robot + 'static, const N: usize>(
+pub fn create_planner<R: SeriesRobot<N> + 'static, const N: usize>(
     planner_type: String,
     robot_name: String,
     path: String,

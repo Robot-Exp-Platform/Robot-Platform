@@ -15,6 +15,7 @@ use planner::config::create_planner;
 use recoder::EXP_NAME;
 #[cfg(feature = "recode")]
 use recoder::TASK_NAME;
+use robot::robot_trait::SeriesRobot;
 use robot::robots::franka_emika;
 use robot::robots::franka_research3;
 use robot::robots::panda;
@@ -99,8 +100,7 @@ impl Exp {
                 let robot = Arc::new(RwLock::new(robot));
 
                 // 分别判断 controller 和 planner 的类型，然后创建对应的 controller 和 planner
-                let (planner, controller, simulator) =
-                    create_nodes::<RobotList, 0>(&config, &path, robot.clone());
+                let (planner, controller, simulator) = create_branch(&config, path.as_str());
 
                 // ! 递归!树就是从这里长起来的
                 for robot_config in config.robots.unwrap() {
@@ -258,28 +258,40 @@ impl ROSThread for Exp {
 }
 
 #[allow(clippy::type_complexity)]
-fn create_nodes<T: robot::Robot + 'static, const N: usize>(
-    config: &Config,
-    path: &str,
-    robot: Arc<RwLock<T>>,
+fn create_branch(
+    _config: &Config,
+    _path: &str,
 ) -> (
     Arc<Mutex<dyn planner::Planner>>,
     Arc<Mutex<dyn controller::Controller>>,
     Arc<Mutex<dyn simulator::Simulator>>,
 ) {
-    let planner = create_planner::<T, N>(
+    unimplemented!();
+}
+
+#[allow(clippy::type_complexity)]
+fn create_nodes<R: SeriesRobot<N> + 'static, const N: usize>(
+    config: &Config,
+    path: &str,
+    robot: Arc<RwLock<R>>,
+) -> (
+    Arc<Mutex<dyn planner::Planner>>,
+    Arc<Mutex<dyn controller::Controller>>,
+    Arc<Mutex<dyn simulator::Simulator>>,
+) {
+    let planner = create_planner::<R, N>(
         config.planner.clone(),
         config.name.clone(),
         format!("/planner/{}", path),
         robot.clone(),
     );
-    let controller = create_controller::<T, N>(
+    let controller = create_controller::<R, N>(
         config.controller.clone(),
         config.name.clone(),
         format!("/controller/{}", path),
         robot.clone(),
     );
-    let simulator = create_simulator::<T, N>(
+    let simulator = create_simulator::<R, N>(
         config.simulator.clone(),
         config.name.clone(),
         format!("/simulator/{}", path),

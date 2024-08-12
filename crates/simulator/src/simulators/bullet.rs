@@ -159,11 +159,12 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Bullet<R, N> {
     fn update(&mut self) {
         // 更新 control command
 
+        // TODO: 这里的逻辑有问题，向仿真器发送的消息应该是整个 message， 不仅仅包括了控制指令的类型，也包括了控制指令的具体内容，目前的写法中只包含了内容，而无法区分到底是什么类型的控制指令。建议将 control_command 直接序列化后发送到仿真器中。
         let (_period, _control_command) = match self.msgnode.control_command_queue.pop() {
             Some(ControlCommand::Joint(joint)) => (0.0, joint),
-            Some(ControlCommand::JointWithPeriod(joint_with_period)) => {
-                (joint_with_period.period, joint_with_period.joint)
-            }
+            Some(ControlCommand::JointWithPeriod(period, joint)) => (period, joint),
+            Some(ControlCommand::Tau(tau)) => (0.0, tau),
+            Some(ControlCommand::TauWithPeriod(period, tau)) => (period, tau),
             None => {
                 eprintln!("Failed to pop control command from queue.");
                 return;
