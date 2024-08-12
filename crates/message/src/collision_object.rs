@@ -3,7 +3,7 @@ use nalgebra as na;
 #[derive(Debug)]
 pub enum CollisionObject {
     Sphere(Sphere),
-    LineSegment(LineSegment),
+    Cylinder(Cylinder),
     Capsule(Capsule),
 }
 
@@ -14,7 +14,7 @@ pub struct Sphere {
 }
 
 #[derive(Debug)]
-pub struct LineSegment {
+pub struct Cylinder {
     pub start: na::Point3<f64>,
     pub end: na::Point3<f64>,
     pub radius: f64,
@@ -22,7 +22,7 @@ pub struct LineSegment {
 
 #[derive(Debug)]
 pub struct Capsule {
-    pub start: na::Point3<f64>,
-    pub end: na::Point3<f64>,
+    pub ball_center1: na::Point3<f64>,
+    pub ball_center2: na::Point3<f64>,
     pub radius: f64,
 }
