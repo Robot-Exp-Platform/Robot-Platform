@@ -44,19 +44,36 @@ pub struct Cone {
 
 pub fn get_distance(a: &CollisionObject, b: &CollisionObject) -> f64 {
     // 计算两个障碍物之间的距离
-    match (a,b){
-        (CollisionObject::Sphere(a),CollisionObject::Sphere(b)) => {
+    match (a, b) {
+        (CollisionObject::Sphere(a), CollisionObject::Sphere(b)) => {
             // 计算球体与球体之间的距离
             sphere_sphere_distance(a, b)
-        },
-        (CollisionObject::Sphere(a),CollisionObject::Capsule(b)) | (CollisionObject::Capsule(b),CollisionObject::Sphere(a))=> {
-            // 计算球体与胶囊之间的距离
-            sphere_capsule_distance(a, b)
-        },
-        (CollisionObject::Capsule(a),CollisionObject::Capsule(b)) => {
+        }
+        (CollisionObject::Capsule(a), CollisionObject::Capsule(b)) => {
             // 计算胶囊与胶囊之间的距离
             capsule_capsule_distance(a, b)
-        },
+        }
+        (CollisionObject::Cylinder(a), CollisionObject::Cylinder(b)) => {
+            // 计算圆柱与圆柱之间的距离
+            cylinder_cylinder_distance(a, b)
+        }
+
+        (CollisionObject::Sphere(a), CollisionObject::Capsule(b))
+        | (CollisionObject::Capsule(b), CollisionObject::Sphere(a)) => {
+            // 计算球体与胶囊之间的距离
+            sphere_capsule_distance(a, b)
+        }
+        (CollisionObject::Sphere(a), CollisionObject::Cylinder(b))
+        | (CollisionObject::Cylinder(b), CollisionObject::Sphere(a)) => {
+            // 计算球体与圆柱之间的距离
+            sphere_cylinder_distance(a, b)
+        }
+        (CollisionObject::Capsule(a), CollisionObject::Cylinder(b))
+        | (CollisionObject::Cylinder(b), CollisionObject::Capsule(a)) => {
+            // 计算胶囊与圆柱之间的距离
+            capsule_cylinder_distance(a, b)
+        }
+
         // 圆柱的暂未实现
         _ => 0.0,
     }
@@ -68,8 +85,11 @@ fn sphere_sphere_distance(a: &Sphere, b: &Sphere) -> f64 {
 }
 
 fn sphere_capsule_distance(sphere: &Sphere, capsule: &Capsule) -> f64 {
-    let closest_point =
-    get_closest_point_on_line_segment(sphere.center, capsule.ball_center1, capsule.ball_center2);
+    let closest_point = get_closest_point_on_line_segment(
+        sphere.center,
+        capsule.ball_center1,
+        capsule.ball_center2,
+    );
     let center_distance = (sphere.center - closest_point).norm();
     (center_distance - sphere.radius - capsule.radius).max(0.0)
 }
@@ -80,8 +100,7 @@ fn capsule_capsule_distance(a: &Capsule, b: &Capsule) -> f64 {
     let start2 = b.ball_center1;
     let end2 = b.ball_center2;
 
-    let (closest_p1, closest_p2, distance_sqr) =
-    get_closest_points_between_lines(start1, end1, start2, end2);
+    let (_, _, distance_sqr) = get_closest_points_between_lines(start1, end1, start2, end2);
 
     let distance = distance_sqr.sqrt(); // 对平方距离开平方，得到实际距离
 
@@ -94,8 +113,7 @@ fn cylinder_cylinder_distance(a: &Cylinder, b: &Cylinder) -> f64 {
     let start2 = b.start;
     let end2 = b.end;
 
-    let (closest_p1, closest_p2, distance_sqr) =
-        get_closest_points_between_lines(start1, end1, start2, end2);
+    let (_, _, distance_sqr) = get_closest_points_between_lines(start1, end1, start2, end2);
 
     let distance = distance_sqr.sqrt();
 
@@ -115,8 +133,7 @@ fn capsule_cylinder_distance(capsule: &Capsule, cylinder: &Cylinder) -> f64 {
     let start2 = cylinder.start;
     let end2 = cylinder.end;
 
-    let (closest_p1, closest_p2, distance_sqr) =
-        get_closest_points_between_lines(start1, end1, start2, end2);
+    let (_, _, distance_sqr) = get_closest_points_between_lines(start1, end1, start2, end2);
 
     let distance = distance_sqr.sqrt();
 
@@ -205,7 +222,11 @@ fn get_closest_points_between_lines(
             let offset = dis2_line.sqrt();
             // 计算line2相对line1的方向
             let direction_start = start2 - start1;
-            let direction = if direction_start.dot(&normal) > 0.0 { 1.0 } else { -1.0 };
+            let direction = if direction_start.dot(&normal) > 0.0 {
+                1.0
+            } else {
+                -1.0
+            };
 
             // 检测线段是否相交
             let is_line_cross = check_line_cross(
@@ -303,4 +324,3 @@ fn get_closest_point_on_segments(
         ((end1, cp2_end), d2_end)
     }
 }
-
