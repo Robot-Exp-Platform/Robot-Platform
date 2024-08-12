@@ -9,6 +9,7 @@ members = [
     "./crates/task_manager",
     "./crates/temp",
     "crates/message",
+    "crates/robot_macros_derive",
 ]
 
 [workspace.package]
@@ -43,6 +44,7 @@ recoder = { path = "./crates/recoder" }
 task_manager = { path = "./crates/task_manager" }
 simulator = { path = "./crates/simulator" }
 message = { path = "./crates/message" }
+robot_macros_derive = { path = "./crates/robot_macros_derive" }
 
 [dependencies]
 serde = { workspace = true, features = ["derive"] }

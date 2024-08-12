@@ -3,6 +3,7 @@ use std::f64::consts::PI;
 
 use crate::robots::robot_n_dof::RobotNDof;
 use crate::robots::robot_n_dof::RobotNDofParams;
+use message::collision_object::Capsule;
 
 pub const RESEARCH3_DOF: usize = 7;
 
@@ -40,6 +41,16 @@ impl FrankaResearch3 {
                 0.0,      0.0,    0.0,      PI * 0.5,
                 0.0,      0.0,    0.088,    PI * 0.5,
                 -PI*0.25,  0.107,  0.0,     0.0,]),
+                capsules: [
+                    Capsule::from_vec(vec![0.0, 0.0, 0.0, 0.0, 0.0, -0.333, 0.07]),
+                    Capsule::from_vec(vec![0.0, 0.0, -0.05, 0.0, 0.0, 0.0, 0.07]),
+                    Capsule::from_vec(vec![0.0, 0.0, 0.0, 0.0, 0.0, -0.316, 0.07]),
+                    Capsule::from_vec(vec![0.0, 0.0, -0.05, 0.0, 0.0, 0.055, 0.07]),
+                    Capsule::from_vec(vec![0.0, 0.0, 0.0, 0.0, 0.0, -0.0384, 0.07]),
+                    Capsule::from_vec(vec![0.0, 0.0, -0.088, 0.0, 0.0, 0.0, 0.07]),
+                    Capsule::from_vec(vec![0.0, 0.0, 0.0, 0.0, 0.0, 0.107, 0.07]),
+                    Capsule::from_vec(vec![0.0, -0.05, 0.0, 0.0, 0.05, 0.0, 0.1]),
+                ],
             },
         )
     }
