@@ -9,37 +9,47 @@ pub enum CollisionObject {
     Cone(Cone),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct Sphere {
     pub center: na::Point3<f64>,
     pub radius: f64,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct Cylinder {
     pub start: na::Point3<f64>,
     pub end: na::Point3<f64>,
     pub radius: f64,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, Default)]
 pub struct Capsule {
     pub ball_center1: na::Point3<f64>,
     pub ball_center2: na::Point3<f64>,
     pub radius: f64,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct Cuboid {
     pub point1: na::Point3<f64>,
     pub point2: na::Point3<f64>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct Cone {
     pub bottom_center: na::Point3<f64>,
     pub up_point: na::Point3<f64>,
     pub radius: f64,
+}
+
+impl Capsule {
+    pub fn from_vec(vec: Vec<f64>) -> Capsule {
+        Capsule {
+            ball_center1: na::Point3::new(vec[0], vec[1], vec[2]),
+            ball_center2: na::Point3::new(vec[3], vec[4], vec[5]),
+            radius: vec[6],
+        }
+    }
 }
 
 pub fn get_distance(a: &CollisionObject, b: &CollisionObject) -> f64 {

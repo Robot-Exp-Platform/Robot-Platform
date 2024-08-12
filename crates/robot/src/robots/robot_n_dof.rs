@@ -2,6 +2,7 @@ use nalgebra as na;
 
 use crate::robot_trait::Robot;
 use crate::robot_trait::SeriesRobot;
+use message::collision_object::Capsule;
 use message::state::Pose;
 
 #[allow(dead_code)]
@@ -35,6 +36,7 @@ pub struct RobotNDofParams<const N: usize, const N_ADD_ONE: usize> {
     pub tau_bound: na::SVector<f64, N>,
     pub tau_dot_bound: na::SVector<f64, N>,
     pub denavit_hartenberg: na::SMatrix<f64, N_ADD_ONE, 4>,
+    pub capsules: [Capsule; N_ADD_ONE],
 }
 
 impl<const N: usize, const N_ADD_ONE: usize> RobotNDof<N, N_ADD_ONE> {
@@ -69,6 +71,7 @@ impl<const N: usize, const N_ADD_ONE: usize> RobotNDofParams<N, N_ADD_ONE> {
             tau_bound: na::SVector::from_element(0.0),
             tau_dot_bound: na::SVector::from_element(0.0),
             denavit_hartenberg: na::SMatrix::from_element(0.0),
+            capsules: [Capsule::default(); N_ADD_ONE],
         }
     }
 }
@@ -106,6 +109,12 @@ impl<const N: usize, const N_ADD_ONE: usize> SeriesRobot<N> for RobotNDof<N, N_A
     fn get_q_jack_na(&self) -> na::SVector<f64, N> {
         self.state.q_jerk
     }
+    fn get_base(&self) -> Pose {
+        self.state.base_pose
+    }
+    fn get_end_effector_pose_na(&self) -> Pose {
+        unimplemented!()
+    }
 }
 
 impl<const N: usize, const N_ADD_ONE: usize> Robot for RobotNDof<N, N_ADD_ONE> {
@@ -115,14 +124,48 @@ impl<const N: usize, const N_ADD_ONE: usize> Robot for RobotNDof<N, N_ADD_ONE> {
     fn get_path(&self) -> String {
         self.path.clone()
     }
-    fn get_q(&self) -> Vec<f64> {
-        self.state.q.iter().copied().collect()
-    }
-    fn get_q_dot(&self) -> Vec<f64> {
-        self.state.q_dot.iter().copied().collect()
-    }
+
     fn get_end_effector_pose(&self) -> Vec<Pose> {
         vec![self.state.base_pose]
+    }
+    fn get_joint_capsules(&self) -> Vec<message::collision_object::Capsule> {
+        let mut joint_capsules = Vec::new();
+        let dh = &self.params.denavit_hartenberg;
+        let mut transform = self.state.base_pose.to_matrix();
+
+        for i in 0..self.params.nlink + 1 {
+            let rotation = na::Rotation3::from_euler_angles(dh[(i, 0)], 0.0, dh[(i, 3)]);
+            let translation = na::Vector3::new(
+                dh[(i, 2)],
+                -dh[(i, 1)] * dh[(i, 3)].sin(),
+                dh[(i, 1)] * dh[(i, 3)].cos(),
+            );
+
+            // Combine rotation and translation into a homogeneous transformation matrix
+            let mut r_t = na::Matrix4::identity();
+            r_t.fixed_view_mut::<3, 3>(0, 0)
+                .copy_from(&rotation.to_homogeneous().fixed_view::<3, 3>(0, 0));
+            r_t.fixed_view_mut::<3, 1>(0, 3).copy_from(&translation);
+
+            // Update the cumulative transformation matrix
+            transform = transform * r_t;
+
+            // Calculate the positions of the capsule's end points in the global frame
+            let capsule_start = transform.fixed_view::<3, 3>(0, 0)
+                * self.params.capsules[i].ball_center1
+                + transform.fixed_view::<3, 1>(0, 3);
+            let capsule_end = transform.fixed_view::<3, 3>(0, 0)
+                * self.params.capsules[i].ball_center2
+                + transform.fixed_view::<3, 1>(0, 3);
+
+            // Create a new Capsule object and add it to the vector
+            joint_capsules.push(Capsule {
+                ball_center1: capsule_start,
+                ball_center2: capsule_end,
+                radius: self.params.capsules[i].radius,
+            });
+        }
+        joint_capsules
     }
 
     fn set_name(&mut self, name: String) {

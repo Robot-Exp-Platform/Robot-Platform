@@ -43,14 +43,12 @@ impl Robot for RobotList {
     fn get_path(&self) -> String {
         self.path.clone()
     }
-
-    fn get_q(&self) -> Vec<f64> {
-        Vec::new()
+    fn get_joint_capsules(&self) -> Vec<message::collision_object::Capsule> {
+        self.robots
+            .iter()
+            .flat_map(|robot| robot.read().unwrap().get_joint_capsules())
+            .collect()
     }
-    fn get_q_dot(&self) -> Vec<f64> {
-        Vec::new()
-    }
-
     fn get_end_effector_pose(&self) -> Vec<Pose> {
         self.robots
             .iter()
