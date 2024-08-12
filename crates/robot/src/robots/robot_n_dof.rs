@@ -19,6 +19,7 @@ pub struct RobotNDofState<const N: usize> {
     q: na::SVector<f64, N>,
     q_dot: na::SVector<f64, N>,
     q_ddot: na::SVector<f64, N>,
+    q_jerk: na::SVector<f64, N>,
     base_pose: Pose,
 }
 
@@ -78,6 +79,7 @@ impl<const N: usize> RobotNDofState<N> {
             q: na::SVector::from_element(0.0),
             q_dot: na::SVector::from_element(0.0),
             q_ddot: na::SVector::from_element(0.0),
+            q_jerk: na::SVector::from_element(0.0),
             base_pose: Pose::identity(),
         }
     }
@@ -95,13 +97,14 @@ impl<const N: usize, const N_ADD_ONE: usize> SeriesRobot<N> for RobotNDof<N, N_A
     fn get_q_na(&self) -> na::SVector<f64, N> {
         self.state.q
     }
-
     fn get_q_dot_na(&self) -> na::SVector<f64, N> {
         self.state.q_dot
     }
-
     fn get_q_ddot_na(&self) -> na::SVector<f64, N> {
         self.state.q_ddot
+    }
+    fn get_q_jack_na(&self) -> na::SVector<f64, N> {
+        self.state.q_jerk
     }
 }
 

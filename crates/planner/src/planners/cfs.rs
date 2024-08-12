@@ -132,6 +132,8 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Cfs<R, N> {
 
         // 执行CFS逻辑
 
+        // // 检查上个任务是否完成或者任务是否过近
+
         // 记录 track
 
         // 发送 track
