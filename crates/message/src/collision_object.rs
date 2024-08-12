@@ -5,6 +5,8 @@ pub enum CollisionObject {
     Sphere(Sphere),
     Cylinder(Cylinder),
     Capsule(Capsule),
+    Cuboid(Cuboid),
+    Cone(Cone),
 }
 
 #[derive(Debug)]
@@ -24,6 +26,19 @@ pub struct Cylinder {
 pub struct Capsule {
     pub ball_center1: na::Point3<f64>,
     pub ball_center2: na::Point3<f64>,
+    pub radius: f64,
+}
+
+#[derive(Debug)]
+pub struct Cuboid {
+    pub point1: na::Point3<f64>,
+    pub point2: na::Point3<f64>,
+}
+
+#[derive(Debug)]
+pub struct Cone {
+    pub bottom_center: na::Point3<f64>,
+    pub up_point: na::Point3<f64>,
     pub radius: f64,
 }
 
