@@ -1,15 +1,19 @@
 use crossbeam::queue::SegQueue;
-use message::control_command::JointWithPeriod;
 use nalgebra as na;
 use serde::Deserialize;
 use serde_json::{from_value, Value};
 // use serde_yaml::{from_value, Value};
-use std::sync::{Arc, Mutex, RwLock};
+use std::fs;
+use std::io::{BufWriter, Write};
+use std::sync::{Arc, RwLock};
 use std::time::Duration;
 
 use crate::controller_trait::Controller;
 use message::{control_command::ControlCommand, track::Track};
+#[cfg(feature = "recode")]
+use recoder::*;
 use robot::robot_trait::Robot;
+use task_manager::generate_node_method;
 use task_manager::ros_thread::ROSThread;
 
 pub struct Pid<R: Robot + 'static, const N: usize> {
@@ -39,6 +43,7 @@ pub struct PidParams<const N: usize> {
 }
 
 pub struct PidNode {
+    recoder: Option<BufWriter<fs::File>>,
     track_queue: Arc<SegQueue<Track>>,
     control_command_queue: Arc<SegQueue<ControlCommand>>,
 }
@@ -76,6 +81,7 @@ impl<R: Robot + 'static, const N: usize> Pid<R, N> {
             params,
 
             msgnode: PidNode {
+                recoder: None,
                 track_queue: Arc::new(SegQueue::new()),
                 control_command_queue: Arc::new(SegQueue::new()),
             },
@@ -85,17 +91,8 @@ impl<R: Robot + 'static, const N: usize> Pid<R, N> {
 }
 
 impl<R: Robot + 'static, const N: usize> Controller for Pid<R, N> {
-    fn get_name(&self) -> String {
-        self.name.clone()
-    }
-    fn get_path(&self) -> String {
-        self.path.clone()
-    }
+    generate_node_method!();
 
-    fn set_params(&mut self, params: Value) {
-        let params: PidParams<N> = from_value(params).unwrap();
-        self.params = params;
-    }
     fn set_track_queue(&mut self, track_queue: Arc<SegQueue<Track>>) {
         self.msgnode.track_queue = track_queue;
     }
@@ -105,21 +102,42 @@ impl<R: Robot + 'static, const N: usize> Controller for Pid<R, N> {
     ) {
         self.msgnode.control_command_queue = controller_command_queue;
     }
-
-    fn add_controller(&mut self, _: Arc<Mutex<dyn Controller>>) {}
 }
 
 impl<R: Robot + 'static, const N: usize> ROSThread for Pid<R, N> {
     fn init(&mut self) {
         println!("{} 向您问好. {} says hello.", self.name, self.name);
     }
-    fn start(&mut self) {}
+
+    fn start(&mut self) {
+        #[cfg(feature = "recode")]
+        {
+            fs::create_dir_all(format!(
+                "./data/{}/{}/{}",
+                *EXP_NAME,
+                *TASK_NAME.lock().unwrap(),
+                self.robot.read().unwrap().get_name()
+            ))
+            .unwrap();
+            let file = fs::OpenOptions::new()
+                .append(true)
+                .create(true)
+                .open(format!(
+                    "data/{}/{}/{}/pid.txt",
+                    *EXP_NAME,
+                    *TASK_NAME.lock().unwrap(),
+                    self.robot.read().unwrap().get_name(),
+                ))
+                .unwrap();
+            self.msgnode.recoder = Some(BufWriter::new(file));
+        }
+    }
 
     fn update(&mut self) {
         // 更新 track
         let track = match self.msgnode.track_queue.pop() {
             Some(Track::Joint(track)) => track,
-            None => return,
+            _ => return,
         };
 
         self.state.track = na::SVector::from_vec(track);
@@ -139,12 +157,22 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Pid<R, N> {
             + self.params.ki * self.state.integral
             + self.params.kd * self.state.derivative;
 
+        // 记录控制指令
+        #[cfg(feature = "recode")]
+        if let Some(ref mut recoder) = self.msgnode.recoder {
+            recode!(recoder, control_output);
+        }
+
         // 发送控制指令
-        let control_command = ControlCommand::JointWithPeriod(JointWithPeriod {
-            period: self.params.period,
-            joint: control_output.as_slice().to_vec(),
-        });
+        let control_command =
+            ControlCommand::JointWithPeriod(self.params.period, control_output.as_slice().to_vec());
         self.msgnode.control_command_queue.push(control_command);
+    }
+
+    fn finalize(&mut self) {
+        if let Some(ref mut recoder) = self.msgnode.recoder {
+            recoder.flush().unwrap();
+        }
     }
 
     fn get_period(&self) -> Duration {

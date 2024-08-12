@@ -2,9 +2,9 @@ use std::sync::{Arc, Mutex, RwLock};
 
 use crate::simulator_trait::Simulator;
 use crate::simulators::bullet::Bullet;
-use robot::robot_trait::Robot;
+use robot::robot_trait::SeriesRobot;
 
-pub fn create_simulator<R: Robot + 'static, const N: usize>(
+pub fn create_simulator<R: SeriesRobot<N> + 'static, const N: usize>(
     simulator_type: String,
     robot_name: String,
     path: String,

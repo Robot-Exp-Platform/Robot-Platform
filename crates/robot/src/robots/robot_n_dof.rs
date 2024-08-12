@@ -1,5 +1,8 @@
-use crate::robot_trait::{Pose, Robot};
 use nalgebra as na;
+
+use crate::robot_trait::Robot;
+use crate::robot_trait::SeriesRobot;
+use message::state::Pose;
 
 #[allow(dead_code)]
 pub struct RobotNDof<const N: usize, const N_ADD_ONE: usize> {
@@ -15,6 +18,7 @@ pub struct RobotNDofState<const N: usize> {
     // 机器人状态,在运行状态下将会实时改变
     q: na::SVector<f64, N>,
     q_dot: na::SVector<f64, N>,
+    q_ddot: na::SVector<f64, N>,
     base_pose: Pose,
 }
 
@@ -73,8 +77,31 @@ impl<const N: usize> RobotNDofState<N> {
         RobotNDofState {
             q: na::SVector::from_element(0.0),
             q_dot: na::SVector::from_element(0.0),
+            q_ddot: na::SVector::from_element(0.0),
             base_pose: Pose::identity(),
         }
+    }
+
+    pub fn get_q(&self) -> &na::SVector<f64, N> {
+        &self.q
+    }
+
+    pub fn get_q_dot(&self) -> &na::SVector<f64, N> {
+        &self.q_dot
+    }
+}
+
+impl<const N: usize, const N_ADD_ONE: usize> SeriesRobot<N> for RobotNDof<N, N_ADD_ONE> {
+    fn get_q_na(&self) -> na::SVector<f64, N> {
+        self.state.q
+    }
+
+    fn get_q_dot_na(&self) -> na::SVector<f64, N> {
+        self.state.q_dot
+    }
+
+    fn get_q_ddot_na(&self) -> na::SVector<f64, N> {
+        self.state.q_ddot
     }
 }
 

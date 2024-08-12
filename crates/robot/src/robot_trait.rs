@@ -1,8 +1,5 @@
+use message::state::Pose;
 use nalgebra as na;
-
-// 考虑使用 na::Isometry3 代替 Pose
-// #[derive(Clone, Copy)]
-pub type Pose = na::Isometry3<f64>;
 
 pub trait Robot: Send + Sync {
     fn get_name(&self) -> String;
@@ -23,3 +20,9 @@ pub trait Robot: Send + Sync {
 }
 
 // pub trait RobotState {}
+
+pub trait SeriesRobot<const N: usize>: Robot {
+    fn get_q_na(&self) -> na::SVector<f64, N>;
+    fn get_q_dot_na(&self) -> na::SVector<f64, N>;
+    fn get_q_ddot_na(&self) -> na::SVector<f64, N>;
+}

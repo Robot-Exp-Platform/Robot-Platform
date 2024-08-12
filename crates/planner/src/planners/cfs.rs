@@ -13,43 +13,51 @@ use message::target::Target;
 use message::track::Track;
 #[cfg(feature = "recode")]
 use recoder::*;
-use robot::robot_trait::Robot;
+use robot::robot_trait::SeriesRobot;
 use task_manager::generate_node_method;
 use task_manager::ros_thread::ROSThread;
 use task_manager::state_collector::{NodeState, StateCollector};
 
-pub struct Linear<R: Robot + 'static, const N: usize> {
+#[allow(dead_code)]
+pub struct Cfs<R: SeriesRobot<N> + 'static, const N: usize> {
     name: String,
     path: String,
 
-    params: LinearParams,
+    params: CfsParams,
 
-    msgnode: LinearNode,
+    msgnode: CfsNode,
 
     robot: Arc<RwLock<R>>,
 }
 
+#[allow(dead_code)]
 #[derive(Deserialize)]
-pub struct LinearParams {
+pub struct CfsParams {
     period: f64,
     interpolation: usize,
+    q1: na::DMatrix<f64>,
+    q2: na::DMatrix<f64>,
+    q3: na::DMatrix<f64>,
 }
 
-pub struct LinearNode {
+pub struct CfsNode {
     recoder: Option<BufWriter<fs::File>>,
     target_queue: Arc<SegQueue<Target>>,
     track_queue: Arc<SegQueue<Track>>,
     state_collector: StateCollector,
 }
 
-impl<R: Robot + 'static, const N: usize> Linear<R, N> {
-    pub fn new(name: String, path: String, robot: Arc<RwLock<R>>) -> Linear<R, N> {
-        Linear::from_params(
+impl<R: SeriesRobot<N> + 'static, const N: usize> Cfs<R, N> {
+    pub fn new(name: String, path: String, robot: Arc<RwLock<R>>) -> Cfs<R, N> {
+        Cfs::from_params(
             name,
             path,
-            LinearParams {
+            CfsParams {
                 period: 0.0,
                 interpolation: 0,
+                q1: na::DMatrix::zeros(0, 0),
+                q2: na::DMatrix::zeros(0, 0),
+                q3: na::DMatrix::zeros(0, 0),
             },
             robot,
         )
@@ -57,17 +65,15 @@ impl<R: Robot + 'static, const N: usize> Linear<R, N> {
     pub fn from_params(
         name: String,
         path: String,
-        params: LinearParams,
+        params: CfsParams,
         robot: Arc<RwLock<R>>,
-    ) -> Linear<R, N> {
-        Linear {
+    ) -> Cfs<R, N> {
+        Cfs {
             name,
             path,
-
             params,
-
-            msgnode: LinearNode {
-                recoder: Option::None,
+            msgnode: CfsNode {
+                recoder: None,
                 target_queue: Arc::new(SegQueue::new()),
                 track_queue: Arc::new(SegQueue::new()),
                 state_collector: Arc::new((Mutex::new(NodeState::new()), Condvar::new())),
@@ -77,7 +83,7 @@ impl<R: Robot + 'static, const N: usize> Linear<R, N> {
     }
 }
 
-impl<R: Robot + 'static, const N: usize> Planner for Linear<R, N> {
+impl<R: SeriesRobot<N> + 'static, const N: usize> Planner for Cfs<R, N> {
     generate_node_method!();
 
     fn set_target_queue(&mut self, target_queue: Arc<SegQueue<Target>>) {
@@ -93,7 +99,7 @@ impl<R: Robot + 'static, const N: usize> Planner for Linear<R, N> {
     fn add_planner(&mut self, _planner: Arc<Mutex<dyn Planner>>) {}
 }
 
-impl<R: Robot + 'static, const N: usize> ROSThread for Linear<R, N> {
+impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Cfs<R, N> {
     fn init(&mut self) {
         println!("{} 向您问好. {} says hello.", self.name, self.name);
     }
@@ -117,7 +123,7 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Linear<R, N> {
                 .append(true)
                 .create(true)
                 .open(format!(
-                    "./data/{}/{}/{}/linear.txt",
+                    "./data/{}/{}/{}/cfs.txt",
                     *EXP_NAME,
                     *TASK_NAME.lock().unwrap(),
                     self.robot.read().unwrap().get_name(),
@@ -133,44 +139,14 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Linear<R, N> {
 
     fn update(&mut self) {
         // 更新 target
-        let target = match self.msgnode.target_queue.pop() {
-            // 根据不同的 target 类型，执行不同的任务，也可以将不同的 Target 类型处理为相同的类型
-            Some(Target::Joint(joint)) => joint,
-            Some(Target::Pose(_pose)) => {
-                unimplemented!("Linear planner does not support Pose target.");
-            }
-            None => {
-                // 任务已经全部完成，进入结束状态，并通知所有线程
-                let (state, cvar) = &*self.msgnode.state_collector;
-                state.lock().unwrap().finish();
-                cvar.notify_all();
-
-                return;
-            }
-        };
-        let target = na::SVector::from_vec(target);
-        println!("{} get target: {:?}", self.name, target);
 
         // 获取 robot 状态
-        let robot_read = self.robot.read().unwrap();
-        let q = na::SVector::from_vec(robot_read.get_q());
 
-        // 执行插值逻辑，将当前位置到目标位置的插值点和目标位置塞入 track 队列
-        let track_list = interpolation::<N>(&q, &target, self.params.interpolation);
+        // 执行CFS逻辑
 
         // 记录 track
-        #[cfg(feature = "recode")]
-        if let Some(ref mut recoder) = self.msgnode.recoder {
-            for track in track_list.iter() {
-                recode!(recoder, track);
-            }
-        }
 
         // 发送 track
-        for track in track_list {
-            let track = Track::Joint(track.as_slice().to_vec());
-            self.msgnode.track_queue.push(track);
-        }
     }
 
     fn finalize(&mut self) {
@@ -182,20 +158,4 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Linear<R, N> {
     fn get_period(&self) -> Duration {
         Duration::from_secs_f64(self.params.period)
     }
-}
-
-fn interpolation<const N: usize>(
-    start: &na::SVector<f64, N>,
-    end: &na::SVector<f64, N>,
-    interpolation: usize,
-) -> Vec<na::SVector<f64, N>> {
-    let mut track_list = Vec::new();
-    for i in 0..interpolation {
-        let mut track = na::SVector::from_vec(vec![0.0; N]);
-        for j in 0..N {
-            track[j] = start[j] + (end[j] - start[j]) * (i as f64 / interpolation as f64);
-        }
-        track_list.push(track);
-    }
-    track_list
 }

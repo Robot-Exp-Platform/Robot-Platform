@@ -17,6 +17,7 @@ pub struct Node {
 
 #[derive(Debug, Deserialize)]
 pub struct Task {
+    pub task_name: String,
     pub robot_tasks: Vec<RobotTasks>,
     pub nodes: Vec<Node>,
 }

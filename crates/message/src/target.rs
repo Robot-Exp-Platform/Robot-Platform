@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use robot::robot_trait::Pose;
+use crate::state::Pose;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum Target {

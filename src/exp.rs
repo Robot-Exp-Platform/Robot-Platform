@@ -1,32 +1,39 @@
-use chrono;
+use chrono::Local;
 use crossbeam::queue::SegQueue;
 use serde::Deserialize;
 use serde_json::from_reader;
 // use serde_yaml::from_reader;
-use std::fs::File;
+use std::fs;
 use std::path;
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Arc, Condvar, Mutex, RwLock};
 
 use crate::config::CONFIG_PATH;
+use crate::config::TASK_PATH;
 use controller::config::create_controller;
 use planner::config::create_planner;
+#[cfg(feature = "recode")]
+use recoder::EXP_NAME;
+#[cfg(feature = "recode")]
+use recoder::TASK_NAME;
+use robot::robot_trait::SeriesRobot;
 use robot::robots::franka_emika;
 use robot::robots::franka_research3;
 use robot::robots::panda;
 use robot::robots::robot_list::RobotList;
 use simulator::config::create_simulator;
 use task_manager::ros_thread::ROSThread;
+use task_manager::state_collector::{NodeState, StateCollector};
 use task_manager::task::Task;
 use task_manager::task_manage::TaskManager;
 use task_manager::thread_manage::ThreadManage;
 
-#[allow(dead_code)]
 pub struct Exp {
     // Exp 是一个森林状的结构，其中的包含 robot tree, controller tree, planner tree 等等树状结构的根节点，通过管理 exp 实现管理整个结构的目的
     pub thread_manage: ThreadManage,
     pub task_manage: TaskManager,
+    pub state_collector: StateCollector,
 
-    pub robot_exp: Arc<RwLock<dyn robot::Robot>>,
+    pub _robot_exp: Arc<RwLock<dyn robot::Robot>>,
     pub planner_exp: Arc<Mutex<dyn planner::Planner>>,
     pub controller_exp: Arc<Mutex<dyn controller::Controller>>,
     pub simulator_exp: Arc<Mutex<dyn simulator::Simulator>>,
@@ -46,18 +53,26 @@ struct Config {
 impl Exp {
     pub fn new() -> Exp {
         // 加载配置文件
-        let config_file = File::open(CONFIG_PATH).expect("Failed to open config file");
+        let config_file = fs::File::open(CONFIG_PATH).expect("Failed to open config file");
         let config: Config = from_reader(config_file).expect("Failed to parse config file");
 
         // 根据配置文件生成机器人树
         let mut thread_manage = ThreadManage::new();
         let mut task_manage = TaskManager::new();
-        let (robot, planner, controller, simulator) =
-            Exp::build_exp_tree(config, "".to_string(), &mut thread_manage, &mut task_manage);
+        let state_collector = Arc::new((Mutex::new(NodeState::new()), Condvar::new()));
+        let (robot, planner, controller, simulator) = Exp::build_exp_tree(
+            config,
+            "".to_string(),
+            &mut thread_manage,
+            &mut task_manage,
+            &state_collector,
+        );
+
         Exp {
             thread_manage,
             task_manage,
-            robot_exp: robot,
+            state_collector,
+            _robot_exp: robot,
             planner_exp: planner,
             controller_exp: controller,
             simulator_exp: simulator,
@@ -70,6 +85,7 @@ impl Exp {
         path: String,
         thread_manage: &mut ThreadManage,
         task_manager: &mut TaskManager,
+        state_collector: &StateCollector,
     ) -> (
         Arc<RwLock<dyn robot::Robot>>,
         Arc<Mutex<dyn planner::Planner>>,
@@ -84,8 +100,7 @@ impl Exp {
                 let robot = Arc::new(RwLock::new(robot));
 
                 // 分别判断 controller 和 planner 的类型，然后创建对应的 controller 和 planner
-                let (planner, controller, simulator) =
-                    create_nodes::<RobotList, 0>(&config, &path, robot.clone());
+                let (planner, controller, simulator) = create_branch(&config, path.as_str());
 
                 // ! 递归!树就是从这里长起来的
                 for robot_config in config.robots.unwrap() {
@@ -95,6 +110,7 @@ impl Exp {
                             format!("{}/robot_list", path),
                             thread_manage,
                             task_manager,
+                            state_collector,
                         );
                     robot.write().unwrap().add_robot(child_robot);
                     planner.lock().unwrap().add_planner(child_planner);
@@ -111,11 +127,19 @@ impl Exp {
                 let track_queue = Arc::new(SegQueue::new());
                 let control_command_queue = Arc::new(SegQueue::new());
 
+                // 为 planner 配置信道
                 planner
                     .lock()
                     .unwrap()
                     .set_target_queue(target_queue.clone());
                 planner.lock().unwrap().set_track_queue(track_queue.clone());
+                planner
+                    .lock()
+                    .unwrap()
+                    .set_state_collector(state_collector.clone());
+                state_collector.0.lock().unwrap().add_node();
+
+                // 为 controller 配置信道
                 controller
                     .lock()
                     .unwrap()
@@ -124,6 +148,8 @@ impl Exp {
                     .lock()
                     .unwrap()
                     .set_controller_command_queue(control_command_queue.clone());
+
+                // 为 simulator 配置信道
                 simulator
                     .lock()
                     .unwrap()
@@ -144,11 +170,19 @@ impl Exp {
 
     fn update_tesk(&mut self) {
         // ! 从 task.json 中读取任务,然后,将对应的参数设置到对应的节点中去,这将有助于在后期反复迭代任务,但是就目前来说,只有更新参数的功能了
-        let task_file = File::open(path::Path::new("task.json")).expect("Failed to open task file");
+        let task_file =
+            fs::File::open(path::Path::new(TASK_PATH)).expect("Failed to open task file");
         let task: Task = from_reader(task_file).expect("Failed to parse task file");
 
         let controller = self.controller_exp.clone();
         let planner = self.planner_exp.clone();
+
+        #[cfg(feature = "recode")]
+        {
+            let mut task_name = TASK_NAME.lock().unwrap();
+            *task_name = task.task_name.clone();
+            fs::create_dir_all(format!("./data/{}/{}", *EXP_NAME, *task_name)).unwrap();
+        }
 
         for node in &task.nodes {
             match node.node_type.as_str() {
@@ -195,46 +229,69 @@ impl ROSThread for Exp {
     fn init(&mut self) {
         println!(
             "现在是 {}，先生，祝您早上、中午、晚上好",
-            chrono::Local::now().format("%Y-%m-%d %H:%M:%S")
+            Local::now().format("%Y-%m-%d %H:%M:%S")
         );
     }
 
-    fn start(&mut self) {
+    fn update(&mut self) {
+        println!("开始任务");
         // ! 所有线程停一会儿，等待下个任务到来
         self.thread_manage.stop_all();
-
         self.update_tesk();
-
         // ! 所有线程启动启动启动
         self.thread_manage.start_all();
-    }
+        println!("任务目标完成");
 
-    fn update(&mut self) {}
+        // ! 获取状态收集器，等待任务完成
+        let (state, cvar) = &*self.state_collector;
+        let mut state = state.lock().unwrap();
+
+        while state.get_node_size() != state.get_finished() {
+            state = cvar.wait(state).unwrap();
+            println!("被通知提醒，此时任务完成数量为：{}", state.get_finished());
+        }
+
+        println!("任务完成，状态整理器重置");
+        state.refresh();
+        self.thread_manage.stop_all();
+    }
 }
 
 #[allow(clippy::type_complexity)]
-fn create_nodes<T: robot::Robot + 'static, const N: usize>(
-    config: &Config,
-    path: &str,
-    robot: Arc<RwLock<T>>,
+fn create_branch(
+    _config: &Config,
+    _path: &str,
 ) -> (
     Arc<Mutex<dyn planner::Planner>>,
     Arc<Mutex<dyn controller::Controller>>,
     Arc<Mutex<dyn simulator::Simulator>>,
 ) {
-    let planner = create_planner::<T, N>(
+    unimplemented!();
+}
+
+#[allow(clippy::type_complexity)]
+fn create_nodes<R: SeriesRobot<N> + 'static, const N: usize>(
+    config: &Config,
+    path: &str,
+    robot: Arc<RwLock<R>>,
+) -> (
+    Arc<Mutex<dyn planner::Planner>>,
+    Arc<Mutex<dyn controller::Controller>>,
+    Arc<Mutex<dyn simulator::Simulator>>,
+) {
+    let planner = create_planner::<R, N>(
         config.planner.clone(),
         config.name.clone(),
         format!("/planner/{}", path),
         robot.clone(),
     );
-    let controller = create_controller::<T, N>(
+    let controller = create_controller::<R, N>(
         config.controller.clone(),
         config.name.clone(),
         format!("/controller/{}", path),
         robot.clone(),
     );
-    let simulator = create_simulator::<T, N>(
+    let simulator = create_simulator::<R, N>(
         config.simulator.clone(),
         config.name.clone(),
         format!("/simulator/{}", path),
@@ -262,7 +319,7 @@ fn create_robot(
             let robot = Arc::new(RwLock::new(robot));
             (
                 robot.clone(),
-                create_nodes::<panda::Panda, { panda::PANDA_DOF }>(&config, &path, robot),
+                create_nodes::<panda::Panda, { panda::PANDA_DOF }>(config, path, robot),
             )
         }
         "franka_emika" => {
@@ -274,7 +331,7 @@ fn create_robot(
             (
                 robot.clone(),
                 create_nodes::<franka_emika::FrankaEmika, { franka_emika::EMIKA_DOF }>(
-                    &config, &path, robot,
+                    config, path, robot,
                 ),
             )
         }
@@ -289,7 +346,7 @@ fn create_robot(
                 create_nodes::<
                     franka_research3::FrankaResearch3,
                     { franka_research3::RESEARCH3_DOF },
-                >(&config, &path, robot),
+                >(config, path, robot),
             )
         }
         _ => panic!("Unknown robot type"),

@@ -1,4 +1,5 @@
 /target/**
 /**/temp/**
-/.**
-/.**
+**.pyc
+**.txt
+!/.vscode/**

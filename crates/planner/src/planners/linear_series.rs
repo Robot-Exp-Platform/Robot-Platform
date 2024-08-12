@@ -13,12 +13,12 @@ use message::target::Target;
 use message::track::Track;
 #[cfg(feature = "recode")]
 use recoder::*;
-use robot::robot_trait::Robot;
+use robot::robot_trait::SeriesRobot;
 use task_manager::generate_node_method;
 use task_manager::ros_thread::ROSThread;
 use task_manager::state_collector::{NodeState, StateCollector};
 
-pub struct Linear<R: Robot + 'static, const N: usize> {
+pub struct Linear<R: SeriesRobot<N> + 'static, const N: usize> {
     name: String,
     path: String,
 
@@ -32,7 +32,7 @@ pub struct Linear<R: Robot + 'static, const N: usize> {
 #[derive(Deserialize)]
 pub struct LinearParams {
     period: f64,
-    interpolation: usize,
+    interpolation: i32,
 }
 
 pub struct LinearNode {
@@ -42,7 +42,7 @@ pub struct LinearNode {
     state_collector: StateCollector,
 }
 
-impl<R: Robot + 'static, const N: usize> Linear<R, N> {
+impl<R: SeriesRobot<N> + 'static, const N: usize> Linear<R, N> {
     pub fn new(name: String, path: String, robot: Arc<RwLock<R>>) -> Linear<R, N> {
         Linear::from_params(
             name,
@@ -77,33 +77,28 @@ impl<R: Robot + 'static, const N: usize> Linear<R, N> {
     }
 }
 
-impl<R: Robot + 'static, const N: usize> Planner for Linear<R, N> {
+impl<R: SeriesRobot<N> + 'static, const N: usize> Planner for Linear<R, N> {
     generate_node_method!();
 
     fn set_target_queue(&mut self, target_queue: Arc<SegQueue<Target>>) {
         self.msgnode.target_queue = target_queue;
     }
-    fn set_track_queue(&mut self, track_queue: Arc<SegQueue<Track>>) {
-        self.msgnode.track_queue = track_queue;
+    fn set_track_queue(&mut self, _track_queue: Arc<SegQueue<Track>>) {
+        self.msgnode.track_queue = _track_queue;
     }
-    fn set_state_collector(&mut self, state_collector: StateCollector) {
-        self.msgnode.state_collector = state_collector;
+    fn set_state_collector(&mut self, _state_collector: StateCollector) {
+        self.msgnode.state_collector = _state_collector;
     }
 
     fn add_planner(&mut self, _planner: Arc<Mutex<dyn Planner>>) {}
 }
 
-impl<R: Robot + 'static, const N: usize> ROSThread for Linear<R, N> {
+impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Linear<R, N> {
     fn init(&mut self) {
         println!("{} 向您问好. {} says hello.", self.name, self.name);
     }
 
     fn start(&mut self) {
-        // 进入启动状态，并通知所有线程
-        let (state, cvar) = &*self.msgnode.state_collector;
-        state.lock().unwrap().start();
-        cvar.notify_all();
-
         #[cfg(feature = "recode")]
         {
             fs::create_dir_all(format!(
@@ -113,7 +108,7 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Linear<R, N> {
                 self.robot.read().unwrap().get_name()
             ))
             .unwrap();
-            let file = fs::OpenOptions::new()
+            let file = OpenOptions::new()
                 .append(true)
                 .create(true)
                 .open(format!(
@@ -125,10 +120,6 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Linear<R, N> {
                 .unwrap();
             self.msgnode.recoder = Some(BufWriter::new(file));
         }
-
-        // 进入循环状态，并通知所有线程
-        state.lock().unwrap().update();
-        cvar.notify_all();
     }
 
     fn update(&mut self) {
@@ -140,11 +131,7 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Linear<R, N> {
                 unimplemented!("Linear planner does not support Pose target.");
             }
             None => {
-                // 任务已经全部完成，进入结束状态，并通知所有线程
-                let (state, cvar) = &*self.msgnode.state_collector;
-                state.lock().unwrap().finish();
-                cvar.notify_all();
-
+                eprintln!("Failed to pop control command from queue.");
                 return;
             }
         };
@@ -153,7 +140,7 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Linear<R, N> {
 
         // 获取 robot 状态
         let robot_read = self.robot.read().unwrap();
-        let q = na::SVector::from_vec(robot_read.get_q());
+        let q = robot_read.get_q_na();
 
         // 执行插值逻辑，将当前位置到目标位置的插值点和目标位置塞入 track 队列
         let track_list = interpolation::<N>(&q, &target, self.params.interpolation);
@@ -187,7 +174,7 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Linear<R, N> {
 fn interpolation<const N: usize>(
     start: &na::SVector<f64, N>,
     end: &na::SVector<f64, N>,
-    interpolation: usize,
+    interpolation: i32,
 ) -> Vec<na::SVector<f64, N>> {
     let mut track_list = Vec::new();
     for i in 0..interpolation {
