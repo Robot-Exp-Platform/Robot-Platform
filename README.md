@@ -120,6 +120,8 @@ cargo run
 
 ## Contribution Guidelines
 
+![System Architecture](./images/system%20architecture.png)
+
 ### 代码风格
 
 在本系统中诸多代码需各自遵循以下代码规范：
