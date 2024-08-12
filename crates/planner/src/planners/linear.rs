@@ -14,7 +14,7 @@ use message::track::Track;
 #[cfg(feature = "recode")]
 use recoder::*;
 use robot::robot_trait::Robot;
-use task_manager::generate_node_method;
+use robot_macros_derive::*;
 use task_manager::ros_thread::ROSThread;
 use task_manager::state_collector::{NodeState, StateCollector};
 
@@ -78,19 +78,7 @@ impl<R: Robot + 'static, const N: usize> Linear<R, N> {
 }
 
 impl<R: Robot + 'static, const N: usize> Planner for Linear<R, N> {
-    generate_node_method!();
-
-    fn set_target_queue(&mut self, target_queue: Arc<SegQueue<Target>>) {
-        self.msgnode.target_queue = target_queue;
-    }
-    fn set_track_queue(&mut self, track_queue: Arc<SegQueue<Track>>) {
-        self.msgnode.track_queue = track_queue;
-    }
-    fn set_state_collector(&mut self, state_collector: StateCollector) {
-        self.msgnode.state_collector = state_collector;
-    }
-
-    fn add_planner(&mut self, _planner: Arc<Mutex<dyn Planner>>) {}
+    generate_planner_method!();
 }
 
 impl<R: Robot + 'static, const N: usize> ROSThread for Linear<R, N> {

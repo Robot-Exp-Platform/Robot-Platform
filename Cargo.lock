@@ -293,6 +293,7 @@ dependencies = [
  "nalgebra",
  "recoder",
  "robot",
+ "robot_macros_derive",
  "rosrust",
  "rosrust_msg",
  "serde",
@@ -1008,6 +1009,7 @@ dependencies = [
  "nalgebra",
  "recoder",
  "robot",
+ "robot_macros_derive",
  "serde",
  "serde_json",
  "serde_yaml",
@@ -1185,6 +1187,10 @@ dependencies = [
  "message",
  "nalgebra",
 ]
+
+[[package]]
+name = "robot_macros_derive"
+version = "0.1.0"
 
 [[package]]
 name = "robot_platform"
@@ -1456,6 +1462,7 @@ dependencies = [
  "nalgebra",
  "recoder",
  "robot",
+ "robot_macros_derive",
  "rosrust",
  "rosrust_msg",
  "serde",

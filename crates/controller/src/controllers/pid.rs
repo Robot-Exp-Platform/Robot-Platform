@@ -13,7 +13,7 @@ use message::{control_command::ControlCommand, track::Track};
 #[cfg(feature = "recode")]
 use recoder::*;
 use robot::robot_trait::Robot;
-use task_manager::generate_node_method;
+use robot_macros_derive::*;
 use task_manager::ros_thread::ROSThread;
 
 pub struct Pid<R: Robot + 'static, const N: usize> {
@@ -91,17 +91,7 @@ impl<R: Robot + 'static, const N: usize> Pid<R, N> {
 }
 
 impl<R: Robot + 'static, const N: usize> Controller for Pid<R, N> {
-    generate_node_method!();
-
-    fn set_track_queue(&mut self, track_queue: Arc<SegQueue<Track>>) {
-        self.msgnode.track_queue = track_queue;
-    }
-    fn set_controller_command_queue(
-        &mut self,
-        controller_command_queue: Arc<SegQueue<ControlCommand>>,
-    ) {
-        self.msgnode.control_command_queue = controller_command_queue;
-    }
+    generate_controller_method!();
 }
 
 impl<R: Robot + 'static, const N: usize> ROSThread for Pid<R, N> {
