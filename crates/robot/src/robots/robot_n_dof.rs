@@ -116,6 +116,12 @@ impl<const N: usize, const N_ADD_ONE: usize> SeriesRobot<N> for RobotNDof<N, N_A
     fn get_end_effector_pose_na(&self) -> Pose {
         unimplemented!()
     }
+
+    fn update_dh(&mut self) {
+        for i in 0..self.params.nlink {
+            self.params.denavit_hartenberg[(i, 0)] = self.state.q[i];
+        }
+    }
 }
 
 impl<const N: usize, const N_ADD_ONE: usize> Robot for RobotNDof<N, N_ADD_ONE> {
@@ -130,11 +136,13 @@ impl<const N: usize, const N_ADD_ONE: usize> Robot for RobotNDof<N, N_ADD_ONE> {
         vec![self.state.base_pose]
     }
     fn get_joint_capsules(&self) -> Vec<message::collision_object::Capsule> {
+        // !本函数需要机器人自主更新DH参数,只有保持dh参数最新才能保证获取的关节胶囊正确
+        let nlink = self.params.nlink;
         let mut joint_capsules = Vec::new();
         let dh = &self.params.denavit_hartenberg;
         let mut isometry = self.state.base_pose;
 
-        for i in 0..self.params.nlink + 1 {
+        for i in 0..nlink + 1 {
             let isometry_increment = Isometry::from_parts(
                 na::Translation3::new(
                     dh[(i, 2)],
@@ -168,6 +176,9 @@ impl<const N: usize, const N_ADD_ONE: usize> Robot for RobotNDof<N, N_ADD_ONE> {
         self.path = path
     }
     fn set_q(&mut self, q: Vec<f64>) {
+        for i in 0..self.params.nlink {
+            self.params.denavit_hartenberg[(i, 0)] = q[i];
+        }
         self.state.q = na::SVector::from_vec(q)
     }
     fn set_q_dot(&mut self, q_dot: Vec<f64>) {

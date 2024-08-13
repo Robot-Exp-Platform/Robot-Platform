@@ -24,6 +24,7 @@ pub trait SeriesRobot<const N: usize>: Robot {
     fn get_q_ddot_na(&self) -> na::SVector<f64, N>;
     fn get_q_jack_na(&self) -> na::SVector<f64, N>;
     fn get_base(&self) -> Pose;
-
     fn get_end_effector_pose_na(&self) -> Pose;
+
+    fn update_dh(&mut self);
 }
