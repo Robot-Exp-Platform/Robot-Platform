@@ -9,6 +9,7 @@ use std::sync::{Arc, Condvar, Mutex, RwLock};
 use std::time::Duration;
 
 use crate::planner_trait::Planner;
+use crate::utilities;
 use message::target::Target;
 use message::track::Track;
 #[cfg(feature = "recode")]
@@ -35,9 +36,6 @@ pub struct Cfs<R: SeriesRobot<N> + 'static, const N: usize> {
 pub struct CfsParams {
     period: f64,
     interpolation: usize,
-    q1: na::DMatrix<f64>,
-    q2: na::DMatrix<f64>,
-    q3: na::DMatrix<f64>,
 }
 
 pub struct CfsNode {
@@ -55,9 +53,6 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> Cfs<R, N> {
             CfsParams {
                 period: 0.0,
                 interpolation: 0,
-                q1: na::DMatrix::zeros(0, 0),
-                q2: na::DMatrix::zeros(0, 0),
-                q3: na::DMatrix::zeros(0, 0),
             },
             robot,
         )
@@ -127,12 +122,31 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Cfs<R, N> {
 
     fn update(&mut self) {
         // 更新 target
+        let target = match self.msgnode.target_queue.pop() {
+            // 根据不同的 target 类型，执行不同的任务，也可以将不同的 Target 类型处理为相同的类型
+            Some(Target::Joint(joint)) => joint,
+            None => {
+                // 任务已经全部完成，进入结束状态，并通知所有线程
+                let (state, cvar) = &*self.msgnode.state_collector;
+                state.lock().unwrap().finish();
+                cvar.notify_all();
+
+                return;
+            }
+            _ => unimplemented!("CFS planner does not support Pose target."),
+        };
+        let target = na::SVector::from_vec(target);
+        println!("{} get target: {:?}", self.name, target);
 
         // 获取 robot 状态
+        let robot_read = self.robot.read().unwrap();
+        let q = robot_read.get_q_na();
 
         // 执行CFS逻辑
 
-        // // 检查上个任务是否完成或者任务是否过近
+        let _q_ref_list = utilities::interpolation::<N>(&q, &target, self.params.interpolation);
+
+        unimplemented!()
 
         // 记录 track
 
