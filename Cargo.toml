@@ -36,6 +36,7 @@ crossbeam = "*"
 rand = "*"
 chrono = "*"
 lazy_static = "*"
+approx = "*"
 
 robot = { path = "./crates/robot" }
 controller = { path = "./crates/controller" }
@@ -54,6 +55,7 @@ nalgebra.workspace = true
 crossbeam.workspace = true
 rand.workspace = true
 chrono.workspace = true
+approx.workspace = true
 zmq = { workspace = true, optional = true }
 rosrust = { workspace = true, optional = true }
 rosrust_msg = { workspace = true, optional = true }

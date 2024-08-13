@@ -1196,6 +1196,7 @@ version = "0.1.0"
 name = "robot_platform"
 version = "0.1.0"
 dependencies = [
+ "approx",
  "chrono",
  "controller",
  "crossbeam",
