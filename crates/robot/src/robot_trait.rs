@@ -1,4 +1,5 @@
 use message::state::Pose;
+use message::message_trait::Message;
 use nalgebra as na;
 
 pub trait Robot: Send + Sync {
@@ -17,6 +18,8 @@ pub trait Robot: Send + Sync {
     fn set_q_dot(&mut self, q_dot: Vec<f64>);
 
     fn reset_state(&mut self);
+
+    fn safety_check(&self, msg: &Message) -> bool;
 }
 
 // pub trait RobotState {}
