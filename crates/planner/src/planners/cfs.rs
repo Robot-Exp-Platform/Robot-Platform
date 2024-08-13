@@ -3,9 +3,10 @@ use nalgebra as na;
 use serde::Deserialize;
 use serde_json::{from_value, Value};
 // use serde_yaml::{from_value, Value};
+use optimization_engine::constraints::{self, *};
 use std::fs;
 use std::io::{BufWriter, Write};
-use std::sync::{Arc, Condvar, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::time::Duration;
 
 use crate::planner_trait::Planner;
@@ -17,7 +18,7 @@ use recoder::*;
 use robot::robot_trait::SeriesRobot;
 use robot_macros_derive::*;
 use task_manager::ros_thread::ROSThread;
-use task_manager::state_collector::{NodeState, StateCollector};
+use task_manager::state_collector::StateCollector;
 
 #[allow(dead_code)]
 pub struct Cfs<R: SeriesRobot<N> + 'static, const N: usize> {
@@ -32,12 +33,14 @@ pub struct Cfs<R: SeriesRobot<N> + 'static, const N: usize> {
 }
 
 #[allow(dead_code)]
-#[derive(Deserialize)]
+#[derive(Deserialize, Default)]
 pub struct CfsParams {
     period: f64,
     interpolation: usize,
+    iteration_number: usize,
 }
 
+#[derive(Default)]
 pub struct CfsNode {
     recoder: Option<BufWriter<fs::File>>,
     target_queue: Arc<SegQueue<Target>>,
@@ -47,15 +50,7 @@ pub struct CfsNode {
 
 impl<R: SeriesRobot<N> + 'static, const N: usize> Cfs<R, N> {
     pub fn new(name: String, path: String, robot: Arc<RwLock<R>>) -> Cfs<R, N> {
-        Cfs::from_params(
-            name,
-            path,
-            CfsParams {
-                period: 0.0,
-                interpolation: 0,
-            },
-            robot,
-        )
+        Cfs::from_params(name, path, CfsParams::default(), robot)
     }
     pub fn from_params(
         name: String,
@@ -67,12 +62,7 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> Cfs<R, N> {
             name,
             path,
             params,
-            msgnode: CfsNode {
-                recoder: None,
-                target_queue: Arc::new(SegQueue::new()),
-                track_queue: Arc::new(SegQueue::new()),
-                state_collector: Arc::new((Mutex::new(NodeState::new()), Condvar::new())),
-            },
+            msgnode: CfsNode::default(),
             robot,
         }
     }
@@ -143,14 +133,22 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Cfs<R, N> {
         let q = robot_read.get_q_na();
 
         // 执行CFS逻辑
-
         let _q_ref_list = utilities::interpolation::<N>(&q, &target, self.params.interpolation);
+        let constraint_list = constraints::CartesianProduct::new();
 
-        unimplemented!()
+        for _ in 0..self.params.iteration_number {
+            // 计算 Jacobian
+            // 计算 Hessian
+            // 计算 cost
+            // 计算 gradient
+            // 计算 step
+            // 更新 q_ref_list
+        }
 
         // 记录 track
 
         // 发送 track
+        unimplemented!();
     }
 
     fn finalize(&mut self) {
