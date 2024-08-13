@@ -3,7 +3,7 @@ use nalgebra::Isometry;
 
 use crate::robot_trait::Robot;
 use crate::robot_trait::SeriesRobot;
-use message::collision_object::Capsule;
+use message::collision_object::{get_distance, Capsule, CollisionObject};
 use message::state::Pose;
 
 #[allow(dead_code)]
@@ -87,14 +87,6 @@ impl<const N: usize> RobotNDofState<N> {
             base_pose: Pose::identity(),
         }
     }
-
-    pub fn get_q(&self) -> &na::SVector<f64, N> {
-        &self.q
-    }
-
-    pub fn get_q_dot(&self) -> &na::SVector<f64, N> {
-        &self.q_dot
-    }
 }
 
 impl<const N: usize, const N_ADD_ONE: usize> SeriesRobot<N> for RobotNDof<N, N_ADD_ONE> {
@@ -167,6 +159,14 @@ impl<const N: usize, const N_ADD_ONE: usize> Robot for RobotNDof<N, N_ADD_ONE> {
             });
         }
         joint_capsules
+    }
+
+    fn get_distance_to_collision(&self, obj: &CollisionObject) -> f64 {
+        self.get_joint_capsules()
+            .iter()
+            .map(|&x| get_distance(&CollisionObject::Capsule(x), obj))
+            .min_by(|a, b| a.partial_cmp(b).unwrap())
+            .unwrap()
     }
 
     fn set_name(&mut self, name: String) {

@@ -1,7 +1,7 @@
 pub mod robot_trait;
 pub mod robots;
-pub use robot_trait::Robot;
 pub mod config;
+pub mod utilities;
 
 #[cfg(test)]
 mod tests {

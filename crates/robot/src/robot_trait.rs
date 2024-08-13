@@ -1,4 +1,4 @@
-use message::collision_object::Capsule;
+use message::collision_object::{Capsule, CollisionObject};
 use message::state::Pose;
 use nalgebra as na;
 
@@ -7,6 +7,7 @@ pub trait Robot: Send + Sync {
     fn get_path(&self) -> String;
     fn get_end_effector_pose(&self) -> Vec<Pose>;
     fn get_joint_capsules(&self) -> Vec<Capsule>;
+    fn get_distance_to_collision(&self, obj: &CollisionObject) -> f64;
 
     fn set_name(&mut self, name: String);
     fn set_path(&mut self, path: String);
