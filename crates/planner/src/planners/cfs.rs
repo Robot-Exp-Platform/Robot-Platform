@@ -3,7 +3,7 @@ use nalgebra as na;
 use serde::Deserialize;
 use serde_json::{from_value, Value};
 // use serde_yaml::{from_value, Value};
-use optimization_engine::constraints::{self, *};
+// use optimization_engine::constraints::{self, *};
 use std::fs;
 use std::io::{BufWriter, Write};
 use std::sync::{Arc, Mutex, RwLock};
@@ -134,7 +134,7 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Cfs<R, N> {
 
         // 执行CFS逻辑
         let _q_ref_list = utilities::interpolation::<N>(&q, &target, self.params.interpolation);
-        let constraint_list = constraints::CartesianProduct::new();
+        // let constraint_list = constraints::CartesianProduct::new();
 
         for _ in 0..self.params.iteration_number {
             // 计算障碍物约束，
