@@ -14,6 +14,7 @@ use message::{control_command::ControlCommand, track::Track};
 use recoder::*;
 use robot::robot_trait::SeriesRobot;
 use robot_macros_derive::*;
+use sensor::sensor_trait::Sensor;
 use task_manager::ros_thread::ROSThread;
 
 pub struct Impedance<R: SeriesRobot<N> + 'static, const N: usize> {
@@ -23,7 +24,7 @@ pub struct Impedance<R: SeriesRobot<N> + 'static, const N: usize> {
     state: ImpedanceState<N>,
     params: ImpedanceParams<N>,
 
-    msgnode: ImpedanceNode,
+    node: ImpedanceNode,
     robot: Arc<RwLock<R>>,
 }
 
@@ -42,6 +43,7 @@ pub struct ImpedanceParams<const N: usize> {
 }
 
 pub struct ImpedanceNode {
+    sensor: Option<Arc<RwLock<Sensor>>>,
     recoder: Option<BufWriter<fs::File>>,
     track_queue: Arc<SegQueue<Track>>,
     control_command_queue: Arc<SegQueue<ControlCommand>>,
@@ -67,7 +69,8 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> Impedance<R, N> {
         params: ImpedanceParams<N>,
         robot: Arc<RwLock<R>>,
     ) -> Impedance<R, N> {
-        let msgnode = ImpedanceNode {
+        let node = ImpedanceNode {
+            sensor: None,
             recoder: None,
             track_queue: Arc::new(SegQueue::new()),
             control_command_queue: Arc::new(SegQueue::new()),
@@ -83,7 +86,7 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> Impedance<R, N> {
             },
             params,
 
-            msgnode,
+            node,
             robot,
         }
     }
@@ -118,13 +121,13 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Impedance<R, N> 
                     self.robot.read().unwrap().get_name(),
                 ))
                 .unwrap();
-            self.msgnode.recoder = Some(BufWriter::new(file));
+            self.node.recoder = Some(BufWriter::new(file));
         }
     }
 
     fn update(&mut self) {
         // 更新 track
-        match self.msgnode.track_queue.pop() {
+        match self.node.track_queue.pop() {
             Some(Track::Joint(ref_q)) => {
                 self.state.ref_q = na::SVector::from_vec(ref_q);
                 println!("{} get track: {:?}", self.name, self.state.ref_q);
@@ -163,18 +166,18 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Impedance<R, N> 
 
         // 记录控制指令
         #[cfg(feature = "recode")]
-        if let Some(ref mut recoder) = self.msgnode.recoder {
+        if let Some(ref mut recoder) = self.node.recoder {
             recode!(recoder, control_output);
         }
 
         // 发送控制指令
         let control_command =
             ControlCommand::TauWithPeriod(self.params.period, control_output.as_slice().to_vec());
-        self.msgnode.control_command_queue.push(control_command);
+        self.node.control_command_queue.push(control_command);
     }
 
     fn finalize(&mut self) {
-        if let Some(ref mut recoder) = self.msgnode.recoder {
+        if let Some(ref mut recoder) = self.node.recoder {
             recoder.flush().unwrap();
         }
     }

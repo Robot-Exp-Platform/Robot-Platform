@@ -11,7 +11,7 @@ nalgebra.workspace = true
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
 serde_yaml.workspace = true
-# optimization_engine.workspace = true
+optimization_engine = { workspace = true, optional = true }
 
 
 robot.workspace = true
@@ -19,10 +19,8 @@ recoder.workspace = true
 task_manager.workspace = true
 message.workspace = true
 robot_macros_derive.workspace = true
+sensor.workspace = true
 
 [features]
 recode = []
-noros = []
-rszmq = []
-ros = []
-ros2 = []
+open = ["optimization_engine"]

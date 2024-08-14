@@ -12,6 +12,7 @@ pub struct RobotTasks {
 pub struct Node {
     pub node_type: String,
     pub name: String,
+    pub sensor: Option<String>,
     pub param: Value,
 }
 

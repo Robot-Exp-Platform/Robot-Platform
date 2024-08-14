@@ -70,6 +70,7 @@ recoder.workspace = true
 task_manager.workspace = true
 simulator.workspace = true
 message.workspace = true
+sensor.workspace = true
 
 
 [build-dependencies]
@@ -81,31 +82,14 @@ message.workspace = true
 # default = ["ros2"]
 
 recode = ["controller/recode", "planner/recode", "simulator/recode"]
-rszmq = [
-    "zmq",
-    "task_manager/rszmq",
-    "controller/rszmq",
-    "planner/rszmq",
-    "simulator/rszmq",
-]
-noros = [
-    "task_manager/noros",
-    "controller/noros",
-    "planner/noros",
-    "simulator/noros",
-]
+rszmq = ["zmq", "task_manager/rszmq", "controller/rszmq", "simulator/rszmq"]
+noros = ["task_manager/noros", "controller/noros", "simulator/noros"]
 ros = [
     "rosrust",
     "rosrust_msg",
     "task_manager/ros",
     "controller/ros",
-    "planner/ros",
     "simulator/ros",
     "message/ros",
 ]
-ros2 = [
-    "task_manager/ros2",
-    "controller/ros2",
-    "planner/ros2",
-    "simulator/ros2",
-]
+ros2 = ["task_manager/ros2", "controller/ros2", "simulator/ros2"]
