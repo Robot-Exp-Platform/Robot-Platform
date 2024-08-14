@@ -11,6 +11,8 @@ nalgebra.workspace = true
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
 serde_yaml.workspace = true
+# optimization_engine.workspace = true
+
 
 robot.workspace = true
 recoder.workspace = true

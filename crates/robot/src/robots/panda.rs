@@ -1,5 +1,5 @@
 use nalgebra as na;
-use std::f64::consts::PI;
+use std::f64::consts::{FRAC_PI_2, FRAC_PI_4};
 
 use crate::robots::robot_n_dof::RobotNDof;
 use crate::robots::robot_n_dof::RobotNDofParams;
@@ -35,14 +35,14 @@ impl Panda {
                 ]),
                 #[rustfmt::skip]
                 denavit_hartenberg: na::SMatrix::from_vec(vec![
-                0.0,      0.333,  0.0,      0.0,
-                0.0,      0.0,    0.0,      -PI * 0.5,
-                0.0,      0.316,  0.0,      PI * 0.5,
-                0.0,      0.0,    0.0825,   PI * 0.5,
-                0.0,      0.384,  -0.0825,  -PI * 0.5,
-                0.0,      0.0,    0.0,      PI * 0.5,
-                0.0,      0.0,    0.088,    PI * 0.5,
-                -PI*0.25,  0.107,  0.0,     0.0,]),
+                    0.0,        0.333,  0.0,     0.0,
+                    0.0,        0.0,    0.0,     -FRAC_PI_2,
+                    0.0,        0.316,  0.0,     FRAC_PI_2,
+                    0.0,        0.0,    0.0825,  FRAC_PI_2,
+                    0.0,        0.384,  -0.0825, -FRAC_PI_2,
+                    0.0,        0.0,    0.0,     FRAC_PI_2,
+                    0.0,        0.0,    0.088,   FRAC_PI_2,
+                    -FRAC_PI_4, 0.107,  0.0,     0.0,]),
                 capsules: [
                     Capsule::from_vec(vec![0.0, 0.0, 0.0, 0.0, 0.0, -0.333, 0.07]),
                     Capsule::from_vec(vec![0.0, 0.0, -0.05, 0.0, 0.0, 0.0, 0.07]),

@@ -1,6 +1,7 @@
 use std::sync::{Arc, RwLock};
 
 use crate::robot_trait::Robot;
+use message::collision_object::CollisionObject;
 use message::state::Pose;
 use message::message_trait::Message;
 
@@ -65,6 +66,10 @@ impl Robot for RobotList {
     }
     fn set_q(&mut self, _: Vec<f64>) {}
     fn set_q_dot(&mut self, _: Vec<f64>) {}
+
+    fn get_distance_to_collision(&self, _: &CollisionObject) -> f64 {
+        unimplemented!()
+    }
 
     fn reset_state(&mut self) {
         self.robots
