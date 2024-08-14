@@ -5,6 +5,7 @@ use crate::robot_trait::Robot;
 use crate::robot_trait::SeriesRobot;
 use message::collision_object::{get_distance, Capsule, CollisionObject};
 use message::state::Pose;
+use message::message_trait::Message;
 
 #[allow(dead_code)]
 pub struct RobotNDof<const N: usize, const N_ADD_ONE: usize> {
@@ -215,5 +216,9 @@ impl<const N: usize, const N_ADD_ONE: usize> Robot for RobotNDof<N, N_ADD_ONE> {
 
     fn reset_state(&mut self) {
         // TODO 位置重置
+    }
+
+    fn safety_check(&self, msg: &Message) -> bool{
+        return true
     }
 }

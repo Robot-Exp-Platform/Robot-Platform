@@ -5,3 +5,4 @@ edition = "2021"
 repository.workspace = true
 
 [dependencies]
+message.workspace = true

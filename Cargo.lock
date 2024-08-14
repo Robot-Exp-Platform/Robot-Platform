@@ -1364,6 +1364,9 @@ dependencies = [
 [[package]]
 name = "sensor"
 version = "0.1.0"
+dependencies = [
+ "message",
+]
 
 [[package]]
 name = "serde"
