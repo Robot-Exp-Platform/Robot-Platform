@@ -12,11 +12,11 @@ use crate::controller_trait::Controller;
 use message::{control_command::ControlCommand, track::Track};
 #[cfg(feature = "recode")]
 use recoder::*;
-use robot::robot_trait::Robot;
-use task_manager::generate_node_method;
+use robot::robot_trait::SeriesRobot;
+use robot_macros_derive::*;
 use task_manager::ros_thread::ROSThread;
 
-pub struct Pid<R: Robot + 'static, const N: usize> {
+pub struct Pid<R: SeriesRobot<N> + 'static, const N: usize> {
     name: String,
     path: String,
 
@@ -48,7 +48,7 @@ pub struct PidNode {
     control_command_queue: Arc<SegQueue<ControlCommand>>,
 }
 
-impl<R: Robot + 'static, const N: usize> Pid<R, N> {
+impl<R: SeriesRobot<N> + 'static, const N: usize> Pid<R, N> {
     pub fn new(name: String, path: String, robot: Arc<RwLock<R>>) -> Pid<R, N> {
         Pid::from_params(
             name,
@@ -90,21 +90,11 @@ impl<R: Robot + 'static, const N: usize> Pid<R, N> {
     }
 }
 
-impl<R: Robot + 'static, const N: usize> Controller for Pid<R, N> {
-    generate_node_method!();
-
-    fn set_track_queue(&mut self, track_queue: Arc<SegQueue<Track>>) {
-        self.msgnode.track_queue = track_queue;
-    }
-    fn set_controller_command_queue(
-        &mut self,
-        controller_command_queue: Arc<SegQueue<ControlCommand>>,
-    ) {
-        self.msgnode.control_command_queue = controller_command_queue;
-    }
+impl<R: SeriesRobot<N> + 'static, const N: usize> Controller for Pid<R, N> {
+    generate_controller_method!();
 }
 
-impl<R: Robot + 'static, const N: usize> ROSThread for Pid<R, N> {
+impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Pid<R, N> {
     fn init(&mut self) {
         println!("{} 向您问好. {} says hello.", self.name, self.name);
     }
@@ -145,7 +135,7 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Pid<R, N> {
 
         // 获取 robot 状态
         let robot_read = self.robot.read().unwrap();
-        let q = na::SVector::from_vec(robot_read.get_q());
+        let q = robot_read.get_q_na();
 
         // 执行 pid 逻辑
         let new_error = self.state.track - q;

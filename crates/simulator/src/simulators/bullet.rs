@@ -19,7 +19,7 @@ use message::state::RobotState;
 #[cfg(feature = "recode")]
 use recoder::*;
 use robot::robot_trait::Robot;
-use task_manager::generate_node_method;
+use robot_macros_derive::*;
 use task_manager::ros_thread::ROSThread;
 
 // bullet 结构体声明，包含其名称，路径，消息节点，以及机器人
@@ -84,14 +84,7 @@ impl<R: Robot + 'static, const N: usize> Bullet<R, N> {
 
 // 为 Bullet 实现 Simulator 特征，使得其是一个仿真器
 impl<R: Robot + 'static, const N: usize> Simulator for Bullet<R, N> {
-    generate_node_method!();
-
-    fn set_controller_command_queue(
-        &mut self,
-        controller_command_queue: Arc<SegQueue<ControlCommand>>,
-    ) {
-        self.msgnode.control_command_queue = controller_command_queue;
-    }
+    generate_simulator_method!();
 }
 
 // 为 Bullet 实现 ROSThread 特征，使得其可以被类似 ros 的线程管理器调用，而实际上并不一定用到了ros，只是结构相似罢了
