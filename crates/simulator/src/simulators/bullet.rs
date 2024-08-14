@@ -156,17 +156,23 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Bullet<R, N> {
         // 更新 control command
 
         // TODO: 这里的逻辑有问题，向仿真器发送的消息应该是整个 message， 不仅仅包括了控制指令的类型，也包括了控制指令的具体内容，目前的写法中只包含了内容，而无法区分到底是什么类型的控制指令。建议将 control_command 直接序列化后发送到仿真器中。
-        let (_period, _control_command) = match self.node.control_command_queue.pop() {
-            Some(ControlCommand::Joint(joint)) => (0.0, joint),
-            Some(ControlCommand::JointWithPeriod(period, joint)) => (period, joint),
-            Some(ControlCommand::Tau(tau)) => (0.0, tau),
-            Some(ControlCommand::TauWithPeriod(period, tau)) => (period, tau),
-            None => {
-                eprintln!("Failed to pop control command from queue.");
-                return;
-            }
-        };
-        println!("{} get control command: {:?}", self.name, _control_command);
+
+        // let (_period, _control_command) = match self.msgnode.control_command_queue.pop() {
+        //     Some(ControlCommand::Joint(joint)) => (0.0, joint),
+        //     Some(ControlCommand::JointWithPeriod(period, joint)) => (period, joint),
+        //     Some(ControlCommand::Tau(tau)) => (0.0, tau),
+        //     Some(ControlCommand::TauWithPeriod(period, tau)) => (period, tau),
+        //     None => {
+        //         eprintln!("Failed to pop control command from queue.");
+        //         return;
+        //     }
+        // };
+        
+        let command = self.msgnode.control_command_queue.pop();
+        if let None = command {
+            eprintln!("Failed to pop control command from queue.");
+            return;
+        }
 
         #[cfg(feature = "rszmq")]
         {
@@ -179,7 +185,7 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Bullet<R, N> {
             let robot_state: RobotState = serde_json::from_str(message.as_str()).unwrap();
 
             // 及时返回控制指令
-            let reply = serde_json::to_string(&(_period, _control_command)).unwrap();
+            let reply = serde_json::to_string(&(command)).unwrap();
             responder.send(&reply, 0).expect("Failed to send reply");
 
             // 处理消息，将消息中的状态信息写入到机器人状态中

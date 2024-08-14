@@ -24,7 +24,7 @@ robot_macros_derive.workspace = true
 sensor.workspace = true
 
 [features]
-# default = ["rszmq"]
+default = ["rszmq"]
 recode = []
 noros = []
 rszmq = ["zmq"]
