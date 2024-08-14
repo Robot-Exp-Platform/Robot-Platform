@@ -20,6 +20,8 @@ use robot::robots::franka_emika;
 use robot::robots::franka_research3;
 use robot::robots::panda;
 use robot::robots::robot_list::RobotList;
+use sensor::config::create_sensor;
+use sensor::sensor_trait::Sensor;
 use simulator::config::create_simulator;
 use task_manager::ros_thread::ROSThread;
 use task_manager::state_collector::{NodeState, StateCollector};
@@ -33,21 +35,35 @@ pub struct Exp {
     pub task_manage: TaskManager,
     pub state_collector: StateCollector,
 
-    pub _robot_exp: Arc<RwLock<dyn robot::Robot>>,
-    pub planner_exp: Arc<Mutex<dyn planner::Planner>>,
-    pub controller_exp: Arc<Mutex<dyn controller::Controller>>,
-    pub simulator_exp: Arc<Mutex<dyn simulator::Simulator>>,
+    pub _robot_tree: Arc<RwLock<dyn robot::Robot>>,
+    pub sensor_list: Vec<Arc<RwLock<Sensor>>>,
+    pub planner_tree: Arc<Mutex<dyn planner::Planner>>,
+    pub controller_tree: Arc<Mutex<dyn controller::Controller>>,
+    pub simulator_tree: Arc<Mutex<dyn simulator::Simulator>>,
 }
 
 #[derive(Debug, Deserialize)]
-struct Config {
+struct RobotConfig {
     // Config 从 CONFIG_PATH/config.json 中读取的配置以如下结构保存
     name: String,
     robot_type: String,
     planner: String,
     controller: String,
     simulator: String,
-    robots: Option<Vec<Config>>,
+    robots: Option<Vec<RobotConfig>>,
+}
+
+#[derive(Debug, Deserialize)]
+struct SensorConfig {
+    // Config 从 CONFIG_PATH/config.json 中读取的配置以如下结构保存
+    name: String,
+    sensor_type: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct Config {
+    robot_config: RobotConfig,
+    sensor_config: Vec<SensorConfig>,
 }
 
 impl Exp {
@@ -60,28 +76,36 @@ impl Exp {
         let mut thread_manage = ThreadManage::new();
         let mut task_manage = TaskManager::new();
         let state_collector = Arc::new((Mutex::new(NodeState::new()), Condvar::new()));
-        let (robot, planner, controller, simulator) = Exp::build_exp_tree(
-            config,
+        let (robot_tree, planner_tree, controller_tree, simulator_tree) = Exp::build_exp_tree(
+            config.robot_config,
             "".to_string(),
             &mut thread_manage,
             &mut task_manage,
             &state_collector,
         );
 
+        // 生成传感器目录
+        let sensor_list = config
+            .sensor_config
+            .iter()
+            .map(|sensor_config| create_sensor(&sensor_config.sensor_type, &sensor_config.name))
+            .collect();
+
         Exp {
             thread_manage,
             task_manage,
             state_collector,
-            _robot_exp: robot,
-            planner_exp: planner,
-            controller_exp: controller,
-            simulator_exp: simulator,
+            _robot_tree: robot_tree,
+            sensor_list,
+            planner_tree,
+            controller_tree,
+            simulator_tree,
         }
     }
 
     #[allow(clippy::type_complexity)]
     fn build_exp_tree(
-        config: Config,
+        config: RobotConfig,
         path: String,
         thread_manage: &mut ThreadManage,
         task_manager: &mut TaskManager,
@@ -174,8 +198,8 @@ impl Exp {
             fs::File::open(path::Path::new(TASK_PATH)).expect("Failed to open task file");
         let task: Task = from_reader(task_file).expect("Failed to parse task file");
 
-        let controller = self.controller_exp.clone();
-        let planner = self.planner_exp.clone();
+        let controller = self.controller_tree.clone();
+        let planner = self.planner_tree.clone();
 
         #[cfg(feature = "recode")]
         {
@@ -188,17 +212,41 @@ impl Exp {
             match node.node_type.as_str() {
                 "planner" => {
                     let planner = get_planner_with_name(&planner, node.name.as_str()).unwrap();
-                    planner.lock().unwrap().set_params(node.param.clone());
+                    let mut planner = planner.lock().unwrap();
+                    planner.set_params(node.param.clone());
+                    planner.set_sensor(
+                        get_sensor_with_name(
+                            &self.sensor_list,
+                            node.sensor.clone().unwrap().as_str(),
+                        )
+                        .unwrap(),
+                    )
                 }
                 "controller" => {
                     let controller =
                         get_controller_with_name(&controller, node.name.as_str()).unwrap();
-                    controller.lock().unwrap().set_params(node.param.clone());
+                    let mut controller = controller.lock().unwrap();
+                    controller.set_params(node.param.clone());
+                    controller.set_sensor(
+                        get_sensor_with_name(
+                            &self.sensor_list,
+                            node.sensor.clone().unwrap().as_str(),
+                        )
+                        .unwrap(),
+                    )
                 }
                 "simulator" => {
                     let simulator =
-                        get_simulator_with_name(&self.simulator_exp, node.name.as_str()).unwrap();
-                    simulator.lock().unwrap().set_params(node.param.clone());
+                        get_simulator_with_name(&self.simulator_tree, node.name.as_str()).unwrap();
+                    let mut simulator = simulator.lock().unwrap();
+                    simulator.set_params(node.param.clone());
+                    simulator.set_sensor(
+                        get_sensor_with_name(
+                            &self.sensor_list,
+                            node.sensor.clone().unwrap().as_str(),
+                        )
+                        .unwrap(),
+                    )
                 }
                 _ => panic!("Unknown node type"),
             }
@@ -259,7 +307,7 @@ impl ROSThread for Exp {
 
 #[allow(clippy::type_complexity)]
 fn create_branch(
-    _config: &Config,
+    _config: &RobotConfig,
     _path: &str,
 ) -> (
     Arc<Mutex<dyn planner::Planner>>,
@@ -271,7 +319,7 @@ fn create_branch(
 
 #[allow(clippy::type_complexity)]
 fn create_nodes<R: SeriesRobot<N> + 'static, const N: usize>(
-    config: &Config,
+    config: &RobotConfig,
     path: &str,
     robot: Arc<RwLock<R>>,
 ) -> (
@@ -303,7 +351,7 @@ fn create_nodes<R: SeriesRobot<N> + 'static, const N: usize>(
 
 #[allow(clippy::type_complexity)]
 fn create_robot(
-    config: &Config,
+    config: &RobotConfig,
     path: &str,
 ) -> (
     Arc<RwLock<dyn robot::Robot>>,
@@ -404,5 +452,18 @@ pub fn get_simulator_with_name(
         }
     }
 
+    None
+}
+
+pub fn get_sensor_with_name(
+    sensor_list: &Vec<Arc<RwLock<Sensor>>>,
+    name: &str,
+) -> Option<Arc<RwLock<Sensor>>> {
+    // !从 sensor_list 中根据 name 获取 sensor,辅助函数
+    for sensor in sensor_list {
+        if sensor.read().unwrap().get_name() == name {
+            return Some(sensor.clone());
+        }
+    }
     None
 }

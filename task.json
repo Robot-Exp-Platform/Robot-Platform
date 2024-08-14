@@ -12,10 +12,11 @@
   ],
 
   "nodes": [
-    { "node_type": "planner", "name": "linear:panda_1", "param": { "period": 0.5, "interpolation": 10 } },
+    { "node_type": "planner", "name": "linear:panda_1", "sensor": null, "param": { "period": 0.5, "interpolation": 10 } },
     {
       "node_type": "controller",
       "name": "pid:panda_1",
+      "sensor": null,
       "param": {
         "period": 0.05,
         "kp": [
@@ -32,6 +33,6 @@
         ]
       }
     },
-    { "node_type": "simulator", "name": "bullet:panda_1", "param": { "period": 0.05 } }
+    { "node_type": "simulator", "name": "bullet:panda_1", "sensor": null, "param": { "period": 0.05 } }
   ]
 }

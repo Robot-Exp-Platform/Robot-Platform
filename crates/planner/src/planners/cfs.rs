@@ -17,6 +17,7 @@ use message::track::Track;
 use recoder::*;
 use robot::robot_trait::SeriesRobot;
 use robot_macros_derive::*;
+use sensor::sensor_trait::Sensor;
 use task_manager::ros_thread::ROSThread;
 use task_manager::state_collector::StateCollector;
 
@@ -27,7 +28,7 @@ pub struct Cfs<R: SeriesRobot<N> + 'static, const N: usize> {
 
     params: CfsParams,
 
-    msgnode: CfsNode,
+    node: CfsNode,
 
     robot: Arc<RwLock<R>>,
 }
@@ -42,6 +43,7 @@ pub struct CfsParams {
 
 #[derive(Default)]
 pub struct CfsNode {
+    sensor: Option<Arc<RwLock<Sensor>>>,
     recoder: Option<BufWriter<fs::File>>,
     target_queue: Arc<SegQueue<Target>>,
     track_queue: Arc<SegQueue<Track>>,
@@ -62,7 +64,7 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> Cfs<R, N> {
             name,
             path,
             params,
-            msgnode: CfsNode::default(),
+            node: CfsNode::default(),
             robot,
         }
     }
@@ -79,7 +81,7 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Cfs<R, N> {
 
     fn start(&mut self) {
         // 进入启动状态，并通知所有线程
-        let (state, cvar) = &*self.msgnode.state_collector;
+        let (state, cvar) = &*self.node.state_collector;
         state.lock().unwrap().start();
         cvar.notify_all();
 
@@ -112,12 +114,12 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Cfs<R, N> {
 
     fn update(&mut self) {
         // 更新 target
-        let target = match self.msgnode.target_queue.pop() {
+        let target = match self.node.target_queue.pop() {
             // 根据不同的 target 类型，执行不同的任务，也可以将不同的 Target 类型处理为相同的类型
             Some(Target::Joint(joint)) => joint,
             None => {
                 // 任务已经全部完成，进入结束状态，并通知所有线程
-                let (state, cvar) = &*self.msgnode.state_collector;
+                let (state, cvar) = &*self.node.state_collector;
                 state.lock().unwrap().finish();
                 cvar.notify_all();
 
@@ -151,7 +153,7 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Cfs<R, N> {
     }
 
     fn finalize(&mut self) {
-        if let Some(ref mut recoder) = self.msgnode.recoder {
+        if let Some(ref mut recoder) = self.node.recoder {
             recoder.flush().unwrap();
         }
     }

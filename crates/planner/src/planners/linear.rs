@@ -16,6 +16,7 @@ use message::track::Track;
 use recoder::*;
 use robot::robot_trait::SeriesRobot;
 use robot_macros_derive::*;
+use sensor::sensor_trait::Sensor;
 use task_manager::ros_thread::ROSThread;
 use task_manager::state_collector::{NodeState, StateCollector};
 
@@ -25,8 +26,7 @@ pub struct Linear<R: SeriesRobot<N> + 'static, const N: usize> {
 
     params: LinearParams,
 
-    msgnode: LinearNode,
-
+    node: LinearNode,
     robot: Arc<RwLock<R>>,
 }
 
@@ -37,6 +37,7 @@ pub struct LinearParams {
 }
 
 pub struct LinearNode {
+    sensor: Option<Arc<RwLock<Sensor>>>,
     recoder: Option<BufWriter<fs::File>>,
     target_queue: Arc<SegQueue<Target>>,
     track_queue: Arc<SegQueue<Track>>,
@@ -67,7 +68,8 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> Linear<R, N> {
 
             params,
 
-            msgnode: LinearNode {
+            node: LinearNode {
+                sensor: Option::None,
                 recoder: Option::None,
                 target_queue: Arc::new(SegQueue::new()),
                 track_queue: Arc::new(SegQueue::new()),
@@ -89,7 +91,7 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Linear<R, N> {
 
     fn start(&mut self) {
         // 进入启动状态，并通知所有线程
-        let (state, cvar) = &*self.msgnode.state_collector;
+        let (state, cvar) = &*self.node.state_collector;
         state.lock().unwrap().start();
         cvar.notify_all();
 
@@ -122,12 +124,12 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Linear<R, N> {
 
     fn update(&mut self) {
         // 更新 target
-        let target = match self.msgnode.target_queue.pop() {
+        let target = match self.node.target_queue.pop() {
             // 根据不同的 target 类型，执行不同的任务，也可以将不同的 Target 类型处理为相同的类型
             Some(Target::Joint(joint)) => joint,
             None => {
                 // 任务已经全部完成，进入结束状态，并通知所有线程
-                let (state, cvar) = &*self.msgnode.state_collector;
+                let (state, cvar) = &*self.node.state_collector;
                 state.lock().unwrap().finish();
                 cvar.notify_all();
 
@@ -156,12 +158,12 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Linear<R, N> {
         // 发送 track
         for track in track_list {
             let track = Track::Joint(track.as_slice().to_vec());
-            self.msgnode.track_queue.push(track);
+            self.node.track_queue.push(track);
         }
     }
 
     fn finalize(&mut self) {
-        if let Some(ref mut recoder) = self.msgnode.recoder {
+        if let Some(ref mut recoder) = self.node.recoder {
             recoder.flush().unwrap();
         }
     }
