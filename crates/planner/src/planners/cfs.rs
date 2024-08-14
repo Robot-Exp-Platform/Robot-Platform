@@ -137,12 +137,11 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Cfs<R, N> {
         let constraint_list = constraints::CartesianProduct::new();
 
         for _ in 0..self.params.iteration_number {
-            // 计算 Jacobian
-            // 计算 Hessian
-            // 计算 cost
-            // 计算 gradient
-            // 计算 step
-            // 更新 q_ref_list
+            // 计算障碍物约束，
+            // 将约束统合为约束类型，约束类型包括关节约束、障碍物约束、起点终点约束
+            // 获得优化方程及其梯度
+            // 求解优化问题
+            // 检查是否收敛，更新 q_ref_list
         }
 
         // 记录 track

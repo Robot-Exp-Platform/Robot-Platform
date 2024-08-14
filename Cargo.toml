@@ -10,6 +10,7 @@ members = [
     "./crates/temp",
     "crates/message",
     "crates/robot_macros_derive",
+    "crates/sensor",
 ]
 
 [workspace.package]
@@ -37,7 +38,7 @@ rand = "*"
 chrono = "*"
 lazy_static = "*"
 approx = "*"
-optimization_engine = { version = "*", features = ["rp"] }
+# optimization_engine = { version = "*", features = ["rp"] }
 
 robot = { path = "./crates/robot" }
 controller = { path = "./crates/controller" }
@@ -47,6 +48,7 @@ task_manager = { path = "./crates/task_manager" }
 simulator = { path = "./crates/simulator" }
 message = { path = "./crates/message" }
 robot_macros_derive = { path = "./crates/robot_macros_derive" }
+sensor = { path = "./crates/sensor" }
 
 [dependencies]
 serde = { workspace = true, features = ["derive"] }
