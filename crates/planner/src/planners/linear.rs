@@ -9,6 +9,7 @@ use std::sync::{Arc, Condvar, Mutex, RwLock};
 use std::time::Duration;
 
 use crate::planner_trait::Planner;
+use crate::utilities;
 use message::target::Target;
 use message::track::Track;
 #[cfg(feature = "recode")]
@@ -124,9 +125,6 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Linear<R, N> {
         let target = match self.msgnode.target_queue.pop() {
             // 根据不同的 target 类型，执行不同的任务，也可以将不同的 Target 类型处理为相同的类型
             Some(Target::Joint(joint)) => joint,
-            Some(Target::Pose(_pose)) => {
-                unimplemented!("Linear planner does not support Pose target.");
-            }
             None => {
                 // 任务已经全部完成，进入结束状态，并通知所有线程
                 let (state, cvar) = &*self.msgnode.state_collector;
@@ -135,6 +133,7 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Linear<R, N> {
 
                 return;
             }
+            _ => unimplemented!("Linear planner does not support Pose target."),
         };
         let target = na::SVector::from_vec(target);
         println!("{} get target: {:?}", self.name, target);
@@ -144,7 +143,7 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Linear<R, N> {
         let q = robot_read.get_q_na();
 
         // 执行插值逻辑，将当前位置到目标位置的插值点和目标位置塞入 track 队列
-        let track_list = interpolation::<N>(&q, &target, self.params.interpolation);
+        let track_list = utilities::interpolation::<N>(&q, &target, self.params.interpolation);
 
         // 记录 track
         #[cfg(feature = "recode")]
@@ -170,20 +169,4 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Linear<R, N> {
     fn get_period(&self) -> Duration {
         Duration::from_secs_f64(self.params.period)
     }
-}
-
-fn interpolation<const N: usize>(
-    start: &na::SVector<f64, N>,
-    end: &na::SVector<f64, N>,
-    interpolation: usize,
-) -> Vec<na::SVector<f64, N>> {
-    let mut track_list = Vec::new();
-    for i in 0..interpolation {
-        let mut track = na::SVector::from_vec(vec![0.0; N]);
-        for j in 0..N {
-            track[j] = start[j] + (end[j] - start[j]) * (i as f64 / interpolation as f64);
-        }
-        track_list.push(track);
-    }
-    track_list
 }

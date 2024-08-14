@@ -1,8 +1,9 @@
 use nalgebra as na;
+use nalgebra::Isometry;
 
 use crate::robot_trait::Robot;
 use crate::robot_trait::SeriesRobot;
-use message::collision_object::Capsule;
+use message::collision_object::{get_distance, Capsule, CollisionObject};
 use message::state::Pose;
 
 #[allow(dead_code)]
@@ -86,14 +87,6 @@ impl<const N: usize> RobotNDofState<N> {
             base_pose: Pose::identity(),
         }
     }
-
-    pub fn get_q(&self) -> &na::SVector<f64, N> {
-        &self.q
-    }
-
-    pub fn get_q_dot(&self) -> &na::SVector<f64, N> {
-        &self.q_dot
-    }
 }
 
 impl<const N: usize, const N_ADD_ONE: usize> SeriesRobot<N> for RobotNDof<N, N_ADD_ONE> {
@@ -115,6 +108,74 @@ impl<const N: usize, const N_ADD_ONE: usize> SeriesRobot<N> for RobotNDof<N, N_A
     fn get_end_effector_pose_na(&self) -> Pose {
         unimplemented!()
     }
+    fn get_joint_capsules_with_joint(&self, joint: nalgebra::SVector<f64, N>) -> Vec<Capsule> {
+        let nlink = N;
+        let mut joint_capsules = Vec::new();
+        let dh = &self.params.denavit_hartenberg;
+        let mut isometry = self.state.base_pose;
+
+        for i in 0..nlink + 1 {
+            let isometry_increment = Isometry::from_parts(
+                na::Translation3::new(
+                    dh[(i, 2)],
+                    -dh[(i, 1)] * dh[(i, 3)].sin(),
+                    dh[(i, 1)] * dh[(i, 3)].cos(),
+                ),
+                na::UnitQuaternion::from_euler_angles(joint[i], 0.0, dh[(i, 3)]),
+            );
+
+            // Update the cumulative transformation matrix
+            isometry = isometry * isometry_increment;
+
+            // Calculate the positions of the capsule's end points in the global frame
+            let capsule_start = isometry * self.params.capsules[i].ball_center1;
+            let capsule_end = isometry * self.params.capsules[i].ball_center1;
+
+            // Create a new Capsule object and add it to the vector
+            joint_capsules.push(Capsule {
+                ball_center1: capsule_start,
+                ball_center2: capsule_end,
+                radius: self.params.capsules[i].radius,
+            });
+        }
+        joint_capsules
+    }
+    fn get_distance_with_joint(
+        &self,
+        joint: nalgebra::SVector<f64, N>,
+        obj: &CollisionObject,
+    ) -> f64 {
+        let joint_capsules = self.get_joint_capsules_with_joint(joint);
+        joint_capsules
+            .iter()
+            .map(|&x| get_distance(&CollisionObject::Capsule(x), obj))
+            .min_by(|a, b| a.partial_cmp(b).unwrap())
+            .unwrap()
+    }
+    fn get_distance_diff_with_joint(
+        &self,
+        joint: nalgebra::SVector<f64, N>,
+        bj: &CollisionObject,
+    ) -> nalgebra::SVector<f64, N> {
+        let mut distance_diff = na::SVector::from_element(0.0);
+        let epsilon = 1e-6;
+        for i in 0..N {
+            let mut joint_plus = joint.clone();
+            joint_plus[i] += epsilon;
+            let mut joint_minus = joint.clone();
+            joint_minus[i] -= epsilon;
+            let distance_plus = self.get_distance_with_joint(joint_plus, bj);
+            let distance_minus = self.get_distance_with_joint(joint_minus, bj);
+            distance_diff[i] = (distance_plus - distance_minus) / (2.0 * epsilon);
+        }
+        distance_diff
+    }
+
+    fn update_dh(&mut self) {
+        for i in 0..self.params.nlink {
+            self.params.denavit_hartenberg[(i, 0)] = self.state.q[i];
+        }
+    }
 }
 
 impl<const N: usize, const N_ADD_ONE: usize> Robot for RobotNDof<N, N_ADD_ONE> {
@@ -129,43 +190,11 @@ impl<const N: usize, const N_ADD_ONE: usize> Robot for RobotNDof<N, N_ADD_ONE> {
         vec![self.state.base_pose]
     }
     fn get_joint_capsules(&self) -> Vec<message::collision_object::Capsule> {
-        let mut joint_capsules = Vec::new();
-        let dh = &self.params.denavit_hartenberg;
-        let mut transform = self.state.base_pose.to_matrix();
+        self.get_joint_capsules_with_joint(self.state.q)
+    }
 
-        for i in 0..self.params.nlink + 1 {
-            let rotation = na::Rotation3::from_euler_angles(dh[(i, 0)], 0.0, dh[(i, 3)]);
-            let translation = na::Vector3::new(
-                dh[(i, 2)],
-                -dh[(i, 1)] * dh[(i, 3)].sin(),
-                dh[(i, 1)] * dh[(i, 3)].cos(),
-            );
-
-            // Combine rotation and translation into a homogeneous transformation matrix
-            let mut r_t = na::Matrix4::identity();
-            r_t.fixed_view_mut::<3, 3>(0, 0)
-                .copy_from(&rotation.to_homogeneous().fixed_view::<3, 3>(0, 0));
-            r_t.fixed_view_mut::<3, 1>(0, 3).copy_from(&translation);
-
-            // Update the cumulative transformation matrix
-            transform = transform * r_t;
-
-            // Calculate the positions of the capsule's end points in the global frame
-            let capsule_start = transform.fixed_view::<3, 3>(0, 0)
-                * self.params.capsules[i].ball_center1
-                + transform.fixed_view::<3, 1>(0, 3);
-            let capsule_end = transform.fixed_view::<3, 3>(0, 0)
-                * self.params.capsules[i].ball_center2
-                + transform.fixed_view::<3, 1>(0, 3);
-
-            // Create a new Capsule object and add it to the vector
-            joint_capsules.push(Capsule {
-                ball_center1: capsule_start,
-                ball_center2: capsule_end,
-                radius: self.params.capsules[i].radius,
-            });
-        }
-        joint_capsules
+    fn get_distance_to_collision(&self, obj: &CollisionObject) -> f64 {
+        self.get_distance_with_joint(self.state.q, obj)
     }
 
     fn set_name(&mut self, name: String) {
@@ -175,6 +204,9 @@ impl<const N: usize, const N_ADD_ONE: usize> Robot for RobotNDof<N, N_ADD_ONE> {
         self.path = path
     }
     fn set_q(&mut self, q: Vec<f64>) {
+        for i in 0..self.params.nlink {
+            self.params.denavit_hartenberg[(i, 0)] = q[i];
+        }
         self.state.q = na::SVector::from_vec(q)
     }
     fn set_q_dot(&mut self, q_dot: Vec<f64>) {
