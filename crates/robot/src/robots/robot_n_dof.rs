@@ -4,8 +4,8 @@ use nalgebra::Isometry;
 use crate::robot_trait::Robot;
 use crate::robot_trait::SeriesRobot;
 use message::collision_object::{get_distance, Capsule, CollisionObject};
-use message::state::Pose;
 use message::message_trait::Message;
+use message::state::Pose;
 
 #[allow(dead_code)]
 pub struct RobotNDof<const N: usize, const N_ADD_ONE: usize> {
@@ -218,7 +218,7 @@ impl<const N: usize, const N_ADD_ONE: usize> Robot for RobotNDof<N, N_ADD_ONE> {
         // TODO 位置重置
     }
 
-    fn safety_check(&self, msg: &Message) -> bool{
-        return true
+    fn safety_check(&self, _: &Message) -> bool {
+        return true;
     }
 }

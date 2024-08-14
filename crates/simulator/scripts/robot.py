@@ -85,7 +85,7 @@ class Joint:
             bodyUniqueId=self.robot_id,
             jointIndex=self.joint_index,
             controlMode=p.TORQUE_CONTROL,
-            force=torque, 
+            force=torque,
         )
         self.update_state()
 
@@ -129,8 +129,6 @@ class Panda:
             joint_positions.append(position)
             joint_velocities.append(velocity)
         return joint_positions, joint_velocities
-
-    
 
     def set_joint_position(self, joint_index, position):
         self.control_joint[joint_index].set_position(position)

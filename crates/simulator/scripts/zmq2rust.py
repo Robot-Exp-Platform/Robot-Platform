@@ -2,8 +2,10 @@ import json
 from typing import List, Dict, Any
 import zmq
 
+
 def RobotState(state_type, value: List[float]) -> Dict[str, Any]:
-    return {state_type : value}
+    return {state_type: value}
+
 
 class ZMQ_REQ:
     def __init__(self, localhost) -> None:

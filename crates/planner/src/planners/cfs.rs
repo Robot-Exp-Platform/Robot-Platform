@@ -104,7 +104,7 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Cfs<R, N> {
                     self.robot.read().unwrap().get_name(),
                 ))
                 .unwrap();
-            self.msgnode.recoder = Some(BufWriter::new(file));
+            self.node.recoder = Some(BufWriter::new(file));
         }
 
         // 进入循环状态，并通知所有线程

@@ -114,7 +114,7 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Linear<R, N> {
                     self.robot.read().unwrap().get_name(),
                 ))
                 .unwrap();
-            self.msgnode.recoder = Some(BufWriter::new(file));
+            self.node.recoder = Some(BufWriter::new(file));
         }
 
         // 进入循环状态，并通知所有线程
@@ -149,7 +149,7 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Linear<R, N> {
 
         // 记录 track
         #[cfg(feature = "recode")]
-        if let Some(ref mut recoder) = self.msgnode.recoder {
+        if let Some(ref mut recoder) = self.node.recoder {
             for track in track_list.iter() {
                 recode!(recoder, track);
             }

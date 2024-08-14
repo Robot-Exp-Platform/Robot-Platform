@@ -77,7 +77,7 @@ impl Robot for RobotList {
             .for_each(|robot| robot.write().unwrap().reset_state());
     }
 
-    fn safety_check(&self, msg: &Message) -> bool{
+    fn safety_check(&self, _: &Message) -> bool{
         return true
     }
 }
