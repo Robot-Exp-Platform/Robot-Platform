@@ -169,7 +169,7 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Bullet<R, N> {
         // };
 
         let command = self.node.control_command_queue.pop();
-        if let None = command {
+        if command.is_none() {
             eprintln!("Failed to pop control command from queue.");
             return;
         }
