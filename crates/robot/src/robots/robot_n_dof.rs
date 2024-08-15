@@ -126,7 +126,7 @@ impl<const N: usize, const N_ADD_ONE: usize> SeriesRobot<N> for RobotNDof<N, N_A
             );
 
             // Update the cumulative transformation matrix
-            isometry = isometry * isometry_increment;
+            isometry *= isometry_increment;
 
             // Calculate the positions of the capsule's end points in the global frame
             let capsule_start = isometry * self.params.capsules[i].ball_center1;
@@ -161,9 +161,9 @@ impl<const N: usize, const N_ADD_ONE: usize> SeriesRobot<N> for RobotNDof<N, N_A
         let mut distance_diff = na::SVector::from_element(0.0);
         let epsilon = 1e-6;
         for i in 0..N {
-            let mut joint_plus = joint.clone();
+            let mut joint_plus = joint;
             joint_plus[i] += epsilon;
-            let mut joint_minus = joint.clone();
+            let mut joint_minus = joint;
             joint_minus[i] -= epsilon;
             let distance_plus = self.get_distance_with_joint(joint_plus, bj);
             let distance_minus = self.get_distance_with_joint(joint_minus, bj);
@@ -205,8 +205,8 @@ impl<const N: usize, const N_ADD_ONE: usize> Robot for RobotNDof<N, N_ADD_ONE> {
         self.path = path
     }
     fn set_q(&mut self, q: Vec<f64>) {
-        for i in 0..self.params.nlink {
-            self.params.denavit_hartenberg[(i, 0)] = q[i];
+        for (i, &q_i) in q.iter().enumerate() {
+            self.params.denavit_hartenberg[(i, 0)] = q_i;
         }
         self.state.q = na::SVector::from_vec(q)
     }
@@ -219,6 +219,6 @@ impl<const N: usize, const N_ADD_ONE: usize> Robot for RobotNDof<N, N_ADD_ONE> {
     }
 
     fn safety_check(&self, _: &Message) -> bool {
-        return true;
+        true
     }
 }
