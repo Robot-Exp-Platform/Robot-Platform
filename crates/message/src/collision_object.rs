@@ -150,121 +150,117 @@ fn capsule_cylinder_distance(capsule: &Capsule, cylinder: &Cylinder) -> f64 {
     (distance - capsule.radius - cylinder.radius).max(0.0)
 }
 
+fn is_equal(x:f64, y:f64) -> bool{
+    if (x - y).abs() < 1e-7{
+        return true
+    }
+    return false
+}
+
 /// 计算两条线段之间的最短距离的平方，并返回最近的两个点
 fn get_closest_points_between_lines(
     start1: na::Point3<f64>,
     end1: na::Point3<f64>,
     start2: na::Point3<f64>,
     end2: na::Point3<f64>,
-) -> (na::Point3<f64>, na::Point3<f64>, f64) {
-    let line1 = end1 - start1;
-    let line2 = end2 - start2;
+) -> (na::Point3<f64>, na::Point3<f64>, f64){
+    // ref: https://www.cnblogs.com/zmy--blog/p/15049721.html
+    let u = end1 - start1;
+    let v = end2 - start2;
+    let w = start1 - start2;
+    let a = u.x * u.x + u.y * u.y + u.z * u.z; // u*u
+    let b = u.x * v.x + u.y * v.y + u.z * v.z; // u*v
+    let c = v.x * v.x + v.y * v.y + v.z * v.z; // v*v
+    let d = u.x * w.x + u.y * w.y + u.z * w.z; // u*w
+    let e = v.x * w.x + v.y * w.y + v.z * w.z; // v*w
+    let dt = a * c - b * b;
+    let mut sd = dt;
+    let mut td = dt;
+    let mut sn; // sn = be - cd
+    let mut tn; // tn - ae - bd
 
-    // 判断完全平行
-    let is_parallel = line1.normalize() == line2.normalize();
-    let (closest_point1, closest_point2, dis_sqr): (na::Point3<f64>, na::Point3<f64>, f64);
-
-    if is_parallel {
-        // 完全平行
-        let len1 = line1.norm_squared();
-        let len2 = line2.norm_squared();
-
-        let dis_start;
-        let dis_end;
-
-        if len1 > len2 {
-            let cp_start = get_closest_point_on_line_segment(start1, end1, start2);
-            let cp_end = get_closest_point_on_line_segment(start1, end1, end2);
-            dis_start = (cp_start - start2).norm_squared();
-            dis_end = (cp_end - end2).norm_squared();
-
-            if dis_start < dis_end {
-                closest_point1 = cp_start;
-                closest_point2 = start2;
-            } else {
-                closest_point1 = cp_end;
-                closest_point2 = end2;
-            }
-        } else {
-            let cp_start = get_closest_point_on_line_segment(start2, end2, start1);
-            let cp_end = get_closest_point_on_line_segment(start2, end2, end1);
-            dis_start = (cp_start - start1).norm_squared();
-            dis_end = (cp_end - end1).norm_squared();
-
-            if dis_start < dis_end {
-                closest_point1 = start1;
-                closest_point2 = cp_start;
-            } else {
-                closest_point1 = end1;
-                closest_point2 = cp_end;
-            }
+    if is_equal(dt, 0.0) {
+        // 两直线平行
+        sn = 0.0;
+        sd = 1.00; // 防止除以0
+        tn = e;
+        td = c;
+    } 
+    else {
+        sn = b * e - c * d;
+        tn = a * e - b * d;
+        if sn < 0.0 {
+            // 最近点在s起点之外，同平行处理
+            sn = 0.0;
+            tn = e;
+            td = c;
         }
-
-        dis_sqr = dis_start.min(dis_end);
-    } else {
-        let normal = line1.cross(&line2);
-        let len = normal.norm_squared();
-        let dis2_line = (start2 - start1).dot(&normal).abs().powi(2) / len;
-
-        // 判断是否在同一个平面上
-        if dis2_line == 0.0 {
-            // 同面
-            // 检测线段是否相交
-            let is_line_cross = check_line_cross(start1, end1, start2, end2);
-            if is_line_cross {
-                closest_point1 = start1;
-                closest_point2 = start2;
-                dis_sqr = 0.0;
-            } else {
-                let (cp1, d1) = get_closest_point_on_segments(start1, end1, start2, end2);
-                let (cp2, d2) = get_closest_point_on_segments(start2, end2, start1, end1);
-                if d1 < d2 {
-                    closest_point1 = cp1.0;
-                    closest_point2 = cp1.1;
-                    dis_sqr = d1;
-                } else {
-                    closest_point1 = cp2.1;
-                    closest_point2 = cp2.0;
-                    dis_sqr = d2;
-                }
-            }
-        } else {
-            let offset = dis2_line.sqrt();
-            // 计算line2相对line1的方向
-            let direction_start = start2 - start1;
-            let direction = if direction_start.dot(&normal) > 0.0 {
-                1.0
-            } else {
-                -1.0
-            };
-
-            // 检测线段是否相交
-            let is_line_cross = check_line_cross(
-                start1,
-                end1,
-                start2 - normal.normalize() * (offset * direction),
-                end2 - normal.normalize() * (offset * direction),
-            );
-
-            if is_line_cross {
-                closest_point1 = start1;
-                closest_point2 = start2;
-                dis_sqr = dis2_line;
-            } else {
-                let (cp1, d1) = get_closest_point_on_segments(start1, end1, start2, end2);
-                let (cp2, d2) = get_closest_point_on_segments(start2, end2, start1, end1);
-                if d1 < d2 {
-                    closest_point1 = cp1.0;
-                    closest_point2 = cp1.1;
-                    dis_sqr = d1;
-                } else {
-                    closest_point1 = cp2.1;
-                    closest_point2 = cp2.0;
-                    dis_sqr = d2;
-                }
-            }
+        else if sn > sd {
+            // 最近点在s终点以外
+            sn = sd;
+            tn = e + b;
+            td = c;
         }
     }
+
+    if tn < 0.0 {
+        // 最近点在t起点之外
+        tn = 0.0;
+        if -d < 0.0 {
+            sn = 0.0;
+        }
+        else if -d > a{
+            sn = sd;
+        }
+        else{
+            sn = -d;
+            sd = a;
+        }
+    }
+    else if tn > td {
+        tn = td;
+        if (-d + b) < 0.0 {
+            sn = 0.0;
+        }
+        else if (-d + b) > a {
+            sn = sd;
+        }
+        else {
+            sn = -d + b;
+            sd = a;
+        }
+    }
+
+    let sc;
+    let tc;
+
+    if is_equal(sn, 0.0){
+        sc = 0.0;
+    }
+    else{
+        sc  = sn / sd;
+    }
+
+    if is_equal(tn, 0.0){
+        tc = 0.0;
+    }
+    else{
+        tc = tn / td;
+    }
+
+    let dx = w.x + (sc * u.x) - (tc * v.x);
+    let dy = w.y + (sc * u.y) - (tc * v.y);
+    let dz = w.z + (sc * u.z) - (tc * v.z);
+    let dis_sqr = dx * dx + dy * dy + dz * dz;
+
+    let cp1_x = start1.x + (sc * u.x);
+    let cp1_y = start1.y + (sc * u.y);
+    let cp1_z = start1.z + (sc * u.z);
+    let cp2_x = start2.x + (tc * v.x);
+    let cp2_y = start2.y + (tc * v.y);
+    let cp2_z = start2.z + (tc * v.z);
+    let closest_point1 = na::Point3::new(cp1_x, cp1_y, cp1_z);
+    let closest_point2 = na::Point3::new(cp2_x, cp2_y, cp2_z);
 
     (closest_point1, closest_point2, dis_sqr)
 }
@@ -278,59 +274,4 @@ fn get_closest_point_on_line_segment(
     let line = end - start;
     let t = (point - start).dot(&line) / line.norm_squared();
     start + line * t.clamp(0.0, 1.0)
-}
-
-/// 检测两条线段是否相交
-fn check_line_cross(
-    start1: na::Point3<f64>,
-    end1: na::Point3<f64>,
-    start2: na::Point3<f64>,
-    end2: na::Point3<f64>,
-) -> bool {
-    let dir1 = end1 - start1;
-    let dir2 = end2 - start2;
-
-    let cross = dir1.cross(&dir2);
-    let denom = cross.norm_squared();
-
-    // 处理平行或共线情况
-    if denom == 0.0 {
-        return false;
-    }
-
-    let w = start2 - start1;
-    let t1 = w.cross(&dir2).dot(&cross) / denom;
-    let t2 = w.cross(&dir1).dot(&cross) / denom;
-
-    t1 >= 0.0 && t1 <= 1.0 && t2 >= 0.0 && t2 <= 1.0
-}
-
-/// 计算两个线段之间最近的点对及其距离平方
-fn get_closest_point_on_segments(
-    start1: na::Point3<f64>,
-    end1: na::Point3<f64>,
-    start2: na::Point3<f64>,
-    end2: na::Point3<f64>,
-) -> ((na::Point3<f64>, na::Point3<f64>), f64) {
-    let cp1_start = get_closest_point_on_line_segment(start1, end1, start2);
-    let d1_start = (cp1_start - start2).norm_squared();
-
-    let cp1_end = get_closest_point_on_line_segment(start1, end1, end2);
-    let d1_end = (cp1_end - end2).norm_squared();
-
-    let cp2_start = get_closest_point_on_line_segment(start2, end2, start1);
-    let d2_start = (cp2_start - start1).norm_squared();
-
-    let cp2_end = get_closest_point_on_line_segment(start2, end2, end1);
-    let d2_end = (cp2_end - end1).norm_squared();
-
-    if d1_start < d1_end && d1_start < d2_start && d1_start < d2_end {
-        ((cp1_start, start2), d1_start)
-    } else if d1_end < d1_start && d1_end < d2_start && d1_end < d2_end {
-        ((cp1_end, end2), d1_end)
-    } else if d2_start < d1_start && d2_start < d1_end && d2_start < d2_end {
-        ((start1, cp2_start), d2_start)
-    } else {
-        ((end1, cp2_end), d2_end)
-    }
 }
