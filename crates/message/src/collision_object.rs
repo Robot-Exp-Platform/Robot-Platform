@@ -154,7 +154,7 @@ fn is_equal(x:f64, y:f64) -> bool{
     if (x - y).abs() < 1e-7{
         return true
     }
-    return false
+    false
 }
 
 /// 计算两条线段之间的最短距离的平方，并返回最近的两个点
@@ -231,22 +231,19 @@ fn get_closest_points_between_lines(
         }
     }
 
-    let sc;
-    let tc;
-
-    if is_equal(sn, 0.0){
-        sc = 0.0;
+    let sc = if is_equal(sn, 0.0){
+        0.0
     }
     else{
-        sc  = sn / sd;
-    }
+        sn / sd
+    };
 
-    if is_equal(tn, 0.0){
-        tc = 0.0;
+    let tc = if is_equal(tn, 0.0){
+        0.0
     }
     else{
-        tc = tn / td;
-    }
+        tn / td
+    };
 
     let dx = w.x + (sc * u.x) - (tc * v.x);
     let dy = w.y + (sc * u.y) - (tc * v.y);
