@@ -39,6 +39,7 @@ chrono = "*"
 lazy_static = "*"
 approx = "*"
 osqp = "*"
+optimization_engine = "0.9.1"
 
 robot = { path = "./crates/robot" }
 controller = { path = "./crates/controller" }
@@ -71,6 +72,7 @@ task_manager.workspace = true
 simulator.workspace = true
 message.workspace = true
 sensor.workspace = true
+
 
 [build-dependencies]
 

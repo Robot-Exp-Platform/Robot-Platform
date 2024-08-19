@@ -1,6 +1,7 @@
 use crossbeam::queue::SegQueue;
 use message::constraint::Constraint;
 use nalgebra as na;
+use sensor::sensors;
 use serde::Deserialize;
 use serde_json::{from_value, Value};
 // use serde_yaml::{from_value, Value};
@@ -26,19 +27,24 @@ pub struct Cfs<R: SeriesRobot<N> + 'static, const N: usize> {
     name: String,
     path: String,
 
+    state: CfsState<N>,
     params: CfsParams,
 
     node: CfsNode,
-
     robot: Arc<RwLock<R>>,
 }
 
-#[allow(dead_code)]
+pub struct CfsState<const N: usize> {
+    h: na::DMatrix<f64>,
+    f: na::DVector<f64>,
+}
+
 #[derive(Deserialize, Default)]
 pub struct CfsParams {
     period: f64,
     interpolation: usize,
     iteration_number: usize,
+    cost_weight: Vec<f64>,
 }
 
 #[derive(Default)]
@@ -63,6 +69,10 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> Cfs<R, N> {
         Cfs {
             name,
             path,
+            state: CfsState {
+                h: na::DMatrix::from_element(N, N, 0.0),
+                f: na::DVector::from_element(N, 0.0),
+            },
             params,
             node: CfsNode::default(),
             robot,
@@ -106,6 +116,17 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Cfs<R, N> {
                 .unwrap();
             self.node.recoder = Some(BufWriter::new(file));
         }
+
+        // 初始化二次规划的目标函数矩阵
+
+        let dim = (self.params.interpolation + 1) * N;
+
+        let mut q1 = na::DMatrix::<f64>::identity(dim, dim);
+
+        q1.view_mut((dim - N, dim - N), (N, N))
+            .copy_from(&(0.1 * na::DMatrix::<f64>::identity(N, N)));
+
+        self.state.h = q1 * self.params.cost_weight[0];
 
         // 进入循环状态，并通知所有线程
         state.lock().unwrap().update();
