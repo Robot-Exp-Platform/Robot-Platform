@@ -133,10 +133,12 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Cfs<R, N> {
         // 获取 robot 状态
         let robot_read = self.robot.read().unwrap();
         let q = robot_read.get_q_na();
+        let q_min_bound = robot_read.get_q_min_bound_na().as_slice().to_vec();
+        let q_max_bound = robot_read.get_q_max_bound_na().as_slice().to_vec();
 
         // 执行CFS逻辑
         let q_ref_list = utilities::interpolation::<N>(&q, &target, self.params.interpolation);
-        let collision_object = self
+        let collision_objects = self
             .node
             .sensor
             .as_ref()
@@ -146,42 +148,41 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Cfs<R, N> {
             .get_collision();
         for _ in 0..self.params.iteration_number {
             // 提前分配空间
-            let mut constraint_product = Constraint::CartesianProduct(
-                Vec::with_capacity(self.params.interpolation),
-                Vec::with_capacity(self.params.interpolation),
+            let mut combined_constraint = Constraint::CartesianProduct(
+                Vec::with_capacity(self.params.interpolation + 1),
+                Vec::with_capacity(self.params.interpolation + 1),
             );
 
+            // 生成约束 包括三部分，起点终点约束、障碍物约束、关节边界约束
+            combined_constraint.push(N, Constraint::Equared(q.as_slice().to_vec()));
+
             for q_ref in q_ref_list.iter() {
-                let joint_obstacle_distances: Vec<_> = collision_objects
-                    .iter()
-                    .map(|collision| robot_read.get_distance_with_joint(q_ref, &collision))
-                    .collect();
-
-                let joint_obstacle_gradients: Vec<_> = collision_objects
-                    .iter()
-                    .map(|collision| robot_read.get_distance_diff_with_joint(q_ref, &collision))
-                    .collect();
-
                 let mut obstacle_constraint =
                     Constraint::Intersection(Vec::with_capacity(collision_objects.len()));
 
-                for (distance, gradient) in joint_obstacle_distances
-                    .iter()
-                    .zip(joint_obstacle_gradients.iter())
-                {
+                for (distance, gradient) in collision_objects.iter().map(|collision| {
+                    (
+                        robot_read.get_distance_with_joint(q_ref, &collision),
+                        robot_read.get_distance_diff_with_joint(q_ref, &collision),
+                    )
+                }) {
                     obstacle_constraint.push(
                         N,
-                        Constraint::Halfspace(
-                            -1.0 * gradient,
-                            *distance - (gradient.transpose() * q_ref)[(0, 0)],
-                        ),
+                        Constraint::Union(vec![
+                            Constraint::Halfspace(
+                                (-gradient).as_slice().to_vec(),
+                                distance - (gradient.transpose() * q_ref)[(0, 0)],
+                            ),
+                            Constraint::Rectangle(q_min_bound.clone(), q_max_bound.clone()),
+                        ]),
                     );
                 }
 
-                combined_constraints.push(N, obstacle_constraint);
+                combined_constraint.push(N, obstacle_constraint);
             }
 
-            // 将约束统合为约束类型，约束类型包括关节约束、障碍物约束、起点终点约束
+            combined_constraint.push(N, Constraint::Equared(target.as_slice().to_vec()));
+
             // 获得优化方程及其梯度
             // 求解优化问题
             // 检查是否收敛，更新 q_ref_list

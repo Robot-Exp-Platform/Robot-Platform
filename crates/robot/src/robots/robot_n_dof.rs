@@ -103,13 +103,28 @@ impl<const N: usize, const N_ADD_ONE: usize> SeriesRobot<N> for RobotNDof<N, N_A
     fn get_q_jack_na(&self) -> na::SVector<f64, N> {
         self.state.q_jerk
     }
+    fn get_q_min_bound_na(&self) -> na::SVector<f64, N> {
+        self.params.q_min_bound
+    }
+    fn get_q_max_bound_na(&self) -> na::SVector<f64, N> {
+        self.params.q_max_bound
+    }
+    fn get_q_dot_bound_na(&self) -> nalgebra::SVector<f64, N> {
+        self.params.q_dot_bound
+    }
+    fn get_q_ddot_bound_na(&self) -> nalgebra::SVector<f64, N> {
+        self.params.q_ddot_bound
+    }
+    fn get_q_jack_bound_na(&self) -> nalgebra::SVector<f64, N> {
+        self.params.q_jerk_bound
+    }
     fn get_base(&self) -> Pose {
         self.state.base_pose
     }
     fn get_end_effector_pose_na(&self) -> Pose {
         unimplemented!()
     }
-    fn get_joint_capsules_with_joint(&self, joint: nalgebra::SVector<f64, N>) -> Vec<Capsule> {
+    fn get_joint_capsules_with_joint(&self, joint: &nalgebra::SVector<f64, N>) -> Vec<Capsule> {
         let nlink = N;
         let mut joint_capsules = Vec::new();
         let dh = &self.params.denavit_hartenberg;
@@ -143,7 +158,7 @@ impl<const N: usize, const N_ADD_ONE: usize> SeriesRobot<N> for RobotNDof<N, N_A
     }
     fn get_distance_with_joint(
         &self,
-        joint: nalgebra::SVector<f64, N>,
+        joint: &nalgebra::SVector<f64, N>,
         obj: &CollisionObject,
     ) -> f64 {
         let joint_capsules = self.get_joint_capsules_with_joint(joint);
@@ -155,18 +170,18 @@ impl<const N: usize, const N_ADD_ONE: usize> SeriesRobot<N> for RobotNDof<N, N_A
     }
     fn get_distance_diff_with_joint(
         &self,
-        joint: nalgebra::SVector<f64, N>,
+        joint: &nalgebra::SVector<f64, N>,
         bj: &CollisionObject,
     ) -> nalgebra::SVector<f64, N> {
         let mut distance_diff = na::SVector::from_element(0.0);
         let epsilon = 1e-6;
         for i in 0..N {
-            let mut joint_plus = joint;
+            let mut joint_plus = *joint;
             joint_plus[i] += epsilon;
-            let mut joint_minus = joint;
+            let mut joint_minus = *joint;
             joint_minus[i] -= epsilon;
-            let distance_plus = self.get_distance_with_joint(joint_plus, bj);
-            let distance_minus = self.get_distance_with_joint(joint_minus, bj);
+            let distance_plus = self.get_distance_with_joint(&joint_plus, bj);
+            let distance_minus = self.get_distance_with_joint(&joint_minus, bj);
             distance_diff[i] = (distance_plus - distance_minus) / (2.0 * epsilon);
         }
         distance_diff
@@ -191,11 +206,11 @@ impl<const N: usize, const N_ADD_ONE: usize> Robot for RobotNDof<N, N_ADD_ONE> {
         vec![self.state.base_pose]
     }
     fn get_joint_capsules(&self) -> Vec<message::collision_object::Capsule> {
-        self.get_joint_capsules_with_joint(self.state.q)
+        self.get_joint_capsules_with_joint(&self.state.q)
     }
 
     fn get_distance_to_collision(&self, obj: &CollisionObject) -> f64 {
-        self.get_distance_with_joint(self.state.q, obj)
+        self.get_distance_with_joint(&self.state.q, obj)
     }
 
     fn set_name(&mut self, name: String) {
