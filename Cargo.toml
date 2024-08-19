@@ -38,7 +38,6 @@ rand = "*"
 chrono = "*"
 lazy_static = "*"
 approx = "*"
-optimization_engine = { version = "*", features = ["rp"] }
 osqp = "*"
 
 robot = { path = "./crates/robot" }
@@ -72,7 +71,6 @@ task_manager.workspace = true
 simulator.workspace = true
 message.workspace = true
 sensor.workspace = true
-
 
 [build-dependencies]
 
