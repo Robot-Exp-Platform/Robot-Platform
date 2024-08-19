@@ -3,7 +3,8 @@ use message::target::Target;
 use message::track::Track;
 use serde_json::Value;
 // use serde_yaml::Value;
-use std::sync::{Arc, Mutex};
+use sensor::sensor_trait::Sensor;
+use std::sync::{Arc, Mutex, RwLock};
 use task_manager::ros_thread::ROSThread;
 use task_manager::state_collector::StateCollector;
 
@@ -25,6 +26,7 @@ pub trait Planner: ROSThread {
     }
 
     fn set_params(&mut self, params: Value);
+    fn set_sensor(&mut self, sensor: Arc<RwLock<Sensor>>);
     fn set_target_queue(&mut self, target_queue: Arc<SegQueue<Target>>);
     fn set_track_queue(&mut self, track_queue: Arc<SegQueue<Track>>);
     fn set_state_collector(&mut self, state_collector: StateCollector);

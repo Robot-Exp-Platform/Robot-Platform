@@ -21,9 +21,10 @@ task_manager.workspace = true
 message.workspace = true
 recoder.workspace = true
 robot_macros_derive.workspace = true
+sensor.workspace = true
 
 [features]
-# default = ["rszmq"]
+default = ["rszmq"]
 recode = []
 noros = []
 rszmq = ["zmq"]

@@ -1,5 +1,5 @@
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Condvar, Mutex};
+use std::sync::{Arc, Condvar, Mutex, RwLock};
 use std::thread;
 use std::time::Instant;
 
@@ -34,6 +34,41 @@ impl ThreadManage {
                 drop(locked);
 
                 let mut node_lock = node.lock().unwrap();
+                node_lock.start();
+                let period = node_lock.get_period();
+                while flag.load(Ordering::SeqCst) {
+                    let start_time = Instant::now();
+
+                    node_lock.update();
+
+                    let elapsed_time = start_time.elapsed();
+                    if period > elapsed_time {
+                        thread::sleep(period - elapsed_time);
+                    }
+                }
+                node_lock.finalize();
+                drop(node_lock);
+            }
+        });
+        self.threads.push(thread);
+    }
+
+    pub fn add_thread_rwlock(&mut self, node: Arc<RwLock<dyn ROSThread>>) {
+        let condvar = self.condvar.clone();
+        let node = node.clone();
+        let thread = thread::spawn(move || {
+            let mut node_lock = node.write().unwrap();
+            node_lock.init();
+            drop(node_lock);
+            let (flag, cvar, lock) = &*condvar;
+            loop {
+                let mut locked = lock.lock().unwrap();
+                while !flag.load(Ordering::SeqCst) {
+                    locked = cvar.wait(locked).unwrap();
+                }
+                drop(locked);
+
+                let mut node_lock = node.write().unwrap();
                 node_lock.start();
                 let period = node_lock.get_period();
                 while flag.load(Ordering::SeqCst) {

@@ -20,6 +20,7 @@ use message::state::RobotState;
 use recoder::*;
 use robot::robot_trait::Robot;
 use robot_macros_derive::*;
+use sensor::sensor_trait::Sensor;
 use task_manager::ros_thread::ROSThread;
 
 // bullet 结构体声明，包含其名称，路径，消息节点，以及机器人
@@ -30,7 +31,7 @@ pub struct Bullet<R: Robot + 'static, const N: usize> {
 
     params: BulletParams,
 
-    msgnode: BulletNode,
+    node: BulletNode,
     robot: Arc<RwLock<R>>,
 }
 
@@ -41,6 +42,7 @@ pub struct BulletParams {
 
 // 消息节点结构体声明，随条件编译的不同而不同，条件编译将决定其使用什么通讯方式
 struct BulletNode {
+    sensor: Option<Arc<RwLock<Sensor>>>,
     recoder: Option<BufWriter<fs::File>>,
     control_command_queue: Arc<SegQueue<ControlCommand>>,
     #[cfg(feature = "rszmq")]
@@ -69,7 +71,8 @@ impl<R: Robot + 'static, const N: usize> Bullet<R, N> {
             name,
             path,
             params,
-            msgnode: BulletNode {
+            node: BulletNode {
+                sensor: None,
                 recoder: None,
                 control_command_queue: Arc::new(SegQueue::new()),
                 #[cfg(feature = "rszmq")]
@@ -96,7 +99,7 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Bullet<R, N> {
             // 使用zmq实现程序通信，通信协议暂定为TCP
             // 以下为responder端
             // 使用锁来访问 responder
-            let responder = self.msgnode.responder.clone(); // 克隆 Arc 引用
+            let responder = self.node.responder.clone(); // 克隆 Arc 引用
             let responder_lock = responder.lock().unwrap(); // 锁定 Mutex 并解锁获得可变引用
                                                             // 绑定到TCP地址
             match responder_lock.bind("tcp://*:5555") {
@@ -109,7 +112,7 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Bullet<R, N> {
             // ! 使用 ros 写的订阅者通讯
             // 在这里进行节点和话题的声明
             let robot = self.robot.clone();
-            self.msgnode.sub_list.push(
+            self.node.sub_list.push(
                 ros::subscribe(
                     (self.path.clone() + self.name.clone().as_str()).as_str(),
                     1,
@@ -145,7 +148,7 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Bullet<R, N> {
                     self.robot.read().unwrap().get_name(),
                 ))
                 .unwrap();
-            self.msgnode.recoder = Some(BufWriter::new(file));
+            self.node.recoder = Some(BufWriter::new(file));
         }
     }
 
@@ -153,22 +156,28 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Bullet<R, N> {
         // 更新 control command
 
         // TODO: 这里的逻辑有问题，向仿真器发送的消息应该是整个 message， 不仅仅包括了控制指令的类型，也包括了控制指令的具体内容，目前的写法中只包含了内容，而无法区分到底是什么类型的控制指令。建议将 control_command 直接序列化后发送到仿真器中。
-        let (_period, _control_command) = match self.msgnode.control_command_queue.pop() {
-            Some(ControlCommand::Joint(joint)) => (0.0, joint),
-            Some(ControlCommand::JointWithPeriod(period, joint)) => (period, joint),
-            Some(ControlCommand::Tau(tau)) => (0.0, tau),
-            Some(ControlCommand::TauWithPeriod(period, tau)) => (period, tau),
-            None => {
-                eprintln!("Failed to pop control command from queue.");
-                return;
-            }
-        };
-        println!("{} get control command: {:?}", self.name, _control_command);
+
+        // let (_period, _control_command) = match self.node.control_command_queue.pop() {
+        //     Some(ControlCommand::Joint(joint)) => (0.0, joint),
+        //     Some(ControlCommand::JointWithPeriod(period, joint)) => (period, joint),
+        //     Some(ControlCommand::Tau(tau)) => (0.0, tau),
+        //     Some(ControlCommand::TauWithPeriod(period, tau)) => (period, tau),
+        //     None => {
+        //         eprintln!("Failed to pop control command from queue.");
+        //         return;
+        //     }
+        // };
+
+        let command = self.node.control_command_queue.pop();
+        if command.is_none() {
+            eprintln!("Failed to pop control command from queue.");
+            return;
+        }
 
         #[cfg(feature = "rszmq")]
         {
             // 获取 responder 并接受 RobotState 消息
-            let responder = self.msgnode.responder.lock().unwrap();
+            let responder = self.node.responder.lock().unwrap();
             let message = responder
                 .recv_string(0)
                 .expect("Received a message that is not a valid UTF-8 string.")
@@ -176,7 +185,7 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Bullet<R, N> {
             let robot_state: RobotState = serde_json::from_str(message.as_str()).unwrap();
 
             // 及时返回控制指令
-            let reply = serde_json::to_string(&(_period, _control_command)).unwrap();
+            let reply = serde_json::to_string(&(command)).unwrap();
             responder.send(&reply, 0).expect("Failed to send reply");
 
             // 处理消息，将消息中的状态信息写入到机器人状态中
@@ -194,7 +203,7 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Bullet<R, N> {
     }
 
     fn finalize(&mut self) {
-        if let Some(ref mut recoder) = self.msgnode.recoder {
+        if let Some(ref mut recoder) = self.node.recoder {
             recoder.flush().unwrap();
         }
     }

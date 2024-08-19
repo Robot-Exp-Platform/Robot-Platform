@@ -22,6 +22,7 @@ recoder.workspace = true
 task_manager.workspace = true
 message.workspace = true
 robot_macros_derive.workspace = true
+sensor.workspace = true
 
 
 [features]

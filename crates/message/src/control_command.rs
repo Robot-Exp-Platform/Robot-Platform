@@ -1,6 +1,6 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub enum ControlCommand {
     Joint(Vec<f64>),
     JointWithPeriod(f64, Vec<f64>),

@@ -60,6 +60,16 @@ class Joint:
         self.update_state()
         return self.position, self.velocity
 
+    def set_position(self, position, force=500):
+        p.setJointMotorControl2(
+            bodyUniqueId=self.robot_id,
+            jointIndex=self.joint_index,
+            controlMode=p.POSITION_CONTROL,
+            targetPosition=position,
+            force=force,  # 设置最大力矩或推力
+        )
+        self.update_state()
+
     def set_velocity(self, velocity, force=500):
         p.setJointMotorControl2(
             bodyUniqueId=self.robot_id,
@@ -67,6 +77,15 @@ class Joint:
             controlMode=p.VELOCITY_CONTROL,
             targetVelocity=velocity,
             force=force,  # 设置最大力矩或推力
+        )
+        self.update_state()
+
+    def set_torque(self, torque):
+        p.setJointMotorControl2(
+            bodyUniqueId=self.robot_id,
+            jointIndex=self.joint_index,
+            controlMode=p.TORQUE_CONTROL,
+            force=torque,
         )
         self.update_state()
 
@@ -111,12 +130,26 @@ class Panda:
             joint_velocities.append(velocity)
         return joint_positions, joint_velocities
 
+    def set_joint_position(self, joint_index, position):
+        self.control_joint[joint_index].set_position(position)
+
+    def set_joints_position(self, positions):
+        for i in range(0, self.joints_num):
+            self.control_joint[i].set_position(positions[i])
+
     def set_joint_velocity(self, joint_index, velocity):
         self.control_joint[joint_index].set_velocity(velocity)
 
     def set_joints_velocity(self, velocities):
         for i in range(0, self.joints_num):
             self.control_joint[i].set_velocity(velocities[i])
+
+    def set_joint_torque(self, joint_index, torque):
+        self.control_joint[joint_index].set_torque(torque)
+
+    def set_joints_torque(self, torques):
+        for i in range(0, self.joints_num):
+            self.control_joint[i].set_torque(torques[i])
 
     def print_panda_state(self):
         joint_positions, joint_velocities = self.get_joints_state()

@@ -1,6 +1,6 @@
 use nalgebra as na;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum CollisionObject {
     Sphere(Sphere),
     Cylinder(Cylinder),

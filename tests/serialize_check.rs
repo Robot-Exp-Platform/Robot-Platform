@@ -171,4 +171,24 @@ mod tests {
 
     #[test]
     fn task_serialize_check() {}
+
+    #[test]
+    fn option_serialize_check() {
+        let none: Option<i32> = None;
+        let some = Some(42);
+
+        let none_serialized = serde_json::to_string(&none).unwrap();
+        let some_serialized = serde_json::to_string(&some).unwrap();
+
+        let none_json: serde_json::Value = serde_json::to_value(&none).unwrap();
+        let some_json: serde_json::Value = serde_json::to_value(&some).unwrap();
+
+        println!("print None: {:?}", none);
+        println!("serialized: {}", none_serialized);
+        println!("json: {}", none_json);
+
+        println!("print Some: {:?}", some);
+        println!("serialized: {}", some_serialized);
+        println!("json: {}", some_json);
+    }
 }
