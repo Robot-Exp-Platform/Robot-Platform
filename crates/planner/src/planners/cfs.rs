@@ -186,7 +186,7 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Cfs<R, N> {
             // 获得优化方程及其梯度
             // 求解优化问题
             // 检查是否收敛，更新 q_ref_list
-            unimplemented!(); // 确保在最终代码中用实际功能替换此行
+            unimplemented!();
         }
 
         // 记录 track
