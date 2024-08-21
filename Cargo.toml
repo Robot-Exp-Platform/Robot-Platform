@@ -50,6 +50,7 @@ simulator = { path = "./crates/simulator" }
 message = { path = "./crates/message" }
 robot_macros_derive = { path = "./crates/robot_macros_derive" }
 sensor = { path = "./crates/sensor" }
+solver = { path = "./crates/solver" }
 
 [dependencies]
 serde = { workspace = true, features = ["derive"] }

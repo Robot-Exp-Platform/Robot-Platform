@@ -18,6 +18,7 @@ task_manager.workspace = true
 message.workspace = true
 robot_macros_derive.workspace = true
 sensor.workspace = true
+solver.workspace = true
 
 [features]
 recode = []

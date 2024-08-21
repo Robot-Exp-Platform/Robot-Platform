@@ -1,9 +1,9 @@
 use crossbeam::queue::SegQueue;
 use message::constraint::Constraint;
 use nalgebra as na;
-use sensor::sensors;
 use serde::Deserialize;
 use serde_json::{from_value, Value};
+use solver::solver_trait::Solver;
 // use serde_yaml::{from_value, Value};
 use std::fs;
 use std::io::{BufWriter, Write};
@@ -12,6 +12,7 @@ use std::time::Duration;
 
 use crate::planner_trait::Planner;
 use crate::utilities;
+use message::problem::{Problem, QuadraticProgramming};
 use message::target::Target;
 use message::track::Track;
 #[cfg(feature = "recode")]
@@ -19,6 +20,7 @@ use recoder::*;
 use robot::robot_trait::SeriesRobot;
 use robot_macros_derive::*;
 use sensor::sensor_trait::Sensor;
+use solver::solvers::osqp::OsqpSolver;
 use task_manager::ros_thread::ROSThread;
 use task_manager::state_collector::StateCollector;
 
@@ -34,10 +36,7 @@ pub struct Cfs<R: SeriesRobot<N> + 'static, const N: usize> {
     robot: Arc<RwLock<R>>,
 }
 
-pub struct CfsState<const N: usize> {
-    h: na::DMatrix<f64>,
-    f: na::DVector<f64>,
-}
+pub struct CfsState<const N: usize> {}
 
 #[derive(Deserialize, Default)]
 pub struct CfsParams {
@@ -45,6 +44,7 @@ pub struct CfsParams {
     interpolation: usize,
     iteration_number: usize,
     cost_weight: Vec<f64>,
+    solver: String,
 }
 
 #[derive(Default)]
@@ -69,10 +69,7 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> Cfs<R, N> {
         Cfs {
             name,
             path,
-            state: CfsState {
-                h: na::DMatrix::from_element(N, N, 0.0),
-                f: na::DVector::from_element(N, 0.0),
-            },
+            state: CfsState {},
             params,
             node: CfsNode::default(),
             robot,
@@ -117,17 +114,6 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Cfs<R, N> {
             self.node.recoder = Some(BufWriter::new(file));
         }
 
-        // 初始化二次规划的目标函数矩阵
-
-        let dim = (self.params.interpolation + 1) * N;
-
-        let mut q1 = na::DMatrix::<f64>::identity(dim, dim);
-
-        q1.view_mut((dim - N, dim - N), (N, N))
-            .copy_from(&(0.1 * na::DMatrix::<f64>::identity(N, N)));
-
-        self.state.h = q1 * self.params.cost_weight[0];
-
         // 进入循环状态，并通知所有线程
         state.lock().unwrap().update();
         cvar.notify_all();
@@ -167,6 +153,36 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Cfs<R, N> {
             .read()
             .unwrap()
             .get_collision();
+        let mut track_list = Vec::new();
+
+        // 初始化二次规划的目标函数矩阵
+        // 矩阵待修改，实际上为q1 为对角矩阵，q2 为离散拉普拉斯算子， q3 为
+
+        let dim = (self.params.interpolation + 1) * N;
+
+        let q1 = na::DMatrix::<f64>::identity(dim, dim);
+
+        let mut v_diff = na::DMatrix::<f64>::identity(dim - N, dim);
+        for i in 0..dim - N {
+            v_diff[(i, i + N)] = -1.0;
+        }
+        let q2 = v_diff.transpose() * v_diff;
+
+        let mut a_diff = na::DMatrix::<f64>::identity(dim - 2 * N, dim);
+        for i in 0..dim - 2 * N {
+            a_diff[(i, i + 2 * N)] = -2.0;
+            a_diff[(i, i + 2 * N)] = 1.0;
+        }
+        let q3 = a_diff.transpose() * a_diff;
+
+        let h = q1 * self.params.cost_weight[0]
+            + q2 * self.params.cost_weight[1]
+            + q3 * self.params.cost_weight[2];
+
+        let f = na::DVector::<f64>::zeros(dim);
+
+        // 线性插值时，f为0
+
         for _ in 0..self.params.iteration_number {
             // 提前分配空间
             let mut combined_constraint = Constraint::CartesianProduct(
@@ -204,16 +220,38 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Cfs<R, N> {
 
             combined_constraint.push(N, Constraint::Equared(target.as_slice().to_vec()));
 
+            let problem = QuadraticProgramming {
+                h: &h,
+                f: &f,
+                constraints: combined_constraint,
+            };
+
             // 获得优化方程及其梯度
             // 求解优化问题
+            track_list = match self.params.solver.as_str() {
+                "osqp" => {
+                    let osqp_solver =
+                        OsqpSolver::from_problem(Problem::QuadraticProgramming(problem));
+                    osqp_solver.solve()
+                }
+                _ => unimplemented!(),
+            };
+
             // 检查是否收敛，更新 q_ref_list
-            unimplemented!();
         }
 
         // 记录 track
+        #[cfg(feature = "recode")]
+        if let Some(ref mut recoder) = self.node.recoder {
+            for track in track_list.iter() {
+                recode!(recoder, track);
+            }
+        }
 
         // 发送 track
-        unimplemented!();
+        for track in track_list {
+            self.node.track_queue.push(track);
+        }
     }
 
     fn finalize(&mut self) {
