@@ -1174,6 +1174,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_yaml",
+ "solver",
  "task_manager",
 ]
 
@@ -1695,6 +1696,7 @@ dependencies = [
 name = "solver"
 version = "0.1.0"
 dependencies = [
+ "message",
  "optimization_engine",
  "osqp",
 ]
