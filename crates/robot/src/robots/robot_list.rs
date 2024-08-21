@@ -2,8 +2,8 @@ use std::sync::{Arc, RwLock};
 
 use crate::robot_trait::Robot;
 use message::collision_object::CollisionObject;
-use message::state::Pose;
 use message::message_trait::Message;
+use message::state::Pose;
 
 pub struct RobotList {
     name: String,
@@ -77,7 +77,7 @@ impl Robot for RobotList {
             .for_each(|robot| robot.write().unwrap().reset_state());
     }
 
-    fn safety_check(&self, _: &Message) -> bool{
-        return true
+    fn safety_check(&self, _: &Message) -> bool {
+        true
     }
 }

@@ -8,9 +8,9 @@ members = [
     "./crates/solver",
     "./crates/task_manager",
     "./crates/temp",
-    "crates/message",
-    "crates/robot_macros_derive",
-    "crates/sensor",
+    "./crates/message",
+    "./crates/robot_macros_derive",
+    "./crates/sensor",
 ]
 
 [workspace.package]
@@ -38,7 +38,8 @@ rand = "*"
 chrono = "*"
 lazy_static = "*"
 approx = "*"
-optimization_engine = { version = "*", features = ["rp"] }
+osqp = "*"
+optimization_engine = "0.9.1"
 
 robot = { path = "./crates/robot" }
 controller = { path = "./crates/controller" }

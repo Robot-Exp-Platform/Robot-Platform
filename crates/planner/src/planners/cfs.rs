@@ -1,9 +1,10 @@
 use crossbeam::queue::SegQueue;
+use message::constraint::Constraint;
 use nalgebra as na;
+use sensor::sensors;
 use serde::Deserialize;
 use serde_json::{from_value, Value};
 // use serde_yaml::{from_value, Value};
-// use optimization_engine::constraints::{self, *};
 use std::fs;
 use std::io::{BufWriter, Write};
 use std::sync::{Arc, Mutex, RwLock};
@@ -26,19 +27,24 @@ pub struct Cfs<R: SeriesRobot<N> + 'static, const N: usize> {
     name: String,
     path: String,
 
+    state: CfsState<N>,
     params: CfsParams,
 
     node: CfsNode,
-
     robot: Arc<RwLock<R>>,
 }
 
-#[allow(dead_code)]
+pub struct CfsState<const N: usize> {
+    h: na::DMatrix<f64>,
+    f: na::DVector<f64>,
+}
+
 #[derive(Deserialize, Default)]
 pub struct CfsParams {
     period: f64,
     interpolation: usize,
     iteration_number: usize,
+    cost_weight: Vec<f64>,
 }
 
 #[derive(Default)]
@@ -63,6 +69,10 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> Cfs<R, N> {
         Cfs {
             name,
             path,
+            state: CfsState {
+                h: na::DMatrix::from_element(N, N, 0.0),
+                f: na::DVector::from_element(N, 0.0),
+            },
             params,
             node: CfsNode::default(),
             robot,
@@ -107,6 +117,17 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Cfs<R, N> {
             self.node.recoder = Some(BufWriter::new(file));
         }
 
+        // 初始化二次规划的目标函数矩阵
+
+        let dim = (self.params.interpolation + 1) * N;
+
+        let mut q1 = na::DMatrix::<f64>::identity(dim, dim);
+
+        q1.view_mut((dim - N, dim - N), (N, N))
+            .copy_from(&(0.1 * na::DMatrix::<f64>::identity(N, N)));
+
+        self.state.h = q1 * self.params.cost_weight[0];
+
         // 进入循环状态，并通知所有线程
         state.lock().unwrap().update();
         cvar.notify_all();
@@ -133,17 +154,60 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Cfs<R, N> {
         // 获取 robot 状态
         let robot_read = self.robot.read().unwrap();
         let q = robot_read.get_q_na();
+        let q_min_bound = robot_read.get_q_min_bound_na().as_slice().to_vec();
+        let q_max_bound = robot_read.get_q_max_bound_na().as_slice().to_vec();
 
         // 执行CFS逻辑
-        let _q_ref_list = utilities::interpolation::<N>(&q, &target, self.params.interpolation);
-        // let constraint_list = constraints::CartesianProduct::new();
-
+        let q_ref_list = utilities::interpolation::<N>(&q, &target, self.params.interpolation);
+        let collision_objects = self
+            .node
+            .sensor
+            .as_ref()
+            .unwrap()
+            .read()
+            .unwrap()
+            .get_collision();
         for _ in 0..self.params.iteration_number {
-            // 计算障碍物约束，
-            // 将约束统合为约束类型，约束类型包括关节约束、障碍物约束、起点终点约束
+            // 提前分配空间
+            let mut combined_constraint = Constraint::CartesianProduct(
+                Vec::with_capacity(self.params.interpolation + 1),
+                Vec::with_capacity(self.params.interpolation + 1),
+            );
+
+            // 生成约束 包括三部分，起点终点约束、障碍物约束、关节边界约束
+            combined_constraint.push(N, Constraint::Equared(q.as_slice().to_vec()));
+
+            for q_ref in q_ref_list.iter() {
+                let mut obstacle_constraint =
+                    Constraint::Intersection(Vec::with_capacity(collision_objects.len()));
+
+                for (distance, gradient) in collision_objects.iter().map(|collision| {
+                    (
+                        robot_read.get_distance_with_joint(q_ref, &collision),
+                        robot_read.get_distance_diff_with_joint(q_ref, &collision),
+                    )
+                }) {
+                    obstacle_constraint.push(
+                        N,
+                        Constraint::Union(vec![
+                            Constraint::Halfspace(
+                                (-gradient).as_slice().to_vec(),
+                                distance - (gradient.transpose() * q_ref)[(0, 0)],
+                            ),
+                            Constraint::Rectangle(q_min_bound.clone(), q_max_bound.clone()),
+                        ]),
+                    );
+                }
+
+                combined_constraint.push(N, obstacle_constraint);
+            }
+
+            combined_constraint.push(N, Constraint::Equared(target.as_slice().to_vec()));
+
             // 获得优化方程及其梯度
             // 求解优化问题
             // 检查是否收敛，更新 q_ref_list
+            unimplemented!();
         }
 
         // 记录 track
