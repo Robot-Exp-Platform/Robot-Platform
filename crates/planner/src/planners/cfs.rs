@@ -199,8 +199,8 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Cfs<R, N> {
 
                 for (distance, gradient) in collision_objects.iter().map(|collision| {
                     (
-                        robot_read.get_distance_with_joint(q_ref, &collision),
-                        robot_read.get_distance_diff_with_joint(q_ref, &collision),
+                        robot_read.get_distance_with_joint(q_ref, collision),
+                        robot_read.get_distance_diff_with_joint(q_ref, collision),
                     )
                 }) {
                     obstacle_constraint.push(
@@ -230,8 +230,7 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Cfs<R, N> {
             // 求解优化问题
             track_list = match self.params.solver.as_str() {
                 "osqp" => {
-                    let osqp_solver =
-                        OsqpSolver::from_problem(Problem::QuadraticProgramming(problem));
+                    let osqp_solver = OsqpSolver::from_problem(problem);
                     osqp_solver.solve()
                 }
                 _ => unimplemented!(),

@@ -1,10 +1,12 @@
 use crate::solver_trait::Solver;
-use message::{problem::Problem, track::Track};
+use message::{problem::QuadraticProgramming, track::Track};
 
-pub struct OsqpSolver {}
+pub struct OsqpSolver {
+    problem: osqp::Problem,
+}
 
 impl OsqpSolver {
-    pub fn from_problem(_problem: Problem) -> OsqpSolver {
+    pub fn from_problem(_problem: QuadraticProgramming) -> OsqpSolver {
         unimplemented!()
     }
 }
