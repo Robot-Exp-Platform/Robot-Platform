@@ -187,7 +187,8 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Cfs<R, N> {
         for _ in 0..self.params.iteration_number {
             // 提前分配空间
             let mut combined_constraint = Constraint::CartesianProduct(
-                Vec::with_capacity(self.params.interpolation + 1),
+                0,
+                0,
                 Vec::with_capacity(self.params.interpolation + 1),
             );
 
@@ -196,7 +197,7 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Cfs<R, N> {
 
             for q_ref in q_ref_list.iter() {
                 let mut obstacle_constraint =
-                    Constraint::Intersection(Vec::with_capacity(collision_objects.len()));
+                    Constraint::Intersection(0, 0, Vec::with_capacity(collision_objects.len()));
 
                 for (distance, gradient) in collision_objects.iter().map(|collision| {
                     (
@@ -206,13 +207,17 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Cfs<R, N> {
                 }) {
                     obstacle_constraint.push(
                         N,
-                        Constraint::Union(vec![
-                            Constraint::Halfspace(
-                                (-gradient).as_slice().to_vec(),
-                                distance - (gradient.transpose() * q_ref)[(0, 0)],
-                            ),
-                            Constraint::Rectangle(q_min_bound.clone(), q_max_bound.clone()),
-                        ]),
+                        Constraint::Intersection(
+                            1 + N,
+                            N,
+                            vec![
+                                Constraint::Halfspace(
+                                    (-gradient).as_slice().to_vec(),
+                                    distance - (gradient.transpose() * q_ref)[(0, 0)],
+                                ),
+                                Constraint::Rectangle(q_min_bound.clone(), q_max_bound.clone()),
+                            ],
+                        ),
                     );
                 }
 
