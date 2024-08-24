@@ -1,6 +1,7 @@
 use nalgebra as na;
+use serde::Deserialize;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Deserialize)]
 pub enum CollisionObject {
     Sphere(Sphere),
     Cylinder(Cylinder),
@@ -9,33 +10,33 @@ pub enum CollisionObject {
     Cone(Cone),
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Deserialize)]
 pub struct Sphere {
     pub center: na::Point3<f64>,
     pub radius: f64,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Deserialize)]
 pub struct Cylinder {
     pub start: na::Point3<f64>,
     pub end: na::Point3<f64>,
     pub radius: f64,
 }
 
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy, Default, Deserialize)]
 pub struct Capsule {
     pub ball_center1: na::Point3<f64>,
     pub ball_center2: na::Point3<f64>,
     pub radius: f64,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Deserialize)]
 pub struct Cuboid {
     pub point1: na::Point3<f64>,
     pub point2: na::Point3<f64>,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Deserialize)]
 pub struct Cone {
     pub bottom_center: na::Point3<f64>,
     pub up_point: na::Point3<f64>,
@@ -150,9 +151,9 @@ fn capsule_cylinder_distance(capsule: &Capsule, cylinder: &Cylinder) -> f64 {
     (distance - capsule.radius - cylinder.radius).max(0.0)
 }
 
-fn is_equal(x:f64, y:f64) -> bool{
-    if (x - y).abs() < 1e-7{
-        return true
+fn is_equal(x: f64, y: f64) -> bool {
+    if (x - y).abs() < 1e-7 {
+        return true;
     }
     false
 }
@@ -163,7 +164,7 @@ fn get_closest_points_between_lines(
     end1: na::Point3<f64>,
     start2: na::Point3<f64>,
     end2: na::Point3<f64>,
-) -> (na::Point3<f64>, na::Point3<f64>, f64){
+) -> (na::Point3<f64>, na::Point3<f64>, f64) {
     // ref: https://www.cnblogs.com/zmy--blog/p/15049721.html
     let u = end1 - start1;
     let v = end2 - start2;
@@ -185,8 +186,7 @@ fn get_closest_points_between_lines(
         sd = 1.00; // 防止除以0
         tn = e;
         td = c;
-    } 
-    else {
+    } else {
         sn = b * e - c * d;
         tn = a * e - b * d;
         if sn < 0.0 {
@@ -194,8 +194,7 @@ fn get_closest_points_between_lines(
             sn = 0.0;
             tn = e;
             td = c;
-        }
-        else if sn > sd {
+        } else if sn > sd {
             // 最近点在s终点以外
             sn = sd;
             tn = e + b;
@@ -208,42 +207,27 @@ fn get_closest_points_between_lines(
         tn = 0.0;
         if -d < 0.0 {
             sn = 0.0;
-        }
-        else if -d > a{
+        } else if -d > a {
             sn = sd;
-        }
-        else{
+        } else {
             sn = -d;
             sd = a;
         }
-    }
-    else if tn > td {
+    } else if tn > td {
         tn = td;
         if (-d + b) < 0.0 {
             sn = 0.0;
-        }
-        else if (-d + b) > a {
+        } else if (-d + b) > a {
             sn = sd;
-        }
-        else {
+        } else {
             sn = -d + b;
             sd = a;
         }
     }
 
-    let sc = if is_equal(sn, 0.0){
-        0.0
-    }
-    else{
-        sn / sd
-    };
+    let sc = if is_equal(sn, 0.0) { 0.0 } else { sn / sd };
 
-    let tc = if is_equal(tn, 0.0){
-        0.0
-    }
-    else{
-        tn / td
-    };
+    let tc = if is_equal(tn, 0.0) { 0.0 } else { tn / td };
 
     let dx = w.x + (sc * u.x) - (tc * v.x);
     let dy = w.y + (sc * u.y) - (tc * v.y);

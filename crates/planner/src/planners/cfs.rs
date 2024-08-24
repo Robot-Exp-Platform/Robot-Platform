@@ -42,7 +42,7 @@ pub struct CfsState<const N: usize> {}
 pub struct CfsParams {
     period: f64,
     interpolation: usize,
-    iteration_number: usize,
+    niter: usize,
     cost_weight: Vec<f64>,
     solver: String,
 }
@@ -184,7 +184,7 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Cfs<R, N> {
 
         // 线性插值时，f为0
 
-        for _ in 0..self.params.iteration_number {
+        for _ in 0..self.params.niter {
             // 提前分配空间
             let mut combined_constraint = Constraint::CartesianProduct(
                 0,
@@ -193,7 +193,7 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Cfs<R, N> {
             );
 
             // 生成约束 包括三部分，起点终点约束、障碍物约束、关节边界约束
-            combined_constraint.push(N, Constraint::Equared(q.as_slice().to_vec()));
+            combined_constraint.push(Constraint::Equared(q.as_slice().to_vec()));
 
             for q_ref in q_ref_list.iter() {
                 let mut obstacle_constraint =
@@ -205,26 +205,23 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Cfs<R, N> {
                         robot_read.get_distance_diff_with_joint(q_ref, collision),
                     )
                 }) {
-                    obstacle_constraint.push(
+                    obstacle_constraint.push(Constraint::Intersection(
+                        1 + N,
                         N,
-                        Constraint::Intersection(
-                            1 + N,
-                            N,
-                            vec![
-                                Constraint::Halfspace(
-                                    (-gradient).as_slice().to_vec(),
-                                    distance - (gradient.transpose() * q_ref)[(0, 0)],
-                                ),
-                                Constraint::Rectangle(q_min_bound.clone(), q_max_bound.clone()),
-                            ],
-                        ),
-                    );
+                        vec![
+                            Constraint::Halfspace(
+                                (-gradient).as_slice().to_vec(),
+                                distance - (gradient.transpose() * q_ref)[(0, 0)],
+                            ),
+                            Constraint::Rectangle(q_min_bound.clone(), q_max_bound.clone()),
+                        ],
+                    ));
                 }
 
-                combined_constraint.push(N, obstacle_constraint);
+                combined_constraint.push(obstacle_constraint);
             }
 
-            combined_constraint.push(N, Constraint::Equared(target.as_slice().to_vec()));
+            combined_constraint.push(Constraint::Equared(target.as_slice().to_vec()));
 
             let problem = QuadraticProgramming {
                 h: &h,

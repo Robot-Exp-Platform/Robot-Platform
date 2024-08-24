@@ -2,7 +2,7 @@
   "task_name": "test",
   "robot_tasks": [
     {
-      "name": "cfs:panda_1",
+      "name": "linear:panda_1",
       "targets": [
         { "Joint": [0.0, -0.7854, 0.0, -2.3562, 0.0, 1.5708, 0.7854] },
         { "Joint": [0.0, -0.7854, 0.0, -2.3562, 0.0, 1.5708, 0.7854] },
@@ -12,20 +12,11 @@
   ],
 
   "nodes": [
-    {
-      "node_type": "sensor",
-      "name": "obstacle_releaser_1",
-      "param": [["sphere_3", { "Sphere": { "center": [0.8, -0.35, 0.5], "radius": 0.01 } }]]
-    },
-    {
-      "node_type": "planner",
-      "name": "cfs:panda_1",
-      "sensor": "obstacle_releaser_1",
-      "param": { "period": 0.5, "interpolation": 3, "niter": 6, "cost_weight": [0.8, 10.0, 20.0], "solver": "osqp" }
-    },
+    { "node_type": "planner", "name": "linear:panda_1", "sensor": null, "param": { "period": 0.5, "interpolation": 10 } },
     {
       "node_type": "controller",
       "name": "pid:panda_1",
+      "sensor": null,
       "param": {
         "period": 0.05,
         "kp": [

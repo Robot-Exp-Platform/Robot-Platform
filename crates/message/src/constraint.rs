@@ -1,3 +1,5 @@
+use std::vec;
+
 #[derive(Debug, Default)]
 pub enum Constraint {
     #[default]
@@ -22,32 +24,47 @@ pub enum Constraint {
 impl Constraint {
     pub fn nrows(&self) -> usize {
         match self {
+            Constraint::NoConstraint => 0,
+            Constraint::Zero => 1,
+            Constraint::Equared(b) => b.len(),
+            Constraint::Halfspace(_, _) => 1,
+            Constraint::Hyperplane(_, _) => 1,
+            Constraint::Rectangle(a, _) => a.len(),
+
             Constraint::CartesianProduct(nrows, _, _) => *nrows,
             Constraint::Intersection(nrows, _, _) => *nrows,
             Constraint::Union(nrows, _, _) => *nrows,
-            _ => 0,
+            _ => panic!("This constraint has no rows func"),
         }
     }
 
     pub fn ncols(&self) -> usize {
         match self {
+            Constraint::NoConstraint => 0,
+            Constraint::Zero => 1,
+            Constraint::Equared(b) => b.len(),
+            Constraint::Halfspace(a, _) => a.len(),
+            Constraint::Hyperplane(a, _) => a.len(),
+            Constraint::Rectangle(a, _) => a.len(),
+
             Constraint::CartesianProduct(_, ncols, _) => *ncols,
             Constraint::Intersection(_, ncols, _) => *ncols,
             Constraint::Union(_, ncols, _) => *ncols,
-            _ => 0,
+            _ => panic!("This constraint has no cols func"),
         }
     }
 
-    pub fn push(&mut self, dim: usize, con: Constraint) {
+    pub fn push(&mut self, con: Constraint) {
         match self {
             Constraint::CartesianProduct(nrows, ncols, constraint) => {
-                *nrows += dim;
-                *ncols += dim;
+                *nrows += con.nrows();
+                *ncols += con.ncols();
                 constraint.push(con);
             }
             Constraint::Intersection(nrows, ncols, constraint) => {
                 *nrows += con.nrows();
-                assert_eq!(dim, *ncols);
+                *ncols = con.ncols();
+
                 constraint.push(con);
             }
             _ => panic!("Only CartesianProduct and Intersection can push"),
@@ -58,14 +75,23 @@ impl Constraint {
         match self {
             Constraint::NoConstraint => (0, 0, vec![], vec![], vec![]),
             Constraint::Zero => (1, 1, vec![0.0], vec![0.0], vec![0.0]),
-            Constraint::Equared(b) => (1, b.len(), b.clone(), b.clone(), b.clone()),
+            Constraint::Equared(b) => {
+                let n = b.len();
+                let mut t = vec![0.0; n * n];
+
+                for i in 0..n {
+                    t[i * n + i] = 1.0;
+                }
+
+                (n, n, t, b.clone(), b.clone())
+            }
             Constraint::Halfspace(a, b) => {
                 (1, a.len(), a.clone(), vec![f64::NEG_INFINITY], vec![*b])
             }
             Constraint::Hyperplane(a, b) => (1, a.len(), a.clone(), vec![*b], vec![*b]),
             Constraint::Rectangle(a, b) => {
                 let n = a.len();
-                let mut t = Vec::with_capacity(n * n);
+                let mut t = vec![0.0; n * n];
 
                 for i in 0..n {
                     t[i * n + i] = 1.0;
@@ -94,7 +120,7 @@ impl Constraint {
                 (*nrows, *ncols, all_t, all_l, all_u)
             }
             Constraint::CartesianProduct(all_nrows, all_ncols, constraints) => {
-                let mut all_t = vec![0.0; all_ncols * all_ncols];
+                let mut all_t = vec![0.0; all_nrows * all_ncols];
                 let mut all_l = Vec::with_capacity(*all_ncols);
                 let mut all_u = Vec::with_capacity(*all_ncols);
                 let mut total_nrows = 0;
@@ -104,6 +130,12 @@ impl Constraint {
                     let (nrows, ncols, t, l, u) = constraint.to_inequation();
                     all_l.extend(l);
                     all_u.extend(u);
+
+                    // 约束维度检查输出
+                    print!(
+                        "cartesian product: [({},{})|({},{})/({},{})]\n",
+                        nrows, ncols, total_nrows, total_ncols, all_nrows, all_ncols
+                    );
                     for i in 0..nrows {
                         for j in 0..ncols {
                             all_t[(i + total_nrows) * all_ncols + (total_ncols + j)] =
@@ -115,8 +147,8 @@ impl Constraint {
                     total_ncols += ncols;
                 }
 
-                assert_eq!(total_ncols, *all_ncols);
                 assert_eq!(total_nrows, *all_nrows);
+                assert_eq!(total_ncols, *all_ncols);
 
                 (*all_nrows, *all_ncols, all_t, all_l, all_u)
             }

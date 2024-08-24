@@ -1,3 +1,5 @@
+use serde_json::Value;
+
 use message::collision_object::CollisionObject;
 
 #[derive(Default)]
@@ -19,5 +21,9 @@ impl ObstacleReleaser {
     }
     pub fn get_collision(&self) -> Vec<CollisionObject> {
         self.obstacle.iter().map(|x| x.1).collect()
+    }
+
+    pub fn set_params(&mut self, params: Value) {
+        self.obstacle = serde_json::from_value(params).unwrap();
     }
 }

@@ -71,7 +71,11 @@ impl Exp {
         // 加载配置文件
         let config_file = fs::File::open(CONFIG_PATH).expect("Failed to open config file");
         let config: Config = from_reader(config_file).expect("Failed to parse config file");
-
+        #[cfg(feature = "recode")]
+        {
+            fs::create_dir(format!("./data/{}", *EXP_NAME)).unwrap();
+            fs::copy(CONFIG_PATH, format!("./data/{}/config.json", *EXP_NAME)).unwrap();
+        }
         // 根据配置文件生成机器人树
         let mut thread_manage = ThreadManage::new();
         let mut task_manage = TaskManager::new();
@@ -206,47 +210,52 @@ impl Exp {
             let mut task_name = TASK_NAME.lock().unwrap();
             *task_name = task.task_name.clone();
             fs::create_dir_all(format!("./data/{}/{}", *EXP_NAME, *task_name)).unwrap();
+            fs::copy(
+                TASK_PATH,
+                format!("./data/{}/{}/task.json", *EXP_NAME, *task_name),
+            )
+            .unwrap();
         }
 
         for node in &task.nodes {
             match node.node_type.as_str() {
+                "sensor" => {
+                    let sensor =
+                        get_sensor_with_name(&self.sensor_list, node.name.as_str()).unwrap();
+                    let mut sensor = sensor.write().unwrap();
+                    sensor.set_params(node.param.clone());
+                }
                 "planner" => {
                     let planner = get_planner_with_name(&planner, node.name.as_str()).unwrap();
                     let mut planner = planner.lock().unwrap();
                     planner.set_params(node.param.clone());
-                    planner.set_sensor(
-                        get_sensor_with_name(
-                            &self.sensor_list,
-                            node.sensor.clone().unwrap().as_str(),
-                        )
-                        .unwrap(),
-                    )
+                    if let Some(sensor_name) = &node.sensor {
+                        planner.set_sensor(
+                            get_sensor_with_name(&self.sensor_list, sensor_name.as_str()).unwrap(),
+                        );
+                    }
                 }
                 "controller" => {
                     let controller =
                         get_controller_with_name(&controller, node.name.as_str()).unwrap();
                     let mut controller = controller.lock().unwrap();
                     controller.set_params(node.param.clone());
-                    controller.set_sensor(
-                        get_sensor_with_name(
-                            &self.sensor_list,
-                            node.sensor.clone().unwrap().as_str(),
-                        )
-                        .unwrap(),
-                    )
+                    if let Some(sensor_name) = &node.sensor {
+                        controller.set_sensor(
+                            get_sensor_with_name(&self.sensor_list, sensor_name.as_str()).unwrap(),
+                        );
+                    }
                 }
                 "simulator" => {
                     let simulator =
                         get_simulator_with_name(&self.simulator_tree, node.name.as_str()).unwrap();
                     let mut simulator = simulator.lock().unwrap();
                     simulator.set_params(node.param.clone());
-                    simulator.set_sensor(
-                        get_sensor_with_name(
-                            &self.sensor_list,
-                            node.sensor.clone().unwrap().as_str(),
-                        )
-                        .unwrap(),
-                    )
+                    if let Some(sensor_name) = &node.sensor {
+                        simulator.set_sensor(
+                            get_sensor_with_name(&self.sensor_list, sensor_name.as_str()).unwrap(),
+                        );
+                    }
                 }
                 _ => panic!("Unknown node type"),
             }

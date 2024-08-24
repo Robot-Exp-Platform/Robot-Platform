@@ -137,7 +137,11 @@ impl<const N: usize, const N_ADD_ONE: usize> SeriesRobot<N> for RobotNDof<N, N_A
                     -dh[(i, 1)] * dh[(i, 3)].sin(),
                     dh[(i, 1)] * dh[(i, 3)].cos(),
                 ),
-                na::UnitQuaternion::from_euler_angles(joint[i], 0.0, dh[(i, 3)]),
+                na::UnitQuaternion::from_euler_angles(
+                    if i == nlink { dh[(nlink, 0)] } else { joint[i] },
+                    0.0,
+                    dh[(i, 3)],
+                ),
             );
 
             // Update the cumulative transformation matrix

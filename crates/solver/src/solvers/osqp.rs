@@ -9,11 +9,18 @@ pub struct OsqpSolver {
 impl OsqpSolver {
     pub fn from_problem(problem: QuadraticProgramming) -> OsqpSolver {
         let (nrows, ncols, a, l, u) = problem.constraints.to_inequation();
-        let p = CscMatrix::from_column_iter_dense(1, 2, problem.h.iter().cloned()).into_upper_tri();
-        let q = problem.f.as_slice();
-        let a = CscMatrix::from_column_iter_dense(nrows, ncols, a.iter().cloned()).into_upper_tri();
+        println!("{:?}", problem.h);
+        println!("{:?}", problem.f);
+        println!("{:?}", a);
+        println!("{:?}", l);
+        println!("{:?}", u);
 
-        let settings = osqp::Settings::default().verbose(false);
+        let p = CscMatrix::from_column_iter_dense(ncols, ncols, problem.h.iter().cloned())
+            .into_upper_tri();
+        let q = problem.f.as_slice();
+        let a = CscMatrix::from_column_iter_dense(nrows, ncols, a.iter().cloned());
+
+        let settings = osqp::Settings::default();
 
         OsqpSolver {
             problem: osqp::Problem::new(p, q, &a, &l, &u, &settings)
