@@ -1,5 +1,3 @@
-use message::track::Track;
-
 pub trait Solver {
-    fn solve(&self) -> Vec<Track>;
+    fn solve(&mut self) -> Vec<f64>;
 }
