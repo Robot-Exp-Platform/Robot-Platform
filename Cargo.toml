@@ -64,6 +64,7 @@ approx.workspace = true
 zmq = { workspace = true, optional = true }
 rosrust = { workspace = true, optional = true }
 rosrust_msg = { workspace = true, optional = true }
+osqp.workspace = true
 
 robot.workspace = true
 controller.workspace = true
@@ -92,6 +93,5 @@ ros = [
     "task_manager/ros",
     "controller/ros",
     "simulator/ros",
-    "message/ros",
 ]
 ros2 = ["task_manager/ros2", "controller/ros2", "simulator/ros2"]

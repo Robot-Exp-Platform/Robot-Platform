@@ -33,4 +33,8 @@ impl Constraint {
             _ => panic!("Only CartesianProduct and Intersection can push"),
         }
     }
+
+    pub fn to_inequation(&self) -> (Into<osqp::CscMatrix>, &[f64], &[f64]) {
+        unimplemented!()
+    }
 }

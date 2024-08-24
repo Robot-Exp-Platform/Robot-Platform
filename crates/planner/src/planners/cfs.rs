@@ -12,7 +12,7 @@ use std::time::Duration;
 
 use crate::planner_trait::Planner;
 use crate::utilities;
-use message::problem::{Problem, QuadraticProgramming};
+use message::problem::QuadraticProgramming;
 use message::target::Target;
 use message::track::Track;
 #[cfg(feature = "recode")]
@@ -153,7 +153,8 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Cfs<R, N> {
             .read()
             .unwrap()
             .get_collision();
-        let mut track_list = Vec::new();
+        let mut solver_result = Vec::new();
+        let mut last_result = Vec::new();
 
         // 初始化二次规划的目标函数矩阵
         // 矩阵待修改，实际上为q1 为对角矩阵，q2 为离散拉普拉斯算子， q3 为
@@ -199,8 +200,8 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Cfs<R, N> {
 
                 for (distance, gradient) in collision_objects.iter().map(|collision| {
                     (
-                        robot_read.get_distance_with_joint(q_ref, &collision),
-                        robot_read.get_distance_diff_with_joint(q_ref, &collision),
+                        robot_read.get_distance_with_joint(q_ref, collision),
+                        robot_read.get_distance_diff_with_joint(q_ref, collision),
                     )
                 }) {
                     obstacle_constraint.push(
@@ -228,16 +229,36 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Cfs<R, N> {
 
             // 获得优化方程及其梯度
             // 求解优化问题
-            track_list = match self.params.solver.as_str() {
+            solver_result = match self.params.solver.as_str() {
                 "osqp" => {
-                    let osqp_solver =
-                        OsqpSolver::from_problem(Problem::QuadraticProgramming(problem));
+                    let mut osqp_solver = OsqpSolver::from_problem(problem);
                     osqp_solver.solve()
                 }
                 _ => unimplemented!(),
             };
 
             // 检查是否收敛，更新 q_ref_list
+
+            if last_result.is_empty() {
+                last_result = solver_result.clone();
+            } else {
+                // 一个比较严苛的收敛条件，学长使用的是平均值，而我采用的是轨迹的误差的和，可能会导致部分情况下收敛不通过
+                let diff: f64 = solver_result
+                    .iter()
+                    .zip(last_result.iter())
+                    .map(|(a, b)| (a - b).abs())
+                    .sum();
+                if diff.abs() < 1e-1 {
+                    break;
+                }
+                last_result = solver_result.clone();
+            }
+        }
+
+        // 生成 track
+        let mut track_list = Vec::new();
+        for i in 0..self.params.interpolation + 1 {
+            track_list.push(Track::Joint(solver_result[i * N..(i + 1) * N].to_vec()));
         }
 
         // 记录 track
