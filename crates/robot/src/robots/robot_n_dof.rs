@@ -30,6 +30,7 @@ pub struct RobotNDofState<const N: usize> {
 pub struct RobotNDofParams<const N: usize, const N_ADD_ONE: usize> {
     // 机器人参数,在运行状态下一般不会改变
     pub nlink: usize,
+    pub q_default: na::SVector<f64, N>,
     pub q_min_bound: na::SVector<f64, N>,
     pub q_max_bound: na::SVector<f64, N>,
     pub q_dot_bound: na::SVector<f64, N>,
@@ -65,6 +66,7 @@ impl<const N: usize, const N_ADD_ONE: usize> RobotNDofParams<N, N_ADD_ONE> {
     fn new() -> RobotNDofParams<N, N_ADD_ONE> {
         RobotNDofParams {
             nlink: N,
+            q_default: na::SVector::from_element(0.0),
             q_min_bound: na::SVector::from_element(0.0),
             q_max_bound: na::SVector::from_element(0.0),
             q_dot_bound: na::SVector::from_element(0.0),
@@ -234,7 +236,10 @@ impl<const N: usize, const N_ADD_ONE: usize> Robot for RobotNDof<N, N_ADD_ONE> {
     }
 
     fn reset_state(&mut self) {
-        // TODO 位置重置
+        self.state.q = self.params.q_default.clone();
+        self.state.q_dot = na::SVector::from_element(0.0);
+        self.state.q_ddot = na::SVector::from_element(0.0);
+        self.state.q_jerk = na::SVector::from_element(0.0);
     }
 
     fn safety_check(&self, _: &Message) -> bool {

@@ -156,6 +156,12 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Cfs<R, N> {
         let mut solver_result = Vec::new();
         let mut last_result = Vec::new();
 
+        println!("interpolation get q: {:?}", q);
+        for q_ref in q_ref_list.iter() {
+            println!("interpolation get q_ref: {:?}", q_ref);
+        }
+        println!("interpolation get target: {:?}", target);
+
         // 初始化二次规划的目标函数矩阵
         // 矩阵待修改，实际上为q1 为对角矩阵，q2 为离散拉普拉斯算子， q3 为
 
@@ -171,7 +177,7 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Cfs<R, N> {
 
         let mut a_diff = na::DMatrix::<f64>::identity(dim - 2 * N, dim);
         for i in 0..dim - 2 * N {
-            a_diff[(i, i + 2 * N)] = -2.0;
+            a_diff[(i, i + N)] = -2.0;
             a_diff[(i, i + 2 * N)] = 1.0;
         }
         let q3 = a_diff.transpose() * a_diff;

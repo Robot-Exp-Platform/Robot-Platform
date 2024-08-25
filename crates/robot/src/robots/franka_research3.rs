@@ -16,6 +16,9 @@ impl FrankaResearch3 {
             path,
             RobotNDofParams {
                 nlink: RESEARCH3_DOF,
+                q_default: na::SVector::from_vec(vec![
+                    0.0, -0.7854, 0.0, -2.3562, 0.0, 1.5708, 0.7854,
+                ]),
                 q_min_bound: na::SVector::from_vec(vec![
                     -2.7437, -1.7837, -2.9007, -3.0421, -2.8065, 0.5445, -3.0159,
                 ]),

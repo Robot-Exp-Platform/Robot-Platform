@@ -151,6 +151,8 @@ impl Exp {
             _ => {
                 let (robot, (planner, controller, simulator)) = create_robot(&config, &path);
 
+                robot.write().unwrap().reset_state();
+
                 let target_queue = Arc::new(SegQueue::new());
                 let track_queue = Arc::new(SegQueue::new());
                 let control_command_queue = Arc::new(SegQueue::new());

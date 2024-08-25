@@ -16,6 +16,9 @@ impl Panda {
             path,
             RobotNDofParams {
                 nlink: PANDA_DOF,
+                q_default: na::SVector::from_vec(vec![
+                    0.0, -0.7854, 0.0, -2.3562, 0.0, 1.5708, 0.7854,
+                ]),
                 q_min_bound: na::SVector::from_vec(vec![
                     -2.8973, -1.7628, -2.8973, -3.0718, -2.8973, -0.0175, -2.8973,
                 ]),
