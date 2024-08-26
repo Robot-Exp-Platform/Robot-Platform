@@ -2,6 +2,7 @@
 % 脚本使用MATLAB内置的quadprog()求解器与osqp求解器计算二次规划问题
 % 只需要更改待求解文件的路径即可，矩阵H、A、f等的大小会自动判断，结果输出到命令行
 % 最后会更加两个求解器的解向量之差的最大元素的绝对值判断两者的解是否相等
+% 在MATLAB中安装osqp求解器，详见install_osqp.m
 clear;
 close all;
 clc;
@@ -29,7 +30,7 @@ temp_cell=strsplit(S{2}(idx_start+1:idx_end-1),',');
 temp_size_f=length(temp_cell);
 f=zeros(1,temp_size_f);
 for i=1:temp_size_f
-        f(1,i)=str2double(temp_cell{i});
+    f(1,i)=str2double(temp_cell{i});
 end
 % 提取l
 idx_start=strfind(S{4},'[');
@@ -38,7 +39,7 @@ temp_cell=strsplit(S{4}(idx_start+1:idx_end-1),',');
 temp_size_l=length(temp_cell);
 l=zeros(1,temp_size_l);
 for i=1:temp_size_l
-        l(1,i)=str2double(temp_cell{i});
+    l(1,i)=str2double(temp_cell{i});
 end
 % 提取u
 idx_start=strfind(S{5},'[');
@@ -46,7 +47,7 @@ idx_end=strfind(S{5},']');
 temp_cell=strsplit(S{5}(idx_start+1:idx_end-1),',');
 u=zeros(1,temp_size_l);
 for i=1:temp_size_l
-        u(1,i)=str2double(temp_cell{i});
+    u(1,i)=str2double(temp_cell{i});
 end
 % 提取A
 idx_start=strfind(S{3},'[');
