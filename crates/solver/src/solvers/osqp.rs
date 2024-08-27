@@ -12,21 +12,11 @@ impl OsqpSolver {
         let p = problem.get_csc_h().into_upper_tri();
         let q = problem.f.as_slice();
 
-        let nonz_h: Vec<&f64> = problem.h.into_iter().filter(|&x| *x != 0.0).collect();
-        let nonz_a: Vec<f64> = problem
-            .constraints
-            .to_inequation()
-            .2
-            .into_iter()
-            .filter(|&x| x != 0.0)
-            .collect();
-
-        println!("h: {}", problem.h);
-        println!("nonz_h longs {} {:?}", nonz_h.len(), nonz_h);
-        println!("nonz_a longs {} {:?}", nonz_a.len(), nonz_a);
-
-        println!("{:?}", p);
-        println!("{:?}", a);
+        // println!("{:?}", problem.h.as_slice());
+        // println!("{:?}", problem.f.as_slice());
+        // println!("{:?}", problem.constraints.to_inequation().2);
+        // println!("{:?}", problem.constraints.to_inequation().3);
+        // println!("{:?}", problem.constraints.to_inequation().4);
 
         let settings = osqp::Settings::default();
 

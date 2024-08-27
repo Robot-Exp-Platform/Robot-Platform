@@ -444,8 +444,8 @@ impl Constraint {
             }
             Constraint::Intersection(nrows, ncols, constraints) => {
                 let mut all_t = na::DMatrix::zeros(*nrows, *ncols);
-                let mut all_l = na::DVector::zeros(*ncols);
-                let mut all_u = na::DVector::zeros(*ncols);
+                let mut all_l = na::DVector::zeros(*nrows);
+                let mut all_u = na::DVector::zeros(*nrows);
                 let mut total_nrows = 0;
 
                 for con in constraints {
@@ -465,8 +465,8 @@ impl Constraint {
             }
             Constraint::CartesianProduct(nrows, ncols, constraint) => {
                 let mut all_t = na::DMatrix::zeros(*nrows, *ncols);
-                let mut all_l = na::DVector::zeros(*ncols);
-                let mut all_u = na::DVector::zeros(*ncols);
+                let mut all_l = na::DVector::zeros(*nrows);
+                let mut all_u = na::DVector::zeros(*nrows);
                 let mut total_nrows = 0;
                 let mut total_ncols = 0;
 
