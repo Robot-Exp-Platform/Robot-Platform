@@ -1,7 +1,4 @@
-use nalgebra::{
-    self as na,
-    constraint::{SameNumberOfColumns, SameNumberOfRows},
-};
+use nalgebra as na;
 use osqp::CscMatrix;
 use std::borrow::Cow;
 
@@ -449,12 +446,46 @@ impl Constraint {
                 let mut all_t = na::DMatrix::zeros(*nrows, *ncols);
                 let mut all_l = na::DVector::zeros(*ncols);
                 let mut all_u = na::DVector::zeros(*ncols);
+                let mut total_nrows = 0;
 
-                // for con in constraints {
-                //     let (nrows, ncols, t, l, u) = con.to_namatrix();
-                //     all_t.view_range_mut(rows, cols)
-                // }
-                unimplemented!()
+                for con in constraints {
+                    let (nrows, ncols, t, l, u) = con.to_namatrix();
+                    all_t
+                        .view_mut((total_nrows, 0), (nrows, ncols))
+                        .copy_from(&t);
+                    all_l.rows_mut(total_nrows, nrows).copy_from(&l);
+                    all_u.rows_mut(total_nrows, nrows).copy_from(&u);
+
+                    total_nrows += nrows;
+                }
+
+                assert_eq!(total_nrows, *nrows);
+
+                (*nrows, *ncols, all_t, all_l, all_u)
+            }
+            Constraint::CartesianProduct(nrows, ncols, constraint) => {
+                let mut all_t = na::DMatrix::zeros(*nrows, *ncols);
+                let mut all_l = na::DVector::zeros(*ncols);
+                let mut all_u = na::DVector::zeros(*ncols);
+                let mut total_nrows = 0;
+                let mut total_ncols = 0;
+
+                for con in constraint {
+                    let (nrows, ncols, t, l, u) = con.to_namatrix();
+                    all_t
+                        .view_mut((total_nrows, total_ncols), (nrows, ncols))
+                        .copy_from(&t);
+                    all_l.rows_mut(total_nrows, nrows).copy_from(&l);
+                    all_u.rows_mut(total_nrows, nrows).copy_from(&u);
+
+                    total_nrows += nrows;
+                    total_ncols += ncols;
+                }
+
+                assert_eq!(total_nrows, *nrows);
+                assert_eq!(total_ncols, *ncols);
+
+                (*nrows, *ncols, all_t, all_l, all_u)
             }
 
             _ => unimplemented!(),
