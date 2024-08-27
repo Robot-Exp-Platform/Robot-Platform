@@ -1,3 +1,7 @@
+use nalgebra::{
+    self as na,
+    constraint::{SameNumberOfColumns, SameNumberOfRows},
+};
 use osqp::CscMatrix;
 use std::borrow::Cow;
 
@@ -133,10 +137,10 @@ impl Constraint {
                     all_u.extend(u);
 
                     // 约束维度检查输出
-                    println!(
-                        "cartesian product: [({},{})|({},{})/({},{})]",
-                        nrows, ncols, total_nrows, total_ncols, all_nrows, all_ncols
-                    );
+                    // println!(
+                    //     "cartesian product: [({},{})|({},{})/({},{})]",
+                    //     nrows, ncols, total_nrows, total_ncols, all_nrows, all_ncols
+                    // );
                     for i in 0..nrows {
                         for j in 0..ncols {
                             all_t[(i + total_nrows) * all_ncols + (total_ncols + j)] =
@@ -335,10 +339,10 @@ impl Constraint {
                     all_u.extend(u);
 
                     // 约束维度检查输出
-                    println!(
-                        "cartesian product: [({},{})|({},{})/({},{})]",
-                        nrows, ncols, total_nrows, total_ncols, all_nrows, all_ncols
-                    );
+                    // println!(
+                    //     "cartesian product: [({},{})|({},{})/({},{})]",
+                    //     nrows, ncols, total_nrows, total_ncols, all_nrows, all_ncols
+                    // );
 
                     let total_indptr = all_indptr.pop().unwrap_or(0);
 
@@ -368,6 +372,91 @@ impl Constraint {
                     all_u,
                 )
             }
+            _ => unimplemented!(),
+        }
+    }
+    pub fn to_namatrix(
+        &self,
+    ) -> (
+        usize,
+        usize,
+        na::DMatrix<f64>,
+        na::DVector<f64>,
+        na::DVector<f64>,
+    ) {
+        match self {
+            Constraint::NoConstraint => (
+                0,
+                0,
+                na::DMatrix::zeros(0, 0),
+                na::DVector::zeros(0),
+                na::DVector::zeros(0),
+            ),
+            Constraint::Zero => (
+                1,
+                1,
+                na::DMatrix::from_element(1, 1, 1.0),
+                na::DVector::from_element(1, 0.0),
+                na::DVector::from_element(1, 0.0),
+            ),
+            Constraint::Equared(b) => {
+                let n = b.len();
+                let mut t = na::DMatrix::zeros(n, n);
+
+                for i in 0..n {
+                    t[(i, i)] = 1.0;
+                }
+
+                (
+                    n,
+                    n,
+                    t,
+                    na::DVector::from_vec(b.clone()),
+                    na::DVector::from_vec(b.clone()),
+                )
+            }
+            Constraint::Halfspace(a, b) => (
+                1,
+                a.len(),
+                na::DMatrix::from_row_slice(1, a.len(), a),
+                na::DVector::from_element(1, f64::NEG_INFINITY),
+                na::DVector::from_element(1, *b),
+            ),
+            Constraint::Hyperplane(a, b) => (
+                1,
+                a.len(),
+                na::DMatrix::from_row_slice(1, a.len(), a),
+                na::DVector::from_element(1, *b),
+                na::DVector::from_element(1, *b),
+            ),
+            Constraint::Rectangle(a, b) => {
+                let n = a.len();
+                let mut t = na::DMatrix::zeros(n, n);
+
+                for i in 0..n {
+                    t[(i, i)] = 1.0;
+                }
+
+                (
+                    n,
+                    n,
+                    t,
+                    na::DVector::from_vec(a.clone()),
+                    na::DVector::from_vec(b.clone()),
+                )
+            }
+            Constraint::Intersection(nrows, ncols, constraints) => {
+                let mut all_t = na::DMatrix::zeros(*nrows, *ncols);
+                let mut all_l = na::DVector::zeros(*ncols);
+                let mut all_u = na::DVector::zeros(*ncols);
+
+                // for con in constraints {
+                //     let (nrows, ncols, t, l, u) = con.to_namatrix();
+                //     all_t.view_range_mut(rows, cols)
+                // }
+                unimplemented!()
+            }
+
             _ => unimplemented!(),
         }
     }

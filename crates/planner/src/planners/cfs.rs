@@ -250,6 +250,7 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Cfs<R, N> {
                     .zip(last_result.iter())
                     .map(|(a, b)| (a - b).abs())
                     .sum();
+                println!("diff: {}", diff);
                 if diff.abs() < 1e-1 {
                     break;
                 }
