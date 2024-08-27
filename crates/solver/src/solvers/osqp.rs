@@ -1,6 +1,5 @@
 use crate::solver_trait::Solver;
 use message::problem::QuadraticProgramming;
-use osqp::CscMatrix;
 
 pub struct OsqpSolver {
     problem: osqp::Problem,
@@ -8,11 +7,18 @@ pub struct OsqpSolver {
 
 impl OsqpSolver {
     pub fn from_problem(problem: QuadraticProgramming) -> OsqpSolver {
-        let p = CscMatrix::from_column_iter_dense(1, 2, problem.h.iter().cloned()).into_upper_tri();
-        let q = problem.f.as_slice();
-        let (a, l, u) = problem.constraints.to_inequation();
+        let (_, _, a, l, u) = problem.constraints.to_cscmatrix();
 
-        let settings = osqp::Settings::default().verbose(false);
+        let p = problem.get_csc_h().into_upper_tri();
+        let q = problem.f.as_slice();
+
+        // println!("{:?}", problem.h.as_slice());
+        // println!("{:?}", problem.f.as_slice());
+        // println!("{:?}", problem.constraints.to_inequation().2);
+        // println!("{:?}", problem.constraints.to_inequation().3);
+        // println!("{:?}", problem.constraints.to_inequation().4);
+
+        let settings = osqp::Settings::default();
 
         OsqpSolver {
             problem: osqp::Problem::new(p, q, &a, &l, &u, &settings)

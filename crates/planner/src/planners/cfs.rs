@@ -42,7 +42,7 @@ pub struct CfsState<const N: usize> {}
 pub struct CfsParams {
     period: f64,
     interpolation: usize,
-    iteration_number: usize,
+    niter: usize,
     cost_weight: Vec<f64>,
     solver: String,
 }
@@ -171,7 +171,7 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Cfs<R, N> {
 
         let mut a_diff = na::DMatrix::<f64>::identity(dim - 2 * N, dim);
         for i in 0..dim - 2 * N {
-            a_diff[(i, i + 2 * N)] = -2.0;
+            a_diff[(i, i + N)] = -2.0;
             a_diff[(i, i + 2 * N)] = 1.0;
         }
         let q3 = a_diff.transpose() * a_diff;
@@ -184,19 +184,20 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Cfs<R, N> {
 
         // 线性插值时，f为0
 
-        for _ in 0..self.params.iteration_number {
+        for _ in 0..self.params.niter {
             // 提前分配空间
             let mut combined_constraint = Constraint::CartesianProduct(
-                Vec::with_capacity(self.params.interpolation + 1),
+                0,
+                0,
                 Vec::with_capacity(self.params.interpolation + 1),
             );
 
             // 生成约束 包括三部分，起点终点约束、障碍物约束、关节边界约束
-            combined_constraint.push(N, Constraint::Equared(q.as_slice().to_vec()));
+            combined_constraint.push(Constraint::Equared(q.as_slice().to_vec()));
 
             for q_ref in q_ref_list.iter() {
                 let mut obstacle_constraint =
-                    Constraint::Intersection(Vec::with_capacity(collision_objects.len()));
+                    Constraint::Intersection(0, 0, Vec::with_capacity(collision_objects.len()));
 
                 for (distance, gradient) in collision_objects.iter().map(|collision| {
                     (
@@ -204,22 +205,23 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Cfs<R, N> {
                         robot_read.get_distance_diff_with_joint(q_ref, collision),
                     )
                 }) {
-                    obstacle_constraint.push(
+                    obstacle_constraint.push(Constraint::Intersection(
+                        1 + N,
                         N,
-                        Constraint::Union(vec![
+                        vec![
                             Constraint::Halfspace(
                                 (-gradient).as_slice().to_vec(),
                                 distance - (gradient.transpose() * q_ref)[(0, 0)],
                             ),
                             Constraint::Rectangle(q_min_bound.clone(), q_max_bound.clone()),
-                        ]),
-                    );
+                        ],
+                    ));
                 }
 
-                combined_constraint.push(N, obstacle_constraint);
+                combined_constraint.push(obstacle_constraint);
             }
 
-            combined_constraint.push(N, Constraint::Equared(target.as_slice().to_vec()));
+            combined_constraint.push(Constraint::Equared(target.as_slice().to_vec()));
 
             let problem = QuadraticProgramming {
                 h: &h,
@@ -248,6 +250,7 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Cfs<R, N> {
                     .zip(last_result.iter())
                     .map(|(a, b)| (a - b).abs())
                     .sum();
+                println!("diff: {}", diff);
                 if diff.abs() < 1e-1 {
                     break;
                 }

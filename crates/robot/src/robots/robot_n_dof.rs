@@ -30,6 +30,7 @@ pub struct RobotNDofState<const N: usize> {
 pub struct RobotNDofParams<const N: usize, const N_ADD_ONE: usize> {
     // 机器人参数,在运行状态下一般不会改变
     pub nlink: usize,
+    pub q_default: na::SVector<f64, N>,
     pub q_min_bound: na::SVector<f64, N>,
     pub q_max_bound: na::SVector<f64, N>,
     pub q_dot_bound: na::SVector<f64, N>,
@@ -65,6 +66,7 @@ impl<const N: usize, const N_ADD_ONE: usize> RobotNDofParams<N, N_ADD_ONE> {
     fn new() -> RobotNDofParams<N, N_ADD_ONE> {
         RobotNDofParams {
             nlink: N,
+            q_default: na::SVector::from_element(0.0),
             q_min_bound: na::SVector::from_element(0.0),
             q_max_bound: na::SVector::from_element(0.0),
             q_dot_bound: na::SVector::from_element(0.0),
@@ -130,7 +132,7 @@ impl<const N: usize, const N_ADD_ONE: usize> SeriesRobot<N> for RobotNDof<N, N_A
         let dh = &self.params.denavit_hartenberg;
         let mut isometry = self.state.base_pose;
 
-        for i in 0..nlink + 1 {
+        for i in 0..nlink {
             let isometry_increment = Isometry::from_parts(
                 na::Translation3::new(
                     dh[(i, 2)],
@@ -145,7 +147,7 @@ impl<const N: usize, const N_ADD_ONE: usize> SeriesRobot<N> for RobotNDof<N, N_A
 
             // Calculate the positions of the capsule's end points in the global frame
             let capsule_start = isometry * self.params.capsules[i].ball_center1;
-            let capsule_end = isometry * self.params.capsules[i].ball_center1;
+            let capsule_end = isometry * self.params.capsules[i].ball_center2;
 
             // Create a new Capsule object and add it to the vector
             joint_capsules.push(Capsule {
@@ -162,11 +164,12 @@ impl<const N: usize, const N_ADD_ONE: usize> SeriesRobot<N> for RobotNDof<N, N_A
         obj: &CollisionObject,
     ) -> f64 {
         let joint_capsules = self.get_joint_capsules_with_joint(joint);
-        joint_capsules
+        let distance = joint_capsules
             .iter()
             .map(|&x| get_distance(&CollisionObject::Capsule(x), obj))
             .min_by(|a, b| a.partial_cmp(b).unwrap())
-            .unwrap()
+            .unwrap();
+        distance
     }
     fn get_distance_diff_with_joint(
         &self,
@@ -174,7 +177,7 @@ impl<const N: usize, const N_ADD_ONE: usize> SeriesRobot<N> for RobotNDof<N, N_A
         bj: &CollisionObject,
     ) -> nalgebra::SVector<f64, N> {
         let mut distance_diff = na::SVector::from_element(0.0);
-        let epsilon = 1e-6;
+        let epsilon = 1e-2;
         for i in 0..N {
             let mut joint_plus = *joint;
             joint_plus[i] += epsilon;
@@ -230,7 +233,10 @@ impl<const N: usize, const N_ADD_ONE: usize> Robot for RobotNDof<N, N_ADD_ONE> {
     }
 
     fn reset_state(&mut self) {
-        // TODO 位置重置
+        self.state.q = self.params.q_default;
+        self.state.q_dot = na::SVector::from_element(0.0);
+        self.state.q_ddot = na::SVector::from_element(0.0);
+        self.state.q_jerk = na::SVector::from_element(0.0);
     }
 
     fn safety_check(&self, _: &Message) -> bool {
