@@ -30,6 +30,7 @@ impl OsqpSolver {
 
 impl Solver for OsqpSolver {
     fn solve(&mut self) -> Vec<f64> {
+        println!("{:?}", self.problem.solve());
         self.problem.solve().x().unwrap().to_vec()
     }
 }

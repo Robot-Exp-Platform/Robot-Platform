@@ -3,6 +3,8 @@
 clear;
 close all;
 
+options = optimoptions(@quadprog,'Display','iter');
+
 % 读取文件
 file_path='./test_1';
 file=fopen(file_path,'rt');
@@ -59,7 +61,7 @@ end
 A=[A;-A];
 b=[u -l]';
 % 求解
-[x,fval] = quadprog(H,f,A,b);
+[x,fval] = quadprog(H,f,A,b,[],[],[],[],[],options);
 % 写入文件
 ans_file=fopen('ans.txt','a');
 fprintf(ans_file,'x=[');
