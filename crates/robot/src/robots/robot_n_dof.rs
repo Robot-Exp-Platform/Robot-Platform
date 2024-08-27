@@ -236,7 +236,7 @@ impl<const N: usize, const N_ADD_ONE: usize> Robot for RobotNDof<N, N_ADD_ONE> {
     }
 
     fn reset_state(&mut self) {
-        self.state.q = self.params.q_default.clone();
+        self.state.q = self.params.q_default;
         self.state.q_dot = na::SVector::from_element(0.0);
         self.state.q_ddot = na::SVector::from_element(0.0);
         self.state.q_jerk = na::SVector::from_element(0.0);
