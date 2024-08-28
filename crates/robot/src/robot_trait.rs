@@ -17,6 +17,10 @@ pub trait Robot: Send + Sync {
 
     fn reset_state(&mut self);
 
+    fn check_joint(&self, joint: &Vec<f64>) -> bool;
+    fn check_vel(&self, vel: &Vec<f64>) -> bool;
+    fn check_acc(&self, acc: &Vec<f64>) -> bool;
+    fn check_tau(&self, tau: &Vec<f64>) -> bool;
     fn safety_check<'a>(&self, msg: Message<'a>) -> Result<Message<'a>, ()>;
 }
 
