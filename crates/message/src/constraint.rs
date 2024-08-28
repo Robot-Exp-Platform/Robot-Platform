@@ -322,7 +322,7 @@ impl Constraint {
                 )
             }
             Constraint::CartesianProduct(all_nrows, all_ncols, constraints) => {
-                let mut all_indptr = vec![];
+                let mut all_indptr = Vec::with_capacity(*all_ncols + 1);
                 let mut all_indices = vec![];
                 let mut all_data = vec![];
                 let mut all_l = Vec::with_capacity(*all_ncols);
@@ -350,7 +350,6 @@ impl Constraint {
                     total_nrows += nrows;
                     total_ncols += ncols;
                 }
-                // all_indptr.push(all_indices.len() + 1);
 
                 assert_eq!(total_nrows, *all_nrows);
                 assert_eq!(total_ncols, *all_ncols);
