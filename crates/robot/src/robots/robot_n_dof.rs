@@ -1,11 +1,9 @@
-use message::control_command::ControlCommand;
 use nalgebra as na;
 use nalgebra::Isometry;
 
 use crate::robot_trait::Robot;
 use crate::robot_trait::SeriesRobot;
 use message::collision_object::{get_distance, Capsule, CollisionObject};
-use message::message_trait::Message;
 use message::state::Pose;
 
 #[allow(dead_code)]
@@ -240,100 +238,100 @@ impl<const N: usize, const N_ADD_ONE: usize> Robot for RobotNDof<N, N_ADD_ONE> {
         self.state.q_jerk = na::SVector::from_element(0.0);
     }
 
-    fn check_joint(&self, joint: &Vec<f64>) -> bool{
-        for i in 0..N{
-            if joint[i] < self.params.q_min_bound[i] || joint[i] > self.params.q_max_bound[i]{
-                return false
-            }
-        }
-        true
-    }
+    // fn check_joint(&self, joint: &Vec<f64>) -> bool{
+    //     for i in 0..N{
+    //         if joint[i] < self.params.q_min_bound[i] || joint[i] > self.params.q_max_bound[i]{
+    //             return false
+    //         }
+    //     }
+    //     true
+    // }
 
-    fn check_vel(&self, vel: &Vec<f64>) -> bool{
-        for i in 0..N{
-            if  vel[i] > self.params.q_dot_bound[i]{
-                return false
-            }
-        }
-        true
-    }
+    // fn check_vel(&self, vel: &Vec<f64>) -> bool{
+    //     for i in 0..N{
+    //         if  vel[i] > self.params.q_dot_bound[i]{
+    //             return false
+    //         }
+    //     }
+    //     true
+    // }
 
-    fn check_acc(&self, acc: &Vec<f64>) -> bool{
-        for i in 0..N{
-            if  acc[i] > self.params.q_ddot_bound[i]{
-                return false
-            }
-        }
-        true
-    }
+    // fn check_acc(&self, acc: &Vec<f64>) -> bool{
+    //     for i in 0..N{
+    //         if  acc[i] > self.params.q_ddot_bound[i]{
+    //             return false
+    //         }
+    //     }
+    //     true
+    // }
 
-    fn check_tau(&self, tau: &Vec<f64>) -> bool{
-        for i in 0..N{
-            if  tau[i] > self.params.tau_bound[i]{
-                return false
-            }
-        }
-        true
-    }
+    // fn check_tau(&self, tau: &Vec<f64>) -> bool{
+    //     for i in 0..N{
+    //         if  tau[i] > self.params.tau_bound[i]{
+    //             return false
+    //         }
+    //     }
+    //     true
+    // }
 
-    fn safety_check<'a>(&self, msg: Message<'a>) -> Result<Message<'a>, ()> {
-        let mut now_acc = vec![0.0; N];
-        let mut now_vel = vec![0.0; N];
-        let mut now_joint = vec![0.0; N];
-        let mut now_tau = vec![0.0; N];
-        let mut time = 0.0;
-        match msg {
-            Message::ControlCommand(ControlCommand::Joint(ref joint)) => {
-                now_joint.clone_from_slice(joint);
-            },
-            Message::ControlCommand(ControlCommand::JointWithPeriod(period, ref joint)) => {
-                now_joint.clone_from_slice(joint);
-                time = period;
-            },
-            Message::ControlCommand(ControlCommand::JointVel(ref joint, ref vel)) => {
-                now_joint.clone_from_slice(joint);
-                now_vel.clone_from_slice(vel);
-            },
-            Message::ControlCommand(ControlCommand::JointVelWithPeriod(period, ref joint, ref vel)) => {
-                now_joint.clone_from_slice(joint);
-                now_vel.clone_from_slice(vel);
-                time = period;
-            },
-            Message::ControlCommand(ControlCommand::JointVelAcc(ref joint, ref vel, ref acc)) => {
-                now_joint.clone_from_slice(joint);
-                now_vel.clone_from_slice(vel);
-                now_acc.clone_from_slice(acc);
-            },
-            Message::ControlCommand(ControlCommand::JointVelAccWithPeriod(period, ref joint, ref vel, ref acc)) => {
-                now_joint.clone_from_slice(joint);
-                now_vel.clone_from_slice(vel);
-                now_acc.clone_from_slice(acc);
-                time = period;
-            },
-            Message::ControlCommand(ControlCommand::Tau(ref tau)) => {
-                now_tau.clone_from_slice(tau);
-            },
-            Message::ControlCommand(ControlCommand::TauWithPeriod(period, ref tau)) => {
-                now_tau.clone_from_slice(tau);
-                time = period;
-            },
-            _ => return Err(()),
-        }
-        let next_vel: Vec<f64> = now_vel.iter()
-                                .zip(now_acc.iter())
-                                .map(|(&x1, &x2)| x1 + time * x2)
-                                .collect();
-        let next_joint: Vec<f64> = now_joint.iter()
-                                .zip(now_vel.iter())
-                                .map(|(&x1, &x2)| x1 + time * x2)
-                                .collect();
-        if self.check_joint(&now_joint) && self.check_joint(&next_joint)
-                                && self.check_vel(&now_vel)
-                                && self.check_vel(&next_vel)
-                                && self.check_acc(&now_acc)
-                                && self.check_tau(&now_tau){
-            return Ok(msg)
-        }
-        Err(())
-    }
+    // fn safety_check<'a>(&self, msg: Message<'a>) -> Result<Message<'a>, ()> {
+    //     let mut now_acc = vec![0.0; N];
+    //     let mut now_vel = vec![0.0; N];
+    //     let mut now_joint = vec![0.0; N];
+    //     let mut now_tau = vec![0.0; N];
+    //     let mut time = 0.0;
+    //     match msg {
+    //         Message::ControlCommand(ControlCommand::Joint(ref joint)) => {
+    //             now_joint.clone_from_slice(joint);
+    //         },
+    //         Message::ControlCommand(ControlCommand::JointWithPeriod(period, ref joint)) => {
+    //             now_joint.clone_from_slice(joint);
+    //             time = period;
+    //         },
+    //         Message::ControlCommand(ControlCommand::JointVel(ref joint, ref vel)) => {
+    //             now_joint.clone_from_slice(joint);
+    //             now_vel.clone_from_slice(vel);
+    //         },
+    //         Message::ControlCommand(ControlCommand::JointVelWithPeriod(period, ref joint, ref vel)) => {
+    //             now_joint.clone_from_slice(joint);
+    //             now_vel.clone_from_slice(vel);
+    //             time = period;
+    //         },
+    //         Message::ControlCommand(ControlCommand::JointVelAcc(ref joint, ref vel, ref acc)) => {
+    //             now_joint.clone_from_slice(joint);
+    //             now_vel.clone_from_slice(vel);
+    //             now_acc.clone_from_slice(acc);
+    //         },
+    //         Message::ControlCommand(ControlCommand::JointVelAccWithPeriod(period, ref joint, ref vel, ref acc)) => {
+    //             now_joint.clone_from_slice(joint);
+    //             now_vel.clone_from_slice(vel);
+    //             now_acc.clone_from_slice(acc);
+    //             time = period;
+    //         },
+    //         Message::ControlCommand(ControlCommand::Tau(ref tau)) => {
+    //             now_tau.clone_from_slice(tau);
+    //         },
+    //         Message::ControlCommand(ControlCommand::TauWithPeriod(period, ref tau)) => {
+    //             now_tau.clone_from_slice(tau);
+    //             time = period;
+    //         },
+    //         _ => return Err(()),
+    //     }
+    //     let next_vel: Vec<f64> = now_vel.iter()
+    //                             .zip(now_acc.iter())
+    //                             .map(|(&x1, &x2)| x1 + time * x2)
+    //                             .collect();
+    //     let next_joint: Vec<f64> = now_joint.iter()
+    //                             .zip(now_vel.iter())
+    //                             .map(|(&x1, &x2)| x1 + time * x2)
+    //                             .collect();
+    //     if self.check_joint(&now_joint) && self.check_joint(&next_joint)
+    //                             && self.check_vel(&now_vel)
+    //                             && self.check_vel(&next_vel)
+    //                             && self.check_acc(&now_acc)
+    //                             && self.check_tau(&now_tau){
+    //         return Ok(msg)
+    //     }
+    //     Err(())
+    // }
 }

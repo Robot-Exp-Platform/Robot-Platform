@@ -1,5 +1,4 @@
 use message::collision_object::{Capsule, CollisionObject};
-use message::message_trait::Message;
 use message::state::Pose;
 use nalgebra as na;
 
@@ -16,12 +15,6 @@ pub trait Robot: Send + Sync {
     fn set_q_dot(&mut self, q_dot: Vec<f64>);
 
     fn reset_state(&mut self);
-
-    fn check_joint(&self, joint: &Vec<f64>) -> bool;
-    fn check_vel(&self, vel: &Vec<f64>) -> bool;
-    fn check_acc(&self, acc: &Vec<f64>) -> bool;
-    fn check_tau(&self, tau: &Vec<f64>) -> bool;
-    fn safety_check<'a>(&self, msg: Message<'a>) -> Result<Message<'a>, ()>;
 }
 
 // pub trait RobotState {}
