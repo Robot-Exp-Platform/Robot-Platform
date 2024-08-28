@@ -4,10 +4,10 @@ use serde::{Deserialize, Serialize};
 pub enum ControlCommand {
     Joint(Vec<f64>),
     JointWithPeriod(f64, Vec<f64>),
-    JointVelocity(Vec<f64>, Vec<f64>),
-    JointVelocityWithPeriod(f64, Vec<f64>, Vec<f64>),
-    JointVelocityAcceleration(Vec<f64>, Vec<f64>, Vec<f64>),
-    JointVelocityAccelerationWithPeriod(f64, Vec<f64>, Vec<f64>, Vec<f64>),
+    JointVel(Vec<f64>, Vec<f64>),
+    JointVelWithPeriod(f64, Vec<f64>, Vec<f64>),
+    JointVelAcc(Vec<f64>, Vec<f64>, Vec<f64>),
+    JointVelAccWithPeriod(f64, Vec<f64>, Vec<f64>, Vec<f64>),
     Tau(Vec<f64>),
     TauWithPeriod(f64, Vec<f64>),
 }
