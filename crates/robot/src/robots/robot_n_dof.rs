@@ -1,3 +1,4 @@
+use message::control_command::ControlCommand;
 use nalgebra as na;
 use nalgebra::Isometry;
 
@@ -239,7 +240,10 @@ impl<const N: usize, const N_ADD_ONE: usize> Robot for RobotNDof<N, N_ADD_ONE> {
         self.state.q_jerk = na::SVector::from_element(0.0);
     }
 
-    fn safety_check(&self, _: &Message) -> bool {
-        true
+    fn safety_check<'a>(&self, msg: Message<'a>) -> Result<Message<'a>, ()> {
+        match msg {
+            Message::ControlCommand(ControlCommand::Joint(_)) => Ok(msg),
+            _ => Err(()),
+        }
     }
 }

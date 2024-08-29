@@ -18,7 +18,7 @@ impl OsqpSolver {
         // println!("{:?}", problem.constraints.to_inequation().3);
         // println!("{:?}", problem.constraints.to_inequation().4);
 
-        let settings = osqp::Settings::default();
+        let settings = osqp::Settings::default().verbose(false);
 
         OsqpSolver {
             problem: osqp::Problem::new(p, q, &a, &l, &u, &settings)

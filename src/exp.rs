@@ -128,7 +128,7 @@ impl Exp {
                 let robot = Arc::new(RwLock::new(robot));
 
                 // 分别判断 controller 和 planner 的类型，然后创建对应的 controller 和 planner
-                let (planner, controller, simulator) = create_branch(&config, path.as_str());
+                let (planner, controller, simulator) = create_branch(&config, &path);
 
                 // ! 递归!树就是从这里长起来的
                 for robot_config in config.robots.unwrap() {

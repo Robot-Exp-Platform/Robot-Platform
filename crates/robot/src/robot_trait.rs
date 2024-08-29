@@ -17,7 +17,7 @@ pub trait Robot: Send + Sync {
 
     fn reset_state(&mut self);
 
-    fn safety_check(&self, msg: &Message) -> bool;
+    fn safety_check<'a>(&self, msg: Message<'a>) -> Result<Message<'a>, ()>;
 }
 
 // pub trait RobotState {}
