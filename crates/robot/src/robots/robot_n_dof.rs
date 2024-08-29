@@ -1,11 +1,9 @@
-use message::control_command::ControlCommand;
 use nalgebra as na;
 use nalgebra::Isometry;
 
 use crate::robot_trait::Robot;
 use crate::robot_trait::SeriesRobot;
 use message::collision_object::{get_distance, Capsule, CollisionObject};
-use message::message_trait::Message;
 use message::state::Pose;
 
 #[allow(dead_code)]
@@ -269,7 +267,7 @@ impl<const N: usize, const N_ADD_ONE: usize> Robot for RobotNDof<N, N_ADD_ONE> {
 
     // fn check_tau(&self, tau: &Vec<f64>) -> bool{
     //     for i in 0..N{
-            
+
     //         if  tau[i] > self.params.tau_bound[i]{
     //             return false
     //         }
