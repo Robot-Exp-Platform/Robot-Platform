@@ -193,7 +193,7 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Bullet<R, N> {
             match robot_state {
                 RobotState::Joint(joint) => robot_write.set_q(joint),
                 RobotState::Velocity(velocity) => robot_write.set_q_dot(velocity),
-                RobotState::JointVelocity(joint, velocity) => {
+                RobotState::JointVel(joint, velocity) => {
                     robot_write.set_q(joint);
                     robot_write.set_q_dot(velocity);
                 }

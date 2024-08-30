@@ -132,7 +132,7 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Impedance<R, N> 
                 self.state.ref_q = na::SVector::from_vec(ref_q);
                 println!("{} get track: {:?}", self.name, self.state.ref_q);
             }
-            Some(Track::JointVelocity(ref_q, ref_q_dot)) => {
+            Some(Track::JointVel(ref_q, ref_q_dot)) => {
                 self.state.ref_q = na::SVector::from_vec(ref_q);
                 self.state.ref_q_dot = na::SVector::from_vec(ref_q_dot);
                 println!(
@@ -140,7 +140,7 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Impedance<R, N> 
                     self.name, self.state.ref_q, self.state.ref_q_dot
                 );
             }
-            Some(Track::JointVelocityAcceleration(ref_q, ref_q_dot, ref_q_ddot)) => {
+            Some(Track::JointVelAcc(ref_q, ref_q_dot, ref_q_ddot)) => {
                 self.state.ref_q = na::SVector::from_vec(ref_q);
                 self.state.ref_q_dot = na::SVector::from_vec(ref_q_dot);
                 self.state.ref_q_ddot = na::SVector::from_vec(ref_q_ddot);
