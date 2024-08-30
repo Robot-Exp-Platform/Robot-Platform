@@ -147,6 +147,8 @@ impl<R: SeriesRobot<N>, const N: usize> ROSThread for Pid<R, N> {
             _ => return,
         };
 
+        println!("{} get track: {:?}", self.name, self.state.track);
+
         // 获取 robot 状态
         let robot_read = self.robot.read().unwrap();
         let q = robot_read.get_q();
