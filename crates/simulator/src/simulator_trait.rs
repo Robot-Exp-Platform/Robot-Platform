@@ -3,9 +3,9 @@ use serde_json::Value;
 // use serde_yaml::Value;
 use std::sync::{Arc, Mutex, RwLock};
 
-use message::control_command::ControlCommand;
-use sensor::sensor_trait::Sensor;
-use task_manager::ros_thread::ROSThread;
+use message::ControlCommandN;
+use sensor::Sensor;
+use task_manager::ROSThread;
 
 pub trait Simulator: ROSThread {
     fn get_name(&self) -> String;
@@ -16,9 +16,12 @@ pub trait Simulator: ROSThread {
 
     fn set_params(&mut self, params: Value);
     fn set_sensor(&mut self, sensor: Arc<RwLock<Sensor>>);
+    fn add_simulator(&mut self, _: Arc<Mutex<dyn Simulator>>) {}
+}
+
+pub trait SimulatorN<const N: usize>: ROSThread {
     fn set_controller_command_queue(
         &mut self,
-        controller_command_queue: Arc<SegQueue<ControlCommand>>,
+        control_command_queue: Arc<SegQueue<ControlCommandN<N>>>,
     );
-    fn add_simulator(&mut self, _: Arc<Mutex<dyn Simulator>>) {}
 }

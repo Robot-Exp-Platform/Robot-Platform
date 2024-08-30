@@ -1,9 +1,9 @@
 use std::sync::{Arc, Mutex, RwLock};
 
-use crate::controller_trait::Controller;
-use crate::controllers::impedance::Impedance;
-use crate::controllers::pid::Pid;
-use robot::robot_trait::SeriesRobot;
+use crate::Controller;
+use crate::Impedance;
+use crate::Pid;
+use robot::SeriesRobot;
 
 pub fn create_controller<R: SeriesRobot<N> + 'static, const N: usize>(
     controller_type: String,

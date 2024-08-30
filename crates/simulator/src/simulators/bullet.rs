@@ -1,9 +1,9 @@
-use crossbeam::queue::SegQueue;
 #[cfg(feature = "ros")]
 use rosrust as ros;
 use serde::Deserialize;
 use serde_json::{from_value, Value};
 // use serde_yaml::Value;
+use crossbeam::queue::SegQueue;
 use std::fs;
 use std::io::{BufWriter, Write};
 #[cfg(feature = "rszmq")]
@@ -12,26 +12,25 @@ use std::sync::{Arc, RwLock};
 #[cfg(feature = "rszmq")]
 use zmq;
 
-use crate::simulator_trait::Simulator;
-use message::control_command::ControlCommand;
+use crate::{Simulator, SimulatorN};
 #[cfg(feature = "rszmq")]
-use message::state::RobotState;
+use message::{ControlCommandN, RobotStateN};
 #[cfg(feature = "recode")]
 use recoder::*;
-use robot::robot_trait::Robot;
+use robot::SeriesRobot;
 use robot_macros_derive::*;
-use sensor::sensor_trait::Sensor;
-use task_manager::ros_thread::ROSThread;
+use sensor::Sensor;
+use task_manager::ROSThread;
 
 // bullet 结构体声明，包含其名称，路径，消息节点，以及机器人
 #[allow(dead_code)]
-pub struct Bullet<R: Robot + 'static, const N: usize> {
+pub struct Bullet<R: SeriesRobot<N>, const N: usize> {
     name: String,
     path: String,
 
     params: BulletParams,
 
-    node: BulletNode,
+    node: BulletNode<N>,
     robot: Arc<RwLock<R>>,
 }
 
@@ -41,10 +40,10 @@ pub struct BulletParams {
 }
 
 // 消息节点结构体声明，随条件编译的不同而不同，条件编译将决定其使用什么通讯方式
-struct BulletNode {
+struct BulletNode<const N: usize> {
     sensor: Option<Arc<RwLock<Sensor>>>,
     recoder: Option<BufWriter<fs::File>>,
-    control_command_queue: Arc<SegQueue<ControlCommand>>,
+    control_command_queue: Arc<SegQueue<ControlCommandN<N>>>,
     #[cfg(feature = "rszmq")]
     responder: Arc<Mutex<zmq::Socket>>,
     #[cfg(feature = "ros")]
@@ -52,7 +51,7 @@ struct BulletNode {
 }
 
 // 为结构体 Bullet 实现方法，这里主要是初始化方法
-impl<R: Robot + 'static, const N: usize> Bullet<R, N> {
+impl<R: SeriesRobot<N>, const N: usize> Bullet<R, N> {
     pub fn new(name: String, path: String, robot: Arc<RwLock<R>>) -> Bullet<R, N> {
         Bullet::from_params(name, path, BulletParams { period: 0.0 }, robot)
     }
@@ -85,13 +84,22 @@ impl<R: Robot + 'static, const N: usize> Bullet<R, N> {
     }
 }
 
+impl<R: SeriesRobot<N>, const N: usize> SimulatorN<N> for Bullet<R, N> {
+    fn set_controller_command_queue(
+        &mut self,
+        control_command_queue: Arc<SegQueue<ControlCommandN<N>>>,
+    ) {
+        self.node.control_command_queue = control_command_queue;
+    }
+}
+
 // 为 Bullet 实现 Simulator 特征，使得其是一个仿真器
-impl<R: Robot + 'static, const N: usize> Simulator for Bullet<R, N> {
+impl<R: SeriesRobot<N>, const N: usize> Simulator for Bullet<R, N> {
     generate_simulator_method!();
 }
 
 // 为 Bullet 实现 ROSThread 特征，使得其可以被类似 ros 的线程管理器调用，而实际上并不一定用到了ros，只是结构相似罢了
-impl<R: Robot + 'static, const N: usize> ROSThread for Bullet<R, N> {
+impl<R: SeriesRobot<N>, const N: usize> ROSThread for Bullet<R, N> {
     fn init(&mut self) {
         println!("{} 向您问好. {} says hello.", self.name, self.name);
         #[cfg(feature = "rszmq")]
@@ -182,7 +190,7 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Bullet<R, N> {
                 .recv_string(0)
                 .expect("Received a message that is not a valid UTF-8 string.")
                 .unwrap();
-            let robot_state: RobotState = serde_json::from_str(message.as_str()).unwrap();
+            let robot_state: RobotStateN<N> = serde_json::from_str(message.as_str()).unwrap();
 
             // 及时返回控制指令
             let reply = serde_json::to_string(&(command)).unwrap();
@@ -191,9 +199,9 @@ impl<R: Robot + 'static, const N: usize> ROSThread for Bullet<R, N> {
             // 处理消息，将消息中的状态信息写入到机器人状态中
             let mut robot_write = self.robot.write().unwrap();
             match robot_state {
-                RobotState::Joint(joint) => robot_write.set_q(joint),
-                RobotState::Velocity(velocity) => robot_write.set_q_dot(velocity),
-                RobotState::JointVel(joint, velocity) => {
+                RobotStateN::Joint(joint) => robot_write.set_q(joint),
+                RobotStateN::Velocity(velocity) => robot_write.set_q_dot(velocity),
+                RobotStateN::JointVel(joint, velocity) => {
                     robot_write.set_q(joint);
                     robot_write.set_q_dot(velocity);
                 }

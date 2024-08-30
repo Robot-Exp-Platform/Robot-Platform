@@ -3,4 +3,6 @@ pub mod planner_trait;
 pub mod planners;
 pub mod utilities;
 
-pub use planner_trait::{Planner, PlannerState};
+pub use config::create_planner;
+pub use planner_trait::{Planner, PlannerN, PlannerState};
+pub use planners::{cfs::Cfs, linear::Linear};

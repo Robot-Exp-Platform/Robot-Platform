@@ -1,6 +1,7 @@
-use crate::sensors::obstacle_releaser::ObstacleReleaser;
-use message::collision_object::CollisionObject;
 use serde_json::Value;
+
+use crate::ObstacleReleaser;
+use message::CollisionObject;
 
 pub enum Sensor {
     ObstacleReleaser(ObstacleReleaser),

@@ -21,6 +21,8 @@ pub enum ControlCommandN<const N: usize> {
     JointVelWithPeriod(f64, SVector<f64, N>, SVector<f64, N>),
     JointVelAcc(SVector<f64, N>, SVector<f64, N>, SVector<f64, N>),
     JointVelAccWithPeriod(f64, SVector<f64, N>, SVector<f64, N>, SVector<f64, N>),
+    Tau(SVector<f64, N>),
+    TauWithPeriod(f64, SVector<f64, N>),
 }
 
 #[derive(Debug, Deserialize)]

@@ -3,7 +3,10 @@ pub mod plant_trait;
 pub mod plants;
 pub mod simulator_trait;
 pub mod simulators;
-pub use simulator_trait::Simulator;
+
+pub use config::create_simulator;
+pub use simulator_trait::{Simulator, SimulatorN};
+pub use simulators::bullet::Bullet;
 
 #[cfg(test)]
 mod tests {

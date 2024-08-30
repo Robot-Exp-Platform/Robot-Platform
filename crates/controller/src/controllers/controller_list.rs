@@ -1,13 +1,10 @@
-use crossbeam::queue::SegQueue;
 use serde_json::Value;
 // use serde_yaml::Value;
 use std::sync::{Arc, Mutex, RwLock};
 
-use crate::controller_trait::Controller;
-use message::control_command::ControlCommand;
-use message::track::Track;
-use sensor::sensor_trait::Sensor;
-use task_manager::ros_thread::ROSThread;
+use crate::Controller;
+use sensor::Sensor;
+use task_manager::ROSThread;
 
 pub struct ControllerList {
     name: String,
@@ -54,8 +51,6 @@ impl Controller for ControllerList {
     }
 
     fn set_params(&mut self, _: Value) {}
-    fn set_track_queue(&mut self, _: Arc<SegQueue<Track>>) {}
-    fn set_controller_command_queue(&mut self, _: Arc<SegQueue<ControlCommand>>) {}
     fn set_sensor(&mut self, _: Arc<RwLock<Sensor>>) {}
 
     fn add_controller(&mut self, controller: Arc<Mutex<dyn Controller>>) {

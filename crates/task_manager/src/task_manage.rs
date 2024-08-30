@@ -1,8 +1,8 @@
 use crossbeam::queue::SegQueue;
 use std::sync::Arc;
 
-use crate::task::Task;
-use message::target::Target;
+use crate::Task;
+use message::Target;
 pub struct TaskManager {
     task: Task,
     pub target_node_list: Vec<TargetNode>,

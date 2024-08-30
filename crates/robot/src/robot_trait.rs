@@ -1,6 +1,4 @@
-use message::collision_object::{Capsule, CollisionObject};
-use message::message_trait::Message;
-use message::state::Pose;
+use message::{collision_object::Capsule, CollisionObject, Message, Pose};
 use nalgebra as na;
 
 pub trait Robot: Send + Sync {
@@ -12,8 +10,6 @@ pub trait Robot: Send + Sync {
 
     fn set_name(&mut self, name: String);
     fn set_path(&mut self, path: String);
-    fn set_q(&mut self, q: Vec<f64>);
-    fn set_q_dot(&mut self, q_dot: Vec<f64>);
 
     fn reset_state(&mut self);
 
@@ -23,15 +19,15 @@ pub trait Robot: Send + Sync {
 // pub trait RobotState {}
 
 pub trait SeriesRobot<const N: usize>: Robot {
-    fn get_q_na(&self) -> na::SVector<f64, N>;
-    fn get_q_dot_na(&self) -> na::SVector<f64, N>;
-    fn get_q_ddot_na(&self) -> na::SVector<f64, N>;
-    fn get_q_jack_na(&self) -> na::SVector<f64, N>;
-    fn get_q_min_bound_na(&self) -> na::SVector<f64, N>;
-    fn get_q_max_bound_na(&self) -> na::SVector<f64, N>;
-    fn get_q_dot_bound_na(&self) -> na::SVector<f64, N>;
-    fn get_q_ddot_bound_na(&self) -> na::SVector<f64, N>;
-    fn get_q_jack_bound_na(&self) -> na::SVector<f64, N>;
+    fn get_q(&self) -> na::SVector<f64, N>;
+    fn get_q_dot(&self) -> na::SVector<f64, N>;
+    fn get_q_ddot(&self) -> na::SVector<f64, N>;
+    fn get_q_jack(&self) -> na::SVector<f64, N>;
+    fn get_q_min_bound(&self) -> na::SVector<f64, N>;
+    fn get_q_max_bound(&self) -> na::SVector<f64, N>;
+    fn get_q_dot_bound(&self) -> na::SVector<f64, N>;
+    fn get_q_ddot_bound(&self) -> na::SVector<f64, N>;
+    fn get_q_jack_bound(&self) -> na::SVector<f64, N>;
     fn get_base(&self) -> Pose;
     fn get_end_effector_pose_na(&self) -> Pose;
     fn get_joint_capsules_with_joint(&self, joint: &na::SVector<f64, N>) -> Vec<Capsule>;
@@ -41,5 +37,8 @@ pub trait SeriesRobot<const N: usize>: Robot {
         joint: &na::SVector<f64, N>,
         bj: &CollisionObject,
     ) -> na::SVector<f64, N>;
+
+    fn set_q(&mut self, q: na::SVector<f64, N>);
+    fn set_q_dot(&mut self, q_dot: na::SVector<f64, N>);
     fn update_dh(&mut self);
 }

@@ -8,25 +8,22 @@ use std::io::{BufWriter, Write};
 use std::sync::{Arc, Condvar, Mutex, RwLock};
 use std::time::Duration;
 
-use crate::planner_trait::Planner;
-use crate::utilities;
-use message::target::Target;
-use message::track::Track;
+use crate::{utilities, Planner, PlannerN};
+use message::{Target, TrackN};
 #[cfg(feature = "recode")]
 use recoder::*;
-use robot::robot_trait::SeriesRobot;
+use robot::SeriesRobot;
 use robot_macros_derive::*;
-use sensor::sensor_trait::Sensor;
-use task_manager::ros_thread::ROSThread;
-use task_manager::state_collector::{NodeState, StateCollector};
+use sensor::Sensor;
+use task_manager::{NodeState, ROSThread, StateCollector};
 
-pub struct Linear<R: SeriesRobot<N> + 'static, const N: usize> {
+pub struct Linear<R: SeriesRobot<N>, const N: usize> {
     name: String,
     path: String,
 
     params: LinearParams,
 
-    node: LinearNode,
+    node: LinearNode<N>,
     robot: Arc<RwLock<R>>,
 }
 
@@ -36,15 +33,15 @@ pub struct LinearParams {
     interpolation: usize,
 }
 
-pub struct LinearNode {
+pub struct LinearNode<const N: usize> {
     sensor: Option<Arc<RwLock<Sensor>>>,
     recoder: Option<BufWriter<fs::File>>,
     target_queue: Arc<SegQueue<Target>>,
-    track_queue: Arc<SegQueue<Track>>,
+    track_queue: Arc<SegQueue<TrackN<N>>>,
     state_collector: StateCollector,
 }
 
-impl<R: SeriesRobot<N> + 'static, const N: usize> Linear<R, N> {
+impl<R: SeriesRobot<N>, const N: usize> Linear<R, N> {
     pub fn new(name: String, path: String, robot: Arc<RwLock<R>>) -> Linear<R, N> {
         Linear::from_params(
             name,
@@ -80,11 +77,17 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> Linear<R, N> {
     }
 }
 
-impl<R: SeriesRobot<N> + 'static, const N: usize> Planner for Linear<R, N> {
+impl<R: SeriesRobot<N>, const N: usize> PlannerN<N> for Linear<R, N> {
+    fn set_track_queue(&mut self, track_queue: Arc<SegQueue<TrackN<N>>>) {
+        self.node.track_queue = track_queue;
+    }
+}
+
+impl<R: SeriesRobot<N>, const N: usize> Planner for Linear<R, N> {
     generate_planner_method!();
 }
 
-impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Linear<R, N> {
+impl<R: SeriesRobot<N>, const N: usize> ROSThread for Linear<R, N> {
     fn init(&mut self) {
         println!("{} 向您问好. {} says hello.", self.name, self.name);
     }
@@ -142,7 +145,7 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Linear<R, N> {
 
         // 获取 robot 状态
         let robot_read = self.robot.read().unwrap();
-        let q = robot_read.get_q_na();
+        let q = robot_read.get_q();
 
         // 执行插值逻辑，将当前位置到目标位置的插值点和目标位置塞入 track 队列
         let track_list = utilities::interpolation::<N>(&q, &target, self.params.interpolation);
@@ -157,7 +160,7 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Linear<R, N> {
 
         // 发送 track
         for track in track_list {
-            let track = Track::Joint(track.as_slice().to_vec());
+            let track = TrackN::Joint(track);
             self.node.track_queue.push(track);
         }
     }

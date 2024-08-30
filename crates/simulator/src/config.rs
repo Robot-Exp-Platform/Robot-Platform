@@ -1,8 +1,7 @@
 use std::sync::{Arc, Mutex, RwLock};
 
-use crate::simulator_trait::Simulator;
-use crate::simulators::bullet::Bullet;
-use robot::robot_trait::SeriesRobot;
+use crate::{Bullet, Simulator};
+use robot::SeriesRobot;
 
 pub fn create_simulator<R: SeriesRobot<N> + 'static, const N: usize>(
     simulator_type: String,

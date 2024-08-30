@@ -19,6 +19,6 @@ pub enum TrackN<const N: usize> {
     Joint(SVector<f64, N>),
     Velocity(SVector<f64, N>),
     Acceleration(SVector<f64, N>),
-    JointVec(SVector<f64, N>, SVector<f64, N>),
+    JointVel(SVector<f64, N>, SVector<f64, N>),
     JointVelAcc(SVector<f64, N>, SVector<f64, N>, SVector<f64, N>),
 }
