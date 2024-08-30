@@ -96,10 +96,10 @@ impl<R: SeriesRobot<N>, const N: usize> Pid<R, N> {
 }
 
 impl<R: SeriesRobot<N>, const N: usize> ControllerN<N> for Pid<R, N> {
-    fn set_track_n_queue(&mut self, track_queue: Arc<SegQueue<message::track::TrackN<N>>>) {
+    fn set_track_queue(&mut self, track_queue: Arc<SegQueue<message::track::TrackN<N>>>) {
         self.node.track_queue = track_queue;
     }
-    fn set_controller_command_n_queue(
+    fn set_controller_command_queue(
         &mut self,
         controller_command_queue: Arc<SegQueue<ControlCommandN<N>>>,
     ) {

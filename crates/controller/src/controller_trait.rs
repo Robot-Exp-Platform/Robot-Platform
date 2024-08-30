@@ -21,8 +21,8 @@ pub trait Controller: ROSThread {
 }
 
 pub trait ControllerN<const N: usize>: Controller {
-    fn set_track_n_queue(&mut self, track_queue: Arc<SegQueue<TrackN<N>>>);
-    fn set_controller_command_n_queue(
+    fn set_track_queue(&mut self, track_queue: Arc<SegQueue<TrackN<N>>>);
+    fn set_controller_command_queue(
         &mut self,
         controller_command_queue: Arc<SegQueue<ControlCommandN<N>>>,
     );

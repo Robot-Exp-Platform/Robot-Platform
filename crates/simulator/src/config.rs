@@ -1,6 +1,6 @@
 use std::sync::{Arc, Mutex, RwLock};
 
-use crate::{Bullet, Simulator};
+use crate::{Bullet, SimulatorN};
 use robot::SeriesRobot;
 
 pub fn create_simulator<R: SeriesRobot<N> + 'static, const N: usize>(
@@ -8,7 +8,7 @@ pub fn create_simulator<R: SeriesRobot<N> + 'static, const N: usize>(
     robot_name: String,
     path: String,
     robot: Arc<RwLock<R>>,
-) -> Arc<Mutex<dyn Simulator>> {
+) -> Arc<Mutex<dyn SimulatorN<N>>> {
     let name = format!("{}:{}", simulator_type, robot_name);
     match simulator_type.as_str() {
         // 在这里按照仿真器类型创建仿真器

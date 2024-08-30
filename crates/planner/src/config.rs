@@ -1,6 +1,6 @@
 use std::sync::{Arc, Mutex, RwLock};
 
-use crate::{Cfs, Linear, Planner};
+use crate::{Cfs, Linear, PlannerN};
 use robot::SeriesRobot;
 
 pub fn create_planner<R: SeriesRobot<N> + 'static, const N: usize>(
@@ -8,7 +8,7 @@ pub fn create_planner<R: SeriesRobot<N> + 'static, const N: usize>(
     robot_name: String,
     path: String,
     robot: Arc<RwLock<R>>,
-) -> Arc<Mutex<dyn Planner>> {
+) -> Arc<Mutex<dyn PlannerN<N>>> {
     // !跟着文家新建 Planner 啦啦啦
     let name = format!("{}:{}", planner_type, robot_name);
     match planner_type.as_str() {

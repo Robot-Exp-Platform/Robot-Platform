@@ -19,7 +19,7 @@ pub trait Simulator: ROSThread {
     fn add_simulator(&mut self, _: Arc<Mutex<dyn Simulator>>) {}
 }
 
-pub trait SimulatorN<const N: usize>: ROSThread {
+pub trait SimulatorN<const N: usize>: Simulator {
     fn set_controller_command_queue(
         &mut self,
         control_command_queue: Arc<SegQueue<ControlCommandN<N>>>,

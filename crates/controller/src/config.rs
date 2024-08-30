@@ -1,6 +1,6 @@
 use std::sync::{Arc, Mutex, RwLock};
 
-use crate::Controller;
+use crate::ControllerN;
 use crate::Impedance;
 use crate::Pid;
 use robot::SeriesRobot;
@@ -10,7 +10,7 @@ pub fn create_controller<R: SeriesRobot<N> + 'static, const N: usize>(
     robot_name: String,
     path: String,
     robot: Arc<RwLock<R>>,
-) -> Arc<Mutex<dyn Controller>> {
+) -> Arc<Mutex<dyn ControllerN<N>>> {
     // !跟着文家新建 Controller 啦啦啦
     let name = format!("{}:{}", controller_type, robot_name);
     match controller_type.as_str() {

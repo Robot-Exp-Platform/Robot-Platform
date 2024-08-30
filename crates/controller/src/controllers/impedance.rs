@@ -89,13 +89,13 @@ impl<R: SeriesRobot<N>, const N: usize> Impedance<R, N> {
 }
 
 impl<R: SeriesRobot<N>, const N: usize> ControllerN<N> for Impedance<R, N> {
-    fn set_controller_command_n_queue(
+    fn set_controller_command_queue(
         &mut self,
         controller_command_queue: Arc<SegQueue<message::control_command::ControlCommandN<N>>>,
     ) {
         self.node.control_command_queue = controller_command_queue;
     }
-    fn set_track_n_queue(&mut self, track_queue: Arc<SegQueue<TrackN<N>>>) {
+    fn set_track_queue(&mut self, track_queue: Arc<SegQueue<TrackN<N>>>) {
         self.node.track_queue = track_queue
     }
 }
