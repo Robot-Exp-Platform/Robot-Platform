@@ -154,36 +154,17 @@ impl Exp {
                 robot.write().unwrap().reset_state();
 
                 let target_queue = Arc::new(SegQueue::new());
-                let track_queue = Arc::new(SegQueue::new());
-                let control_command_queue = Arc::new(SegQueue::new());
 
                 // 为 planner 配置信道
                 planner
                     .lock()
                     .unwrap()
                     .set_target_queue(target_queue.clone());
-                planner.lock().unwrap().set_track_queue(track_queue.clone());
                 planner
                     .lock()
                     .unwrap()
                     .set_state_collector(state_collector.clone());
                 state_collector.0.lock().unwrap().add_node();
-
-                // 为 controller 配置信道
-                controller
-                    .lock()
-                    .unwrap()
-                    .set_track_queue(track_queue.clone());
-                controller
-                    .lock()
-                    .unwrap()
-                    .set_controller_command_queue(control_command_queue.clone());
-
-                // 为 simulator 配置信道
-                simulator
-                    .lock()
-                    .unwrap()
-                    .set_controller_command_queue(control_command_queue.clone());
 
                 task_manager
                     .add_target_node(planner.lock().unwrap().get_name(), target_queue.clone());
@@ -355,6 +336,32 @@ fn create_nodes<R: SeriesRobot<N> + 'static, const N: usize>(
         format!("/simulator/{}", path),
         robot.clone(),
     );
+
+    let target_queue = Arc::new(SegQueue::new());
+    let track_queue = Arc::new(SegQueue::new());
+    let control_command_queue = Arc::new(SegQueue::new());
+
+    // 为 planner 配置信道
+    planner
+        .lock()
+        .unwrap()
+        .set_target_queue(target_queue.clone());
+    planner.lock().unwrap().set_track_queue(track_queue.clone());
+    // 为 controller 配置信道
+    controller
+        .lock()
+        .unwrap()
+        .set_track_queue(track_queue.clone());
+    controller
+        .lock()
+        .unwrap()
+        .set_controller_command_queue(control_command_queue.clone());
+
+    // 为 simulator 配置信道
+    simulator
+        .lock()
+        .unwrap()
+        .set_controller_command_queue(control_command_queue.clone());
 
     (planner, controller, simulator)
 }

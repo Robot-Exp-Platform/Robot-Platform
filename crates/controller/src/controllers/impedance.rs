@@ -1,4 +1,5 @@
 use crossbeam::queue::SegQueue;
+use message::track::TrackN;
 use nalgebra as na;
 use serde::Deserialize;
 use serde_json::{from_value, Value};
@@ -8,23 +9,23 @@ use std::io::{BufWriter, Write};
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
 
-use crate::controller_trait::Controller;
-use message::{control_command::ControlCommand, track::Track};
+use crate::{Controller, ControllerN};
+use message::ControlCommandN;
 #[cfg(feature = "recode")]
 use recoder::*;
-use robot::robot_trait::SeriesRobot;
+use robot::SeriesRobot;
 use robot_macros_derive::*;
-use sensor::sensor_trait::Sensor;
-use task_manager::ros_thread::ROSThread;
+use sensor::Sensor;
+use task_manager::ROSThread;
 
-pub struct Impedance<R: SeriesRobot<N> + 'static, const N: usize> {
+pub struct Impedance<R: SeriesRobot<N>, const N: usize> {
     name: String,
     path: String,
 
     state: ImpedanceState<N>,
     params: ImpedanceParams<N>,
 
-    node: ImpedanceNode,
+    node: ImpedanceNode<N>,
     robot: Arc<RwLock<R>>,
 }
 
@@ -42,14 +43,15 @@ pub struct ImpedanceParams<const N: usize> {
     m: na::SMatrix<f64, N, N>,
 }
 
-pub struct ImpedanceNode {
+#[derive(Default)]
+pub struct ImpedanceNode<const N: usize> {
     sensor: Option<Arc<RwLock<Sensor>>>,
     recoder: Option<BufWriter<fs::File>>,
-    track_queue: Arc<SegQueue<Track>>,
-    control_command_queue: Arc<SegQueue<ControlCommand>>,
+    track_queue: Arc<SegQueue<TrackN<N>>>,
+    control_command_queue: Arc<SegQueue<ControlCommandN<N>>>,
 }
 
-impl<R: SeriesRobot<N> + 'static, const N: usize> Impedance<R, N> {
+impl<R: SeriesRobot<N>, const N: usize> Impedance<R, N> {
     pub fn new(name: String, path: String, robot: Arc<RwLock<R>>) -> Impedance<R, N> {
         Impedance::from_params(
             name,
@@ -69,12 +71,6 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> Impedance<R, N> {
         params: ImpedanceParams<N>,
         robot: Arc<RwLock<R>>,
     ) -> Impedance<R, N> {
-        let node = ImpedanceNode {
-            sensor: None,
-            recoder: None,
-            track_queue: Arc::new(SegQueue::new()),
-            control_command_queue: Arc::new(SegQueue::new()),
-        };
         Impedance {
             name,
             path,
@@ -86,17 +82,29 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> Impedance<R, N> {
             },
             params,
 
-            node,
+            node: ImpedanceNode::default(),
             robot,
         }
     }
 }
 
-impl<R: SeriesRobot<N> + 'static, const N: usize> Controller for Impedance<R, N> {
+impl<R: SeriesRobot<N>, const N: usize> ControllerN<N> for Impedance<R, N> {
+    fn set_controller_command_queue(
+        &mut self,
+        controller_command_queue: Arc<SegQueue<message::control_command::ControlCommandN<N>>>,
+    ) {
+        self.node.control_command_queue = controller_command_queue;
+    }
+    fn set_track_queue(&mut self, track_queue: Arc<SegQueue<TrackN<N>>>) {
+        self.node.track_queue = track_queue
+    }
+}
+
+impl<R: SeriesRobot<N>, const N: usize> Controller for Impedance<R, N> {
     generate_controller_method!();
 }
 
-impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Impedance<R, N> {
+impl<R: SeriesRobot<N>, const N: usize> ROSThread for Impedance<R, N> {
     fn init(&mut self) {
         println!("{} 向您问好. {} says hello.", self.name, self.name);
     }
@@ -128,22 +136,22 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Impedance<R, N> 
     fn update(&mut self) {
         // 更新 track
         match self.node.track_queue.pop() {
-            Some(Track::Joint(ref_q)) => {
-                self.state.ref_q = na::SVector::from_vec(ref_q);
+            Some(TrackN::Joint(ref_q)) => {
+                self.state.ref_q = ref_q;
                 println!("{} get track: {:?}", self.name, self.state.ref_q);
             }
-            Some(Track::JointVelocity(ref_q, ref_q_dot)) => {
-                self.state.ref_q = na::SVector::from_vec(ref_q);
-                self.state.ref_q_dot = na::SVector::from_vec(ref_q_dot);
+            Some(TrackN::JointVel(ref_q, ref_q_dot)) => {
+                self.state.ref_q = ref_q;
+                self.state.ref_q_dot = ref_q_dot;
                 println!(
                     "{} get track: {:?}, {:?}",
                     self.name, self.state.ref_q, self.state.ref_q_dot
                 );
             }
-            Some(Track::JointVelocityAcceleration(ref_q, ref_q_dot, ref_q_ddot)) => {
-                self.state.ref_q = na::SVector::from_vec(ref_q);
-                self.state.ref_q_dot = na::SVector::from_vec(ref_q_dot);
-                self.state.ref_q_ddot = na::SVector::from_vec(ref_q_ddot);
+            Some(TrackN::JointVelAcc(ref_q, ref_q_dot, ref_q_ddot)) => {
+                self.state.ref_q = ref_q;
+                self.state.ref_q_dot = ref_q_dot;
+                self.state.ref_q_ddot = ref_q_ddot;
                 println!(
                     "{} get track: {:?}, {:?}, {:?}",
                     self.name, self.state.ref_q, self.state.ref_q_dot, self.state.ref_q_ddot
@@ -154,9 +162,9 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Impedance<R, N> 
 
         // 获取 robot 状态
         let robot_read = self.robot.read().unwrap();
-        let q = robot_read.get_q_na();
-        let q_dot = robot_read.get_q_dot_na();
-        let q_ddot = robot_read.get_q_ddot_na();
+        let q = robot_read.get_q();
+        let q_dot = robot_read.get_q_dot();
+        let q_ddot = robot_read.get_q_ddot();
 
         // 执行 impedance 逻辑
 
@@ -171,8 +179,7 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Impedance<R, N> 
         }
 
         // 发送控制指令
-        let control_command =
-            ControlCommand::TauWithPeriod(self.params.period, control_output.as_slice().to_vec());
+        let control_command = ControlCommandN::TauWithPeriod(self.params.period, control_output);
         self.node.control_command_queue.push(control_command);
     }
 

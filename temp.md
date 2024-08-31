@@ -317,7 +317,7 @@ use crate::controllers::pid::Pid;
 use robot::robot_trait::Robot;
 use robot::robots::panda;
 
-pub fn build_controller<R: Robot + 'static>(
+pub fn build_controller<R: Robot >(
     controller_type: String,
     robot_type: String,
     path: String,
@@ -347,7 +347,7 @@ use crate::controller_trait::Controller;
 use recoder::recoder_trait::Recoder;
 use robot::robot_trait::Robot;
 
-pub struct Pid<R: Robot + 'static, const N: usize> {
+pub struct Pid<R: Robot , const N: usize> {
     name: String,
     path: String,
 
@@ -378,7 +378,7 @@ pub struct PidNode {
     pub_list: Vec<ros::Publisher>,
 }
 
-impl<R: Robot + 'static, const N: usize> Pid<R, N> {
+impl<R: Robot , const N: usize> Pid<R, N> {
     pub fn new(
         name: String,
         path: String,
@@ -465,7 +465,7 @@ use crate::planners::linear::Linear;
 use robot::robot_trait::Robot;
 use robot::robots::panda;
 
-pub fn build_planner<R: Robot + 'static>(
+pub fn build_planner<R: Robot >(
     planner_type: String,
     robot_type: String,
     path: String,
@@ -507,7 +507,7 @@ pub struct LinearNode {
     pub_list: Vec<String>,
 }
 
-pub struct Linear<R: Robot + 'static, const N: usize> {
+pub struct Linear<R: Robot , const N: usize> {
     name: String,
     path: String,
 
@@ -519,7 +519,7 @@ pub struct Linear<R: Robot + 'static, const N: usize> {
     robot: Arc<RwLock<R>>,
 }
 
-impl<R: Robot + 'static, const N: usize> Linear<R, N> {
+impl<R: Robot , const N: usize> Linear<R, N> {
     pub fn new(
         name: String,
         path: String,
@@ -547,7 +547,7 @@ impl<R: Robot + 'static, const N: usize> Linear<R, N> {
     }
 }
 
-impl<R: Robot + 'static, const N: usize> Planner for Linear<R, N> {
+impl<R: Robot , const N: usize> Planner for Linear<R, N> {
     // fn get_planner_state(&self) -> PlannerState {
     //     self.state
     // }
@@ -565,7 +565,7 @@ impl<R: Robot + 'static, const N: usize> Planner for Linear<R, N> {
     fn add_planner(&mut self, _planner: Box<dyn Planner>) {}
 }
 
-impl<R: Robot + 'static, const N: usize> Recoder for Linear<R, N> {
+impl<R: Robot , const N: usize> Recoder for Linear<R, N> {
     fn recoder() {
         // TODO Recoder for Linear
     }

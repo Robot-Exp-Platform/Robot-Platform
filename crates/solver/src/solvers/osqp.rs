@@ -1,4 +1,4 @@
-use crate::solver_trait::Solver;
+use crate::Solver;
 use message::problem::QuadraticProgramming;
 
 pub struct OsqpSolver {

@@ -1,7 +1,8 @@
-use message::target::Target;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 // use serde_yaml::Value;
+
+use message::Target;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RobotTasks {

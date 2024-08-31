@@ -1,9 +1,7 @@
 use std::sync::{Arc, RwLock};
 
 use crate::robot_trait::Robot;
-use message::collision_object::CollisionObject;
-use message::message_trait::Message;
-use message::state::Pose;
+use message::{CollisionObject, Message, Pose};
 
 pub struct RobotList {
     name: String,
@@ -64,8 +62,6 @@ impl Robot for RobotList {
     fn set_path(&mut self, path: String) {
         self.path = path
     }
-    fn set_q(&mut self, _: Vec<f64>) {}
-    fn set_q_dot(&mut self, _: Vec<f64>) {}
 
     fn get_distance_to_collision(&self, _: &CollisionObject) -> f64 {
         unimplemented!()

@@ -1,4 +1,5 @@
 use crossbeam::queue::SegQueue;
+use message::track::TrackN;
 use nalgebra as na;
 use serde::Deserialize;
 use serde_json::{from_value, Value};
@@ -8,23 +9,23 @@ use std::io::{BufWriter, Write};
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
 
-use crate::controller_trait::Controller;
-use message::{control_command::ControlCommand, track::Track};
+use crate::controller_trait::{Controller, ControllerN};
+use message::ControlCommandN;
 #[cfg(feature = "recode")]
 use recoder::*;
-use robot::robot_trait::SeriesRobot;
+use robot::SeriesRobot;
 use robot_macros_derive::*;
-use sensor::sensor_trait::Sensor;
-use task_manager::ros_thread::ROSThread;
+use sensor::Sensor;
+use task_manager::ROSThread;
 
-pub struct Pid<R: SeriesRobot<N> + 'static, const N: usize> {
+pub struct Pid<R: SeriesRobot<N>, const N: usize> {
     name: String,
     path: String,
 
     state: PidState<N>,
     params: PidParams<N>,
 
-    node: PidNode,
+    node: PidNode<N>,
     robot: Arc<RwLock<R>>,
 }
 
@@ -43,14 +44,15 @@ pub struct PidParams<const N: usize> {
     kd: na::SMatrix<f64, N, N>,
 }
 
-pub struct PidNode {
+#[derive(Default)]
+pub struct PidNode<const N: usize> {
     sensor: Option<Arc<RwLock<Sensor>>>,
     recoder: Option<BufWriter<fs::File>>,
-    track_queue: Arc<SegQueue<Track>>,
-    control_command_queue: Arc<SegQueue<ControlCommand>>,
+    track_queue: Arc<SegQueue<TrackN<N>>>,
+    control_command_queue: Arc<SegQueue<ControlCommandN<N>>>,
 }
 
-impl<R: SeriesRobot<N> + 'static, const N: usize> Pid<R, N> {
+impl<R: SeriesRobot<N>, const N: usize> Pid<R, N> {
     pub fn new(name: String, path: String, robot: Arc<RwLock<R>>) -> Pid<R, N> {
         Pid::from_params(
             name,
@@ -93,11 +95,23 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> Pid<R, N> {
     }
 }
 
-impl<R: SeriesRobot<N> + 'static, const N: usize> Controller for Pid<R, N> {
+impl<R: SeriesRobot<N>, const N: usize> ControllerN<N> for Pid<R, N> {
+    fn set_track_queue(&mut self, track_queue: Arc<SegQueue<message::track::TrackN<N>>>) {
+        self.node.track_queue = track_queue;
+    }
+    fn set_controller_command_queue(
+        &mut self,
+        controller_command_queue: Arc<SegQueue<ControlCommandN<N>>>,
+    ) {
+        self.node.control_command_queue = controller_command_queue;
+    }
+}
+
+impl<R: SeriesRobot<N>, const N: usize> Controller for Pid<R, N> {
     generate_controller_method!();
 }
 
-impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Pid<R, N> {
+impl<R: SeriesRobot<N>, const N: usize> ROSThread for Pid<R, N> {
     fn init(&mut self) {
         println!("{} 向您问好. {} says hello.", self.name, self.name);
     }
@@ -128,17 +142,16 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Pid<R, N> {
 
     fn update(&mut self) {
         // 更新 track
-        let track = match self.node.track_queue.pop() {
-            Some(Track::Joint(track)) => track,
+        self.state.track = match self.node.track_queue.pop() {
+            Some(TrackN::Joint(track)) => track,
             _ => return,
         };
 
-        self.state.track = na::SVector::from_vec(track);
         println!("{} get track: {:?}", self.name, self.state.track);
 
         // 获取 robot 状态
         let robot_read = self.robot.read().unwrap();
-        let q = robot_read.get_q_na();
+        let q = robot_read.get_q();
 
         // 执行 pid 逻辑
         let new_error = self.state.track - q;
@@ -157,8 +170,7 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Pid<R, N> {
         }
 
         // 发送控制指令
-        let control_command =
-            ControlCommand::JointWithPeriod(self.params.period, control_output.as_slice().to_vec());
+        let control_command = ControlCommandN::JointWithPeriod(self.params.period, control_output);
         self.node.control_command_queue.push(control_command);
     }
 

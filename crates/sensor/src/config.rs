@@ -1,6 +1,6 @@
 use std::sync::{Arc, RwLock};
 
-use crate::{sensor_trait::Sensor, sensors::obstacle_releaser::ObstacleReleaser};
+use crate::{ObstacleReleaser, Sensor};
 
 pub fn create_sensor(sensor_type: &String, name: &String) -> Arc<RwLock<Sensor>> {
     match sensor_type.as_str() {

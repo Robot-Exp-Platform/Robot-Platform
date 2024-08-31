@@ -1,5 +1,5 @@
 use chrono::Local;
-use message::message_trait::Message;
+use message::Message;
 use std::{
     fs::File,
     io::{BufWriter, Write},
