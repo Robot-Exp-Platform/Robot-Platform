@@ -1,3 +1,4 @@
+use core::str;
 use crossbeam::queue::SegQueue;
 use message::constraint::Constraint;
 use nalgebra as na;
@@ -28,10 +29,16 @@ pub struct Cfs<R: SeriesRobot<N>, const N: usize> {
     name: String,
     path: String,
 
+    state: CfsState,
     params: CfsParams,
 
     node: CfsNode<N>,
     robot: Arc<RwLock<R>>,
+}
+
+#[derive(Default)]
+pub struct CfsState {
+    solve_suppressor: bool,
 }
 
 #[derive(Deserialize, Default)]
@@ -65,6 +72,7 @@ impl<R: SeriesRobot<N>, const N: usize> Cfs<R, N> {
         Cfs {
             name,
             path,
+            state: CfsState::default(),
             params,
             node: CfsNode::default(),
             robot,
@@ -133,7 +141,7 @@ impl<R: SeriesRobot<N>, const N: usize> ROSThread for Cfs<R, N> {
 
                 return;
             }
-            _ => unimplemented!("CFS planner does not support Pose target."),
+            _ => unimplemented!("CFS planner does not support target of type."),
         };
         let target = na::SVector::from_vec(target);
         println!("{} get target: {:?}", self.name, target);
@@ -233,7 +241,7 @@ impl<R: SeriesRobot<N>, const N: usize> ROSThread for Cfs<R, N> {
             // 获得优化方程及其梯度
             // 求解优化问题
             solver_result = match self.params.solver.as_str() {
-                "osqp" => {
+                "osqp" if !self.state.solve_suppressor => {
                     let mut osqp_solver = OsqpSolver::from_problem(problem);
                     osqp_solver.solve()
                 }
