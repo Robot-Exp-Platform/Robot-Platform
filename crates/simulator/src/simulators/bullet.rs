@@ -3,6 +3,7 @@ use rosrust as ros;
 use serde::Deserialize;
 use serde_json::{from_value, Value};
 // use serde_yaml::Value;
+use crossbeam::channel::Sender;
 use crossbeam::queue::SegQueue;
 use std::fs;
 use std::io::{BufWriter, Write};
@@ -44,6 +45,7 @@ struct BulletNode<const N: usize> {
     sensor: Option<Arc<RwLock<Sensor>>>,
     recoder: Option<BufWriter<fs::File>>,
     control_command_queue: Arc<SegQueue<ControlCommandN<N>>>,
+    sender: Option<Sender<(String, String)>>,
     #[cfg(feature = "rszmq")]
     responder: Arc<Mutex<zmq::Socket>>,
     #[cfg(feature = "ros")]
@@ -74,6 +76,7 @@ impl<R: SeriesRobot<N>, const N: usize> Bullet<R, N> {
                 sensor: None,
                 recoder: None,
                 control_command_queue: Arc::new(SegQueue::new()),
+                sender: None,
                 #[cfg(feature = "rszmq")]
                 responder: Arc::new(Mutex::new(responder)),
                 #[cfg(feature = "ros")]

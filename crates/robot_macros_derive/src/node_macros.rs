@@ -43,5 +43,8 @@ macro_rules! generate_planner_method {
 macro_rules! generate_simulator_method {
     () => {
         generate_node_method!();
+        fn set_sender(&mut self, sender: Sender<(String, String)>) {
+            self.node.sender = Some(sender);
+        }
     };
 }

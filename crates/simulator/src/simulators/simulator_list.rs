@@ -43,6 +43,7 @@ impl Simulator for SimulatorList {
 
     fn set_params(&mut self, _: Value) {}
     fn set_sensor(&mut self, _: Arc<RwLock<Sensor>>) {}
+    fn set_sender(&mut self, _: crossbeam::channel::Sender<(String, String)>) {}
 
     fn add_simulator(&mut self, simulator: Arc<Mutex<dyn Simulator>>) {
         self.simulators.push(simulator)
