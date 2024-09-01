@@ -3,8 +3,8 @@ use nalgebra::Isometry;
 
 use crate::robot_trait::Robot;
 use crate::robot_trait::SeriesRobot;
-use message::collision_object::{get_distance, Capsule, CollisionObject};
-use message::state::Pose;
+use message::collision_object::{get_distance, Capsule};
+use message::{CollisionObject, Message, Pose};
 
 #[allow(dead_code)]
 pub struct RobotNDof<const N: usize, const N_ADD_ONE: usize> {
@@ -92,31 +92,31 @@ impl<const N: usize> RobotNDofState<N> {
 }
 
 impl<const N: usize, const N_ADD_ONE: usize> SeriesRobot<N> for RobotNDof<N, N_ADD_ONE> {
-    fn get_q_na(&self) -> na::SVector<f64, N> {
+    fn get_q(&self) -> na::SVector<f64, N> {
         self.state.q
     }
-    fn get_q_dot_na(&self) -> na::SVector<f64, N> {
+    fn get_q_dot(&self) -> na::SVector<f64, N> {
         self.state.q_dot
     }
-    fn get_q_ddot_na(&self) -> na::SVector<f64, N> {
+    fn get_q_ddot(&self) -> na::SVector<f64, N> {
         self.state.q_ddot
     }
-    fn get_q_jack_na(&self) -> na::SVector<f64, N> {
+    fn get_q_jack(&self) -> na::SVector<f64, N> {
         self.state.q_jerk
     }
-    fn get_q_min_bound_na(&self) -> na::SVector<f64, N> {
+    fn get_q_min_bound(&self) -> na::SVector<f64, N> {
         self.params.q_min_bound
     }
-    fn get_q_max_bound_na(&self) -> na::SVector<f64, N> {
+    fn get_q_max_bound(&self) -> na::SVector<f64, N> {
         self.params.q_max_bound
     }
-    fn get_q_dot_bound_na(&self) -> nalgebra::SVector<f64, N> {
+    fn get_q_dot_bound(&self) -> nalgebra::SVector<f64, N> {
         self.params.q_dot_bound
     }
-    fn get_q_ddot_bound_na(&self) -> nalgebra::SVector<f64, N> {
+    fn get_q_ddot_bound(&self) -> nalgebra::SVector<f64, N> {
         self.params.q_ddot_bound
     }
-    fn get_q_jack_bound_na(&self) -> nalgebra::SVector<f64, N> {
+    fn get_q_jack_bound(&self) -> nalgebra::SVector<f64, N> {
         self.params.q_jerk_bound
     }
     fn get_base(&self) -> Pose {
@@ -189,6 +189,13 @@ impl<const N: usize, const N_ADD_ONE: usize> SeriesRobot<N> for RobotNDof<N, N_A
         distance_diff
     }
 
+    fn set_q(&mut self, q: nalgebra::SVector<f64, N>) {
+        self.state.q = q;
+    }
+    fn set_q_dot(&mut self, q_dot: nalgebra::SVector<f64, N>) {
+        self.state.q_dot = q_dot;
+    }
+
     fn update_dh(&mut self) {
         for i in 0..self.params.nlink {
             self.params.denavit_hartenberg[(i, 0)] = self.state.q[i];
@@ -220,15 +227,6 @@ impl<const N: usize, const N_ADD_ONE: usize> Robot for RobotNDof<N, N_ADD_ONE> {
     }
     fn set_path(&mut self, path: String) {
         self.path = path
-    }
-    fn set_q(&mut self, q: Vec<f64>) {
-        for (i, &q_i) in q.iter().enumerate() {
-            self.params.denavit_hartenberg[(i, 0)] = q_i;
-        }
-        self.state.q = na::SVector::from_vec(q)
-    }
-    fn set_q_dot(&mut self, q_dot: Vec<f64>) {
-        self.state.q_dot = na::SVector::from_vec(q_dot)
     }
 
     fn reset_state(&mut self) {

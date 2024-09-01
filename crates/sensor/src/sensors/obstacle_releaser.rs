@@ -1,6 +1,6 @@
 use serde_json::Value;
 
-use message::collision_object::CollisionObject;
+use message::CollisionObject;
 
 #[derive(Default)]
 pub struct ObstacleReleaser {

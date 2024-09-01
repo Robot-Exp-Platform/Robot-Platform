@@ -1,8 +1,8 @@
 use nalgebra as na;
 use std::f64::consts::{FRAC_PI_2, FRAC_PI_4};
 
-use crate::robots::robot_n_dof::RobotNDof;
 use crate::robots::robot_n_dof::RobotNDofParams;
+use crate::RobotNDof;
 use message::collision_object::Capsule;
 
 pub const PANDA_DOF: usize = 7;

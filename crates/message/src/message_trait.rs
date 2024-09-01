@@ -1,9 +1,9 @@
 use crate::collision_object::CollisionObject;
 use crate::constraint::Constraint;
-use crate::control_command::ControlCommand;
+use crate::control_command::{ControlCommand, ControlCommandN};
 use crate::problem::Problem;
 use crate::state::NodeState;
-use crate::state::RobotState;
+use crate::state::{RobotState, RobotStateN};
 use crate::target::Target;
 use crate::track::Track;
 
@@ -17,4 +17,10 @@ pub enum Message<'a> {
     RobotState(RobotState),
     Target(Target),
     Track(Track),
+}
+
+#[derive(Debug)]
+pub enum RobotMessageN<const N: usize> {
+    RobotMessageN(RobotStateN<N>),
+    ControlCommandN(ControlCommandN<N>),
 }

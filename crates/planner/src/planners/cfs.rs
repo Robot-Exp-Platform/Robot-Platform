@@ -1,3 +1,4 @@
+use core::str;
 use crossbeam::queue::SegQueue;
 use message::constraint::Constraint;
 use nalgebra as na;
@@ -10,33 +11,35 @@ use std::io::{BufWriter, Write};
 use std::sync::{Arc, Mutex, RwLock};
 use std::time::Duration;
 
-use crate::planner_trait::Planner;
+use crate::planner_trait::{Planner, PlannerN};
 use crate::utilities;
 use message::problem::QuadraticProgramming;
-use message::target::Target;
-use message::track::Track;
+use message::{Target, TrackN};
 #[cfg(feature = "recode")]
 use recoder::*;
-use robot::robot_trait::SeriesRobot;
+use robot::SeriesRobot;
 use robot_macros_derive::*;
-use sensor::sensor_trait::Sensor;
-use solver::solvers::osqp::OsqpSolver;
-use task_manager::ros_thread::ROSThread;
-use task_manager::state_collector::StateCollector;
+use sensor::Sensor;
+use solver::OsqpSolver;
+use task_manager::{ROSThread, StateCollector};
 
-#[allow(dead_code)]
-pub struct Cfs<R: SeriesRobot<N> + 'static, const N: usize> {
+pub trait CfsTrait {}
+
+pub struct Cfs<R: SeriesRobot<N>, const N: usize> {
     name: String,
     path: String,
 
-    state: CfsState<N>,
+    state: CfsState,
     params: CfsParams,
 
-    node: CfsNode,
+    node: CfsNode<N>,
     robot: Arc<RwLock<R>>,
 }
 
-pub struct CfsState<const N: usize> {}
+#[derive(Default)]
+pub struct CfsState {
+    solve_suppressor: bool,
+}
 
 #[derive(Deserialize, Default)]
 pub struct CfsParams {
@@ -48,15 +51,15 @@ pub struct CfsParams {
 }
 
 #[derive(Default)]
-pub struct CfsNode {
+pub struct CfsNode<const N: usize> {
     sensor: Option<Arc<RwLock<Sensor>>>,
     recoder: Option<BufWriter<fs::File>>,
     target_queue: Arc<SegQueue<Target>>,
-    track_queue: Arc<SegQueue<Track>>,
+    track_queue: Arc<SegQueue<TrackN<N>>>,
     state_collector: StateCollector,
 }
 
-impl<R: SeriesRobot<N> + 'static, const N: usize> Cfs<R, N> {
+impl<R: SeriesRobot<N>, const N: usize> Cfs<R, N> {
     pub fn new(name: String, path: String, robot: Arc<RwLock<R>>) -> Cfs<R, N> {
         Cfs::from_params(name, path, CfsParams::default(), robot)
     }
@@ -69,7 +72,7 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> Cfs<R, N> {
         Cfs {
             name,
             path,
-            state: CfsState {},
+            state: CfsState::default(),
             params,
             node: CfsNode::default(),
             robot,
@@ -77,11 +80,17 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> Cfs<R, N> {
     }
 }
 
-impl<R: SeriesRobot<N> + 'static, const N: usize> Planner for Cfs<R, N> {
+impl<R: SeriesRobot<N>, const N: usize> PlannerN<N> for Cfs<R, N> {
+    fn set_track_queue(&mut self, track_queue: Arc<SegQueue<TrackN<N>>>) {
+        self.node.track_queue = track_queue;
+    }
+}
+
+impl<R: SeriesRobot<N>, const N: usize> Planner for Cfs<R, N> {
     generate_planner_method!();
 }
 
-impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Cfs<R, N> {
+impl<R: SeriesRobot<N>, const N: usize> ROSThread for Cfs<R, N> {
     fn init(&mut self) {
         println!("{} 向您问好. {} says hello.", self.name, self.name);
     }
@@ -132,16 +141,16 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Cfs<R, N> {
 
                 return;
             }
-            _ => unimplemented!("CFS planner does not support Pose target."),
+            _ => unimplemented!("CFS planner does not support target of type."),
         };
         let target = na::SVector::from_vec(target);
         println!("{} get target: {:?}", self.name, target);
 
         // 获取 robot 状态
         let robot_read = self.robot.read().unwrap();
-        let q = robot_read.get_q_na();
-        let q_min_bound = robot_read.get_q_min_bound_na().as_slice().to_vec();
-        let q_max_bound = robot_read.get_q_max_bound_na().as_slice().to_vec();
+        let q = robot_read.get_q();
+        let q_min_bound = robot_read.get_q_min_bound().as_slice().to_vec();
+        let q_max_bound = robot_read.get_q_max_bound().as_slice().to_vec();
 
         // 执行CFS逻辑
         let q_ref_list = utilities::interpolation::<N>(&q, &target, self.params.interpolation);
@@ -232,7 +241,7 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Cfs<R, N> {
             // 获得优化方程及其梯度
             // 求解优化问题
             solver_result = match self.params.solver.as_str() {
-                "osqp" => {
+                "osqp" if !self.state.solve_suppressor => {
                     let mut osqp_solver = OsqpSolver::from_problem(problem);
                     osqp_solver.solve()
                 }
@@ -261,7 +270,9 @@ impl<R: SeriesRobot<N> + 'static, const N: usize> ROSThread for Cfs<R, N> {
         // 生成 track
         let mut track_list = Vec::new();
         for i in 0..self.params.interpolation + 1 {
-            track_list.push(Track::Joint(solver_result[i * N..(i + 1) * N].to_vec()));
+            track_list.push(TrackN::Joint(na::SVector::from_column_slice(
+                &solver_result[i * N..(i + 1) * N],
+            )));
         }
 
         // 记录 track

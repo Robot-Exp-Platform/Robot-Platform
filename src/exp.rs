@@ -28,6 +28,7 @@ use task_manager::state_collector::{NodeState, StateCollector};
 use task_manager::task::Task;
 use task_manager::task_manage::TaskManager;
 use task_manager::thread_manage::ThreadManage;
+use task_manager::PostOffice;
 
 pub struct Exp {
     // Exp 是一个森林状的结构，其中的包含 robot tree, controller tree, planner tree 等等树状结构的根节点，通过管理 exp 实现管理整个结构的目的
@@ -80,13 +81,16 @@ impl Exp {
         let mut thread_manage = ThreadManage::new();
         let mut task_manage = TaskManager::new();
         let state_collector = Arc::new((Mutex::new(NodeState::new()), Condvar::new()));
+        let mut post_office = PostOffice::new();
         let (robot_tree, planner_tree, controller_tree, simulator_tree) = Exp::build_exp_tree(
             config.robot_config,
             "".to_string(),
             &mut thread_manage,
             &mut task_manage,
             &state_collector,
+            &mut post_office,
         );
+        thread_manage.add_thread(Arc::new(Mutex::new(post_office)));
 
         // 生成传感器目录
         let sensor_list = config
@@ -114,6 +118,7 @@ impl Exp {
         thread_manage: &mut ThreadManage,
         task_manager: &mut TaskManager,
         state_collector: &StateCollector,
+        post_office: &mut PostOffice,
     ) -> (
         Arc<RwLock<dyn robot::Robot>>,
         Arc<Mutex<dyn planner::Planner>>,
@@ -139,6 +144,7 @@ impl Exp {
                             thread_manage,
                             task_manager,
                             state_collector,
+                            post_office,
                         );
                     robot.write().unwrap().add_robot(child_robot);
                     planner.lock().unwrap().add_planner(child_planner);
@@ -154,39 +160,26 @@ impl Exp {
                 robot.write().unwrap().reset_state();
 
                 let target_queue = Arc::new(SegQueue::new());
-                let track_queue = Arc::new(SegQueue::new());
-                let control_command_queue = Arc::new(SegQueue::new());
+                let (tx, rx) = crossbeam::channel::unbounded();
 
                 // 为 planner 配置信道
                 planner
                     .lock()
                     .unwrap()
                     .set_target_queue(target_queue.clone());
-                planner.lock().unwrap().set_track_queue(track_queue.clone());
                 planner
                     .lock()
                     .unwrap()
                     .set_state_collector(state_collector.clone());
                 state_collector.0.lock().unwrap().add_node();
-
-                // 为 controller 配置信道
-                controller
-                    .lock()
-                    .unwrap()
-                    .set_track_queue(track_queue.clone());
-                controller
-                    .lock()
-                    .unwrap()
-                    .set_controller_command_queue(control_command_queue.clone());
-
-                // 为 simulator 配置信道
-                simulator
-                    .lock()
-                    .unwrap()
-                    .set_controller_command_queue(control_command_queue.clone());
-
                 task_manager
                     .add_target_node(planner.lock().unwrap().get_name(), target_queue.clone());
+
+                // 为 controller 配置信道
+
+                // 为 simulator 配置信道
+                simulator.lock().unwrap().set_sender(tx);
+                post_office.add_receiver(rx);
 
                 // 需要给控制器和规划器开辟独立的线程
                 thread_manage.add_thread(planner.clone());
@@ -355,6 +348,32 @@ fn create_nodes<R: SeriesRobot<N> + 'static, const N: usize>(
         format!("/simulator/{}", path),
         robot.clone(),
     );
+
+    let target_queue = Arc::new(SegQueue::new());
+    let track_queue = Arc::new(SegQueue::new());
+    let control_command_queue = Arc::new(SegQueue::new());
+
+    // 为 planner 配置信道
+    planner
+        .lock()
+        .unwrap()
+        .set_target_queue(target_queue.clone());
+    planner.lock().unwrap().set_track_queue(track_queue.clone());
+    // 为 controller 配置信道
+    controller
+        .lock()
+        .unwrap()
+        .set_track_queue(track_queue.clone());
+    controller
+        .lock()
+        .unwrap()
+        .set_controller_command_queue(control_command_queue.clone());
+
+    // 为 simulator 配置信道
+    simulator
+        .lock()
+        .unwrap()
+        .set_controller_command_queue(control_command_queue.clone());
 
     (planner, controller, simulator)
 }

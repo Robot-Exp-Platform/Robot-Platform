@@ -1,3 +1,4 @@
+use nalgebra::SVector;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -10,6 +11,18 @@ pub enum ControlCommand {
     JointVelAccWithPeriod(f64, Vec<f64>, Vec<f64>, Vec<f64>),
     Tau(Vec<f64>),
     TauWithPeriod(f64, Vec<f64>),
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub enum ControlCommandN<const N: usize> {
+    Joint(SVector<f64, N>),
+    JointWithPeriod(f64, SVector<f64, N>),
+    JointVel(SVector<f64, N>, SVector<f64, N>),
+    JointVelWithPeriod(f64, SVector<f64, N>, SVector<f64, N>),
+    JointVelAcc(SVector<f64, N>, SVector<f64, N>, SVector<f64, N>),
+    JointVelAccWithPeriod(f64, SVector<f64, N>, SVector<f64, N>, SVector<f64, N>),
+    Tau(SVector<f64, N>),
+    TauWithPeriod(f64, SVector<f64, N>),
 }
 
 #[derive(Debug, Deserialize)]

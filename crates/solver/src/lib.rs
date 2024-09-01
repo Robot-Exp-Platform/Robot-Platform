@@ -1,6 +1,9 @@
 pub mod solver_trait;
 pub mod solvers;
 
+pub use solver_trait::Solver;
+pub use solvers::osqp::OsqpSolver;
+
 #[cfg(test)]
 mod tests {
     #[test]
