@@ -43,5 +43,13 @@ macro_rules! generate_planner_method {
 macro_rules! generate_simulator_method {
     () => {
         generate_node_method!();
+        fn subscribe_post_office(
+            &mut self,
+            sender: Sender<(String, String)>,
+            receiver: Receiver<String>,
+        ) {
+            self.node.sender = Some(sender);
+            self.node.receiver = Some(receiver);
+        }
     };
 }

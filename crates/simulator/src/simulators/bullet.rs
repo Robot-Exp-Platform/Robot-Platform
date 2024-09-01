@@ -1,8 +1,7 @@
-#[cfg(feature = "ros")]
-use rosrust as ros;
 use serde::Deserialize;
 use serde_json::{from_value, Value};
 // use serde_yaml::Value;
+use crossbeam::channel::{Receiver, Sender};
 use crossbeam::queue::SegQueue;
 use std::fs;
 use std::io::{BufWriter, Write};
@@ -44,10 +43,10 @@ struct BulletNode<const N: usize> {
     sensor: Option<Arc<RwLock<Sensor>>>,
     recoder: Option<BufWriter<fs::File>>,
     control_command_queue: Arc<SegQueue<ControlCommandN<N>>>,
+    sender: Option<Sender<(String, String)>>,
+    receiver: Option<Receiver<String>>,
     #[cfg(feature = "rszmq")]
     responder: Arc<Mutex<zmq::Socket>>,
-    #[cfg(feature = "ros")]
-    sub_list: Vec<ros::Subscriber>,
 }
 
 // 为结构体 Bullet 实现方法，这里主要是初始化方法
@@ -74,6 +73,8 @@ impl<R: SeriesRobot<N>, const N: usize> Bullet<R, N> {
                 sensor: None,
                 recoder: None,
                 control_command_queue: Arc::new(SegQueue::new()),
+                sender: None,
+                receiver: None,
                 #[cfg(feature = "rszmq")]
                 responder: Arc::new(Mutex::new(responder)),
                 #[cfg(feature = "ros")]
@@ -114,25 +115,6 @@ impl<R: SeriesRobot<N>, const N: usize> ROSThread for Bullet<R, N> {
                 Ok(_) => println!("Socket successfully bound to tcp://*:5555"),
                 Err(e) => eprintln!("Failed to bind socket: {}", e),
             }
-        }
-        #[cfg(feature = "ros")]
-        {
-            // ! 使用 ros 写的订阅者通讯
-            // 在这里进行节点和话题的声明
-            let robot = self.robot.clone();
-            self.node.sub_list.push(
-                ros::subscribe(
-                    (self.path.clone() + self.name.clone().as_str()).as_str(),
-                    1,
-                    move |msg: rosrust_msg::msg_package::RobotState| {
-                        robot.write().unwrap().set_q(msg.q.clone());
-                        robot.write().unwrap().set_q_dot(msg.q_dot.clone());
-                    },
-                )
-                .unwrap(),
-            );
-
-            // 新建接收者，并将他们放入list中去
         }
     }
 

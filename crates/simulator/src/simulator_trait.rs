@@ -1,3 +1,4 @@
+use crossbeam::channel::{Receiver, Sender};
 use crossbeam::queue::SegQueue;
 use serde_json::Value;
 // use serde_yaml::Value;
@@ -16,6 +17,12 @@ pub trait Simulator: ROSThread {
 
     fn set_params(&mut self, params: Value);
     fn set_sensor(&mut self, sensor: Arc<RwLock<Sensor>>);
+    fn subscribe_post_office(
+        &mut self,
+        sender: Sender<(String, String)>,
+        receiver: Receiver<String>,
+    );
+
     fn add_simulator(&mut self, _: Arc<Mutex<dyn Simulator>>) {}
 }
 

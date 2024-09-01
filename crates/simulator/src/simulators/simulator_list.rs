@@ -1,5 +1,6 @@
 use serde_json::Value;
 // use serde_yaml::Value;
+use crossbeam::channel::{Receiver, Sender};
 use std::sync::{Arc, Mutex, RwLock};
 
 use crate::Simulator;
@@ -43,6 +44,7 @@ impl Simulator for SimulatorList {
 
     fn set_params(&mut self, _: Value) {}
     fn set_sensor(&mut self, _: Arc<RwLock<Sensor>>) {}
+    fn subscribe_post_office(&mut self, _: Sender<(String, String)>, _: Receiver<String>) {}
 
     fn add_simulator(&mut self, simulator: Arc<Mutex<dyn Simulator>>) {
         self.simulators.push(simulator)
