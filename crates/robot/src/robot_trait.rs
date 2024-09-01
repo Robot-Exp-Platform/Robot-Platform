@@ -1,4 +1,4 @@
-use message::{collision_object::Capsule, CollisionObject, Message, Pose};
+use message::{collision_object::Capsule, CollisionObject, Pose, RobotMessageN};
 use nalgebra as na;
 
 pub trait Robot: Send + Sync {
@@ -13,8 +13,6 @@ pub trait Robot: Send + Sync {
 
     fn reset_state(&mut self);
 }
-
-// pub trait RobotState {}
 
 pub trait SeriesRobot<const N: usize>: Robot {
     fn get_q(&self) -> na::SVector<f64, N>;
@@ -39,4 +37,5 @@ pub trait SeriesRobot<const N: usize>: Robot {
     fn set_q(&mut self, q: na::SVector<f64, N>);
     fn set_q_dot(&mut self, q_dot: na::SVector<f64, N>);
     fn update_dh(&mut self);
+    fn safety_check(&self, msg: &RobotMessageN<N>) -> bool;
 }
