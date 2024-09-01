@@ -11,7 +11,7 @@ use std::io::{BufWriter, Write};
 use std::sync::{Arc, Mutex, RwLock};
 use std::time::Duration;
 
-use crate::planner_trait::{Planner, PlannerN};
+use crate::planner_trait::{CfsTrait, OptimizationBasedPlanner, Planner, PlannerN};
 use crate::utilities;
 use message::problem::QuadraticProgramming;
 use message::{Target, TrackN};
@@ -22,8 +22,6 @@ use robot_macros_derive::*;
 use sensor::Sensor;
 use solver::OsqpSolver;
 use task_manager::{ROSThread, StateCollector};
-
-pub trait CfsTrait {}
 
 pub struct Cfs<R: SeriesRobot<N>, const N: usize> {
     name: String,
@@ -77,6 +75,14 @@ impl<R: SeriesRobot<N>, const N: usize> Cfs<R, N> {
             node: CfsNode::default(),
             robot,
         }
+    }
+}
+
+impl<R: SeriesRobot<N>, const N: usize> CfsTrait for Cfs<R, N> {}
+
+impl<R: SeriesRobot<N>, const N: usize> OptimizationBasedPlanner for Cfs<R, N> {
+    fn supperssion(&mut self) {
+        self.state.solve_suppressor = true;
     }
 }
 
