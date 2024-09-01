@@ -1,11 +1,10 @@
-use message::control_command::ControlCommand;
 use nalgebra as na;
 use nalgebra::Isometry;
 
 use crate::robot_trait::Robot;
 use crate::robot_trait::SeriesRobot;
 use message::collision_object::{get_distance, Capsule};
-use message::{CollisionObject, Message, Pose};
+use message::{CollisionObject, ControlCommandN, Pose, RobotMessageN};
 
 #[allow(dead_code)]
 pub struct RobotNDof<const N: usize, const N_ADD_ONE: usize> {
@@ -59,6 +58,39 @@ impl<const N: usize, const N_ADD_ONE: usize> RobotNDof<N, N_ADD_ONE> {
 
     pub fn new_without_params(name: String, path: String) -> RobotNDof<N, N_ADD_ONE> {
         RobotNDof::new_from_params(name, path, RobotNDofParams::new())
+    }
+
+    fn check_joint(&self, joint: &na::SVector<f64, N>) -> bool {
+        for i in 0..N {
+            if joint[i] < self.params.q_min_bound[i] || joint[i] > self.params.q_max_bound[i] {
+                return false;
+            }
+        }
+        true
+    }
+    fn check_vel(&self, vel: &na::SVector<f64, N>) -> bool {
+        for i in 0..N {
+            if vel[i] > self.params.q_dot_bound[i] {
+                return false;
+            }
+        }
+        true
+    }
+    fn check_acc(&self, acc: &na::SVector<f64, N>) -> bool {
+        for i in 0..N {
+            if acc[i] > self.params.q_ddot_bound[i] {
+                return false;
+            }
+        }
+        true
+    }
+    fn check_tau(&self, tau: &na::SVector<f64, N>) -> bool {
+        for i in 0..N {
+            if tau[i] > self.params.tau_bound[i] {
+                return false;
+            }
+        }
+        true
     }
 }
 
@@ -202,6 +234,82 @@ impl<const N: usize, const N_ADD_ONE: usize> SeriesRobot<N> for RobotNDof<N, N_A
             self.params.denavit_hartenberg[(i, 0)] = self.state.q[i];
         }
     }
+
+    fn safety_check(&self, msg: &RobotMessageN<N>) -> bool {
+        let (time, now_joint, now_vel, now_acc, now_tau) = match msg {
+            RobotMessageN::ControlCommandN(command) => match command {
+                ControlCommandN::Joint(joint) => (
+                    0.0,
+                    joint.clone(),
+                    nalgebra::SVector::zeros(),
+                    nalgebra::SVector::zeros(),
+                    nalgebra::SVector::zeros(),
+                ),
+                ControlCommandN::JointWithPeriod(period, joint) => (
+                    *period,
+                    joint.clone(),
+                    nalgebra::SVector::zeros(),
+                    nalgebra::SVector::zeros(),
+                    nalgebra::SVector::zeros(),
+                ),
+                ControlCommandN::JointVel(joint, vel) => (
+                    0.0,
+                    joint.clone(),
+                    vel.clone(),
+                    nalgebra::SVector::zeros(),
+                    nalgebra::SVector::zeros(),
+                ),
+                ControlCommandN::JointVelWithPeriod(period, joint, vel) => (
+                    *period,
+                    joint.clone(),
+                    vel.clone(),
+                    nalgebra::SVector::zeros(),
+                    nalgebra::SVector::zeros(),
+                ),
+                ControlCommandN::JointVelAcc(joint, vel, acc) => (
+                    0.0,
+                    joint.clone(),
+                    vel.clone(),
+                    acc.clone(),
+                    nalgebra::SVector::zeros(),
+                ),
+                ControlCommandN::JointVelAccWithPeriod(period, joint, vel, acc) => (
+                    *period,
+                    joint.clone(),
+                    vel.clone(),
+                    acc.clone(),
+                    nalgebra::SVector::zeros(),
+                ),
+                ControlCommandN::Tau(tau) => (
+                    0.0,
+                    nalgebra::SVector::zeros(),
+                    nalgebra::SVector::zeros(),
+                    nalgebra::SVector::zeros(),
+                    tau.clone(),
+                ),
+                ControlCommandN::TauWithPeriod(period, tau) => (
+                    *period,
+                    nalgebra::SVector::zeros(),
+                    nalgebra::SVector::zeros(),
+                    nalgebra::SVector::zeros(),
+                    tau.clone(),
+                ),
+            },
+            _ => return false, // 处理非ControlCommandN的情况，直接返回false
+        };
+        let next_vel = now_vel + time * now_acc;
+        let next_joint = now_joint + time * now_vel;
+        if self.check_joint(&now_joint)
+            && self.check_joint(&next_joint)
+            && self.check_vel(&now_vel)
+            && self.check_vel(&next_vel)
+            && self.check_acc(&now_acc)
+            && self.check_tau(&now_tau)
+        {
+            return true;
+        }
+        return false;
+    }
 }
 
 impl<const N: usize, const N_ADD_ONE: usize> Robot for RobotNDof<N, N_ADD_ONE> {
@@ -235,12 +343,5 @@ impl<const N: usize, const N_ADD_ONE: usize> Robot for RobotNDof<N, N_ADD_ONE> {
         self.state.q_dot = na::SVector::from_element(0.0);
         self.state.q_ddot = na::SVector::from_element(0.0);
         self.state.q_jerk = na::SVector::from_element(0.0);
-    }
-
-    fn safety_check<'a>(&self, msg: Message<'a>) -> Result<Message<'a>, ()> {
-        match msg {
-            Message::ControlCommand(ControlCommand::Joint(_)) => Ok(msg),
-            _ => Err(()),
-        }
     }
 }

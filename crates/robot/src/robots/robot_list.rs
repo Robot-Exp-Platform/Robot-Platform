@@ -72,8 +72,4 @@ impl Robot for RobotList {
             .iter_mut()
             .for_each(|robot| robot.write().unwrap().reset_state());
     }
-
-    fn safety_check<'a>(&self, _: Message<'a>) -> Result<Message<'a>, ()> {
-        Err(())
-    }
 }
