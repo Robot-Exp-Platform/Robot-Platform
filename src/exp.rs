@@ -2,7 +2,6 @@ use chrono::Local;
 use crossbeam::queue::SegQueue;
 use serde::Deserialize;
 use serde_json::from_reader;
-use task_manager::post_office;
 // use serde_yaml::from_reader;
 use std::fs;
 use std::path;
@@ -36,7 +35,6 @@ pub struct Exp {
     pub thread_manage: ThreadManage,
     pub task_manage: TaskManager,
     pub state_collector: StateCollector,
-    pub post_office: PostOffice,
 
     pub _robot_tree: Arc<RwLock<dyn robot::Robot>>,
     pub sensor_list: Vec<Arc<RwLock<Sensor>>>,
@@ -92,6 +90,7 @@ impl Exp {
             &state_collector,
             &mut post_office,
         );
+        thread_manage.add_thread(Arc::new(Mutex::new(post_office)));
 
         // 生成传感器目录
         let sensor_list = config
@@ -104,7 +103,6 @@ impl Exp {
             thread_manage,
             task_manage,
             state_collector,
-            post_office,
             _robot_tree: robot_tree,
             sensor_list,
             planner_tree,
