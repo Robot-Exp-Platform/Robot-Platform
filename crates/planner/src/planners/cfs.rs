@@ -58,7 +58,7 @@ pub struct CfsNode<const N: usize> {
 }
 
 impl<R: SeriesRobot<N>, const N: usize> Cfs<R, N> {
-    pub fn new(name: String, path: String, robot: Arc<RwLock<R>>) -> Cfs<R, N> {
+    pub fn new(name: String, path: String, robot: Arc<RwLock<R>>) -> Self {
         Cfs::from_params(name, path, CfsParams::default(), robot)
     }
     pub fn from_params(
@@ -66,7 +66,7 @@ impl<R: SeriesRobot<N>, const N: usize> Cfs<R, N> {
         path: String,
         params: CfsParams,
         robot: Arc<RwLock<R>>,
-    ) -> Cfs<R, N> {
+    ) -> Self {
         Cfs {
             name,
             path,
@@ -94,6 +94,10 @@ impl<R: SeriesRobot<N>, const N: usize> PlannerN<N> for Cfs<R, N> {
 
 impl<R: SeriesRobot<N>, const N: usize> Planner for Cfs<R, N> {
     generate_planner_method!();
+
+    fn as_cfs_planner(&self) -> Option<&dyn CfsTrait> {
+        Some(self)
+    }
 }
 
 impl<R: SeriesRobot<N>, const N: usize> ROSThread for Cfs<R, N> {

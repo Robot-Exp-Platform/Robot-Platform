@@ -160,7 +160,6 @@ impl Exp {
                 robot.write().unwrap().reset_state();
 
                 let target_queue = Arc::new(SegQueue::new());
-                let (tx, rx) = crossbeam::channel::unbounded();
 
                 // 为 planner 配置信道
                 planner
@@ -178,8 +177,15 @@ impl Exp {
                 // 为 controller 配置信道
 
                 // 为 simulator 配置信道
-                simulator.lock().unwrap().set_sender(tx);
-                post_office.add_receiver(rx);
+                let (tx_simlu, rx_post) = crossbeam::channel::unbounded();
+                let (tx_post, rx_simlu) = crossbeam::channel::unbounded();
+
+                simulator
+                    .lock()
+                    .unwrap()
+                    .subscribe_post_office(tx_simlu, rx_simlu);
+                post_office.add_receiver(rx_post);
+                post_office.add_sender(tx_post);
 
                 // 需要给控制器和规划器开辟独立的线程
                 thread_manage.add_thread(planner.clone());

@@ -1,7 +1,7 @@
 use nalgebra as na;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Copy, Deserialize)]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
 pub enum CollisionObject {
     Sphere(Sphere),
     Cylinder(Cylinder),
@@ -10,33 +10,33 @@ pub enum CollisionObject {
     Cone(Cone),
 }
 
-#[derive(Debug, Clone, Copy, Deserialize)]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
 pub struct Sphere {
     pub center: na::Point3<f64>,
     pub radius: f64,
 }
 
-#[derive(Debug, Clone, Copy, Deserialize)]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
 pub struct Cylinder {
     pub start: na::Point3<f64>,
     pub end: na::Point3<f64>,
     pub radius: f64,
 }
 
-#[derive(Debug, Clone, Copy, Default, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, Deserialize, Serialize)]
 pub struct Capsule {
     pub ball_center1: na::Point3<f64>,
     pub ball_center2: na::Point3<f64>,
     pub radius: f64,
 }
 
-#[derive(Debug, Clone, Copy, Deserialize)]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
 pub struct Cuboid {
     pub point1: na::Point3<f64>,
     pub point2: na::Point3<f64>,
 }
 
-#[derive(Debug, Clone, Copy, Deserialize)]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
 pub struct Cone {
     pub bottom_center: na::Point3<f64>,
     pub up_point: na::Point3<f64>,
@@ -255,4 +255,52 @@ fn get_closest_point_on_line_segment(
     let line = end - start;
     let t = (point - start).dot(&line) / line.norm_squared();
     start + line * t.clamp(0.0, 1.0)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn collision_object_to_json() {
+        let sphere = CollisionObject::Sphere(Sphere {
+            center: na::Point3::new(1.0, 2.0, 3.0),
+            radius: 1.0,
+        });
+        let cylinder = CollisionObject::Cylinder(Cylinder {
+            start: na::Point3::new(1.0, 2.0, 3.0),
+            end: na::Point3::new(4.0, 5.0, 6.0),
+            radius: 1.0,
+        });
+        let capsule = CollisionObject::Capsule(Capsule {
+            ball_center1: na::Point3::new(1.0, 2.0, 3.0),
+            ball_center2: na::Point3::new(4.0, 5.0, 6.0),
+            radius: 1.0,
+        });
+        let cuboid = CollisionObject::Cuboid(Cuboid {
+            point1: na::Point3::new(1.0, 2.0, 3.0),
+            point2: na::Point3::new(4.0, 5.0, 6.0),
+        });
+
+        let sphere_json = serde_json::to_string(&sphere).unwrap();
+        let cylinder_json = serde_json::to_string(&cylinder).unwrap();
+        let capsule_json = serde_json::to_string(&capsule).unwrap();
+        let cuboid_json = serde_json::to_string(&cuboid).unwrap();
+
+        assert_eq!(
+            sphere_json,
+            r#"{"Sphere":{"center":[1.0,2.0,3.0],"radius":1.0}}"#
+        );
+        assert_eq!(
+            cylinder_json,
+            r#"{"Cylinder":{"start":[1.0,2.0,3.0],"end":[4.0,5.0,6.0],"radius":1.0}}"#
+        );
+        assert_eq!(
+            capsule_json,
+            r#"{"Capsule":{"ball_center1":[1.0,2.0,3.0],"ball_center2":[4.0,5.0,6.0],"radius":1.0}}"#
+        );
+        assert_eq!(
+            cuboid_json,
+            r#"{"Cuboid":{"point1":[1.0,2.0,3.0],"point2":[4.0,5.0,6.0]}}"#
+        );
+    }
 }

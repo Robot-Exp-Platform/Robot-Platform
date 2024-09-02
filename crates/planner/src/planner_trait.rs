@@ -30,8 +30,11 @@ pub trait Planner: ROSThread {
     fn set_state_collector(&mut self, state_collector: StateCollector);
 
     fn add_planner(&mut self, planner: Arc<Mutex<dyn Planner>>);
-}
 
+    fn as_cfs_planner(&self) -> Option<&dyn CfsTrait> {
+        None
+    }
+}
 pub trait PlannerN<const N: usize>: Planner {
     fn set_track_queue(&mut self, track_queue: Arc<SegQueue<TrackN<N>>>);
 }

@@ -57,7 +57,7 @@ impl ROSThread for PostOffice {
                 // 等待外部消息
                 // 发送处理好的消息队列中的消息,如果没有则发送空消息
 
-                // 处理收到的外部消息,按照 ; 分割,并按序列发给对应的接收器
+                // 处理收到的外部消息,并按序列发给对应的接收器
             }
         }))
     }
@@ -66,15 +66,20 @@ impl ROSThread for PostOffice {
     fn update(&mut self) {
         // 从每个接收器中接受消息并分类处理
         // 收集所有第一个字符串为 bullet 的消息,并将其发给 pybullet 仿真器.
+        let mut bullet_msgs: Vec<String> = Vec::new();
         for receiver in &self.receivers {
-            if let Ok((topic, _msg)) = receiver.try_recv() {
+            if let Ok((topic, msg)) = receiver.try_recv() {
                 match topic.as_str() {
                     "bullet" => {
-                        // 处理相关仿真器内容
+                        bullet_msgs.push(msg);
                     }
                     _ => unimplemented!(),
                 }
             }
+        }
+        let bullet_msgs = serde_json::to_string(&bullet_msgs).unwrap();
+        if !bullet_msgs.is_empty() {
+            self.message_queue.push(bullet_msgs);
         }
     }
 }
