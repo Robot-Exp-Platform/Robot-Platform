@@ -1167,6 +1167,7 @@ dependencies = [
  "crossbeam",
  "message",
  "nalgebra",
+ "osqp",
  "recoder",
  "robot",
  "robot_macros_derive",

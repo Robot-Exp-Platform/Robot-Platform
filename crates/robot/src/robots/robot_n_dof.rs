@@ -171,12 +171,12 @@ impl<const N: usize, const N_ADD_ONE: usize> SeriesRobot<N> for RobotNDof<N, N_A
             .unwrap();
         distance
     }
-    fn get_distance_diff_with_joint(
+    fn get_distance_grad_with_joint(
         &self,
         joint: &nalgebra::SVector<f64, N>,
         bj: &CollisionObject,
     ) -> nalgebra::SVector<f64, N> {
-        let mut distance_diff = na::SVector::from_element(0.0);
+        let mut distance_grad = na::SVector::from_element(0.0);
         let epsilon = 1e-2;
         for i in 0..N {
             let mut joint_plus = *joint;
@@ -185,9 +185,9 @@ impl<const N: usize, const N_ADD_ONE: usize> SeriesRobot<N> for RobotNDof<N, N_A
             joint_minus[i] -= epsilon;
             let distance_plus = self.get_distance_with_joint(&joint_plus, bj);
             let distance_minus = self.get_distance_with_joint(&joint_minus, bj);
-            distance_diff[i] = (distance_plus - distance_minus) / (2.0 * epsilon);
+            distance_grad[i] = (distance_plus - distance_minus) / (2.0 * epsilon);
         }
-        distance_diff
+        distance_grad
     }
 
     fn set_q(&mut self, q: nalgebra::SVector<f64, N>) {
@@ -211,9 +211,14 @@ impl<const N: usize, const N_ADD_ONE: usize> Robot for RobotNDof<N, N_ADD_ONE> {
     fn get_path(&self) -> String {
         self.path.clone()
     }
-
+    fn get_q_with_indptr(&self) -> (Vec<usize>, Vec<f64>) {
+        (vec![0, N], self.state.q.as_slice().to_vec())
+    }
     fn get_end_effector_pose(&self) -> Vec<Pose> {
         vec![self.state.base_pose]
+    }
+    fn get_end_effector_pose_with_q(&self, _: &na::DVector<f64>) {
+        unimplemented!()
     }
     fn get_joint_capsules(&self) -> Vec<message::collision_object::Capsule> {
         self.get_joint_capsules_with_joint(&self.state.q)
@@ -221,6 +226,18 @@ impl<const N: usize, const N_ADD_ONE: usize> Robot for RobotNDof<N, N_ADD_ONE> {
 
     fn get_distance_to_collision(&self, obj: &CollisionObject) -> f64 {
         self.get_distance_with_joint(&self.state.q, obj)
+    }
+
+    fn get_distance_with_slice(&self, q: &[f64], obj: &CollisionObject) -> f64 {
+        let q = na::SVector::from_vec(q.to_vec());
+        self.get_distance_with_joint(&q, obj)
+    }
+
+    fn get_distance_grad_with_slice(&self, q: &[f64], obj: &CollisionObject) -> Vec<f64> {
+        let q = na::SVector::from_vec(q.to_vec());
+        self.get_distance_grad_with_joint(&q, obj)
+            .as_slice()
+            .to_vec()
     }
 
     fn set_name(&mut self, name: String) {

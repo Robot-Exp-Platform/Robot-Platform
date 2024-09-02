@@ -2,7 +2,7 @@ use nalgebra as na;
 use osqp::CscMatrix;
 use std::borrow::Cow;
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub enum Constraint {
     #[default]
     NoConstraint, // 无约束
