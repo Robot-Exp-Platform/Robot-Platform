@@ -1,14 +1,15 @@
+use crossbeam::queue::SegQueue;
+use message::problem::QuadraticProgramming;
+use message::{Constraint, Pose, Target};
+use robot::Robot;
+use serde::Deserialize;
 use serde_json::Value;
+use solver::{OsqpSolver, Solver};
 // use serde_yaml::Value;
-use std::{
-    any::Any,
-    sync::{Arc, Mutex, RwLock},
-};
+use std::sync::{Arc, Mutex, RwLock};
+use std::time::Duration;
 
-use crate::{
-    planner_trait::{CfsTrait, OptimizationBasedPlanner},
-    Cfs, Planner, PlannerState,
-};
+use crate::{utilities, Planner, PlannerState};
 use sensor::Sensor;
 use task_manager::ROSThread;
 
@@ -16,14 +17,68 @@ pub struct CfsBranch {
     name: String,
     path: String,
 
+    state: CfsBranchState,
+    params: CfsBranchParams,
+
+    node: CfsBranchNode,
+
     planners: Vec<Arc<Mutex<dyn Planner>>>,
-    cfsplanners: Vec<Arc<Mutex<dyn CfsTrait>>>,
+    robot: Arc<RwLock<dyn Robot>>,
 }
 
-impl CfsTrait for CfsBranch {}
+#[derive(Default)]
+pub struct CfsBranchState {
+    target: Option<Target>,
+}
 
-impl OptimizationBasedPlanner for CfsBranch {
-    fn supperssion(&mut self) {}
+#[derive(Deserialize, Default)]
+pub struct CfsBranchParams {
+    period: f64,
+    interpolation: usize,
+    niter: usize,
+    cost_weight: Vec<f64>,
+    solver: String,
+}
+
+#[derive(Default)]
+pub struct CfsBranchNode {
+    sensor: Option<Arc<RwLock<Sensor>>>,
+    target_queue: Arc<SegQueue<Target>>,
+    child_target_queue: Vec<Arc<SegQueue<Target>>>,
+    state_collector: task_manager::StateCollector,
+}
+
+impl CfsBranch {
+    pub fn new(name: String, path: String, robot: Arc<RwLock<dyn Robot>>) -> Self {
+        Self::from_planners(name, path, robot, vec![])
+    }
+    pub fn from_planners(
+        name: String,
+        path: String,
+        robot: Arc<RwLock<dyn Robot>>,
+        planners: Vec<Arc<Mutex<dyn Planner>>>,
+    ) -> Self {
+        CfsBranch {
+            name,
+            path,
+            state: CfsBranchState::default(),
+            params: CfsBranchParams::default(),
+            node: CfsBranchNode::default(),
+            planners,
+            robot,
+        }
+    }
+
+    // 以下是本节点可能会用到的函数
+    pub fn get_end_space_constraint(
+        &self,
+        _robot1: &(String, Pose),
+        _robot2: &(String, Pose),
+    ) -> Constraint {
+        let constraint = Constraint::Intersection(0, 0, vec![]);
+        // TODO 根据梯度法生成两个机械臂受末端空间的约束
+        constraint
+    }
 }
 
 impl Planner for CfsBranch {
@@ -43,7 +98,7 @@ impl Planner for CfsBranch {
     fn set_params(&mut self, _: Value) {}
     fn set_sensor(&mut self, _: Arc<RwLock<Sensor>>) {}
     fn set_state_collector(&mut self, _: task_manager::StateCollector) {}
-    fn set_target_queue(&mut self, _: Arc<crossbeam::queue::SegQueue<message::Target>>) {}
+    fn set_target_queue(&mut self, _: Arc<SegQueue<Target>>) {}
 
     fn add_planner(&mut self, planner: Arc<Mutex<dyn Planner>>) {
         self.planners.push(planner);
@@ -52,14 +107,114 @@ impl Planner for CfsBranch {
 }
 
 impl ROSThread for CfsBranch {
-    fn init(&mut self) {}
-    fn start(&mut self) {}
+    fn init(&mut self) {
+        println!("{} 向您问好. {} says hello.", self.name, self.name);
+    }
+    fn start(&mut self) {
+        // 进入启动状态，并通知所有线程
+        let (state, cvar) = &*self.node.state_collector;
+        state.lock().unwrap().start();
+        cvar.notify_all();
+
+        // 进入循环状态，并通知所有线程
+        state.lock().unwrap().update();
+        cvar.notify_all();
+    }
     fn update(&mut self) {
-        // 获取target target，发给枝节点的target一般都是任务约束相关的目标，当存在枝节点目标时，需要由枝节点拆分目标给子……需要吗？
-        // 获取机器人状态
-        // 获取约束
-        // 整理约束
-        // 提交约束或求解
-        // 将求解结果发布到子规划器
+        // 检查上次任务是否完成, 若完成则获取新的 target
+        let target = self
+            .state
+            .target
+            .clone()
+            .unwrap_or(self.node.target_queue.pop().unwrap());
+        self.state.target = Some(target.clone());
+        let (target_pose, relative_planner) = match target {
+            // 根据不同的 target 类型，执行不同的任务，也可以将不同的 Target 类型处理为相同的类型
+            Target::EndSpace(target_pose, relative_planner) => (target_pose, relative_planner),
+            _ => unimplemented!("unsupported target type"),
+        };
+
+        // 获取 robot 状态
+        let (indptr, q) = self.robot.read().unwrap().get_q_with_indptr();
+
+        // TODO 检查任务完成状态,如果已经完成,则将target更新为无
+
+        // ! 第一次求解,意在求出参考路径,
+
+        // 临时变量初始化
+        let ndof = indptr[indptr.len() - 1];
+        let dim = ndof * (self.params.interpolation + 1);
+
+        // 构建第一次求解,建立参考路径.
+        let mut constraint_task =
+            Constraint::CartesianProduct(1, ndof, vec![Constraint::Equared(q)]);
+
+        // 根据任务生成等式约束,并重复  次
+        let mut constraint_once = Constraint::CartesianProduct(1, 0, vec![]);
+        for i in 1..relative_planner.len() {
+            constraint_once
+                .push(self.get_end_space_constraint(&relative_planner[0], &relative_planner[i]));
+        }
+        for _ in 0..self.params.interpolation {
+            constraint_task.push(constraint_once.clone());
+        }
+
+        // 生成目标函数
+        let h = utilities::get_optimize_function(dim, ndof, self.params.cost_weight.clone());
+
+        let f = vec![0.0; dim * (self.params.interpolation + 1)];
+
+        // 第一次求解,获得满足任务约束的参考路径
+        let problem = QuadraticProgramming {
+            h: &h,
+            f: &f,
+            constraints: constraint_task,
+        };
+        let mut solver = match self.params.solver.as_str() {
+            "osqp" => OsqpSolver::from_problem(problem),
+            _ => unimplemented!(),
+        };
+
+        let mut solver_result = solver.solve();
+
+        // TODO 检验参考轨迹是否安全可靠,取不可靠段做重规划
+        // TODO 理论上最新轨迹应该为被重新规划的段落
+        let mut last_result = solver_result.clone();
+
+        // 已获得初始轨迹,新增避障约束和关节约束后,进行迭代求解
+
+        for _ in 0..self.params.niter {
+            // 提前分配空间
+            let constraints = Constraint::CartesianProduct(
+                0,
+                0,
+                Vec::with_capacity(self.params.interpolation + 1),
+            );
+
+            // TODO 建立约束,包括起点终点约束、障碍物约束、关节边界约束、任务约束
+
+            // 求解优化问题
+            solver.update_constraints(constraints);
+            solver_result = solver.solve();
+
+            // 检查是否收敛,更新参考轨迹
+            if !last_result.is_empty() {
+                let diff: f64 = solver_result
+                    .iter()
+                    .zip(last_result.iter())
+                    .map(|(a, b)| (a - b).abs())
+                    .sum();
+                println!("diff: {}", diff);
+                if diff.abs() < 1e-1 {
+                    break;
+                }
+            }
+            last_result = solver_result.clone();
+        }
+
+        // TODOm 根据indptr 为每个robot 实现 track,单实际上通过 child_target_queue 传递给子节点
+    }
+    fn get_period(&self) -> Duration {
+        Duration::from_secs_f64(self.params.period)
     }
 }

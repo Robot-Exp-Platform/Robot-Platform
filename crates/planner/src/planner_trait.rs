@@ -31,13 +31,6 @@ pub trait Planner: ROSThread {
 
     fn add_planner(&mut self, planner: Arc<Mutex<dyn Planner>>);
 }
-
 pub trait PlannerN<const N: usize>: Planner {
     fn set_track_queue(&mut self, track_queue: Arc<SegQueue<TrackN<N>>>);
 }
-
-pub trait OptimizationBasedPlanner: Planner {
-    fn supperssion(&mut self);
-}
-
-pub trait CfsTrait: OptimizationBasedPlanner {}
