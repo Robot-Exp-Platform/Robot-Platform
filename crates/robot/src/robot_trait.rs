@@ -11,6 +11,7 @@ pub trait Robot: Send + Sync {
     fn get_distance_to_collision(&self, obj: &CollisionObject) -> f64;
     fn get_distance_with_slice(&self, q: &[f64], obj: &CollisionObject) -> f64;
     fn get_distance_grad_with_slice(&self, q: &[f64], obj: &CollisionObject) -> Vec<f64>;
+    fn get_robot_indices(&self, robot_names: Vec<String>) -> Vec<usize>;
 
     fn set_name(&mut self, name: String);
     fn set_path(&mut self, path: String);
@@ -46,3 +47,5 @@ pub trait SeriesRobot<const N: usize>: Robot {
     fn set_q_dot(&mut self, q_dot: na::SVector<f64, N>);
     fn update_dh(&mut self);
 }
+
+pub trait BranchRobot: Robot {}

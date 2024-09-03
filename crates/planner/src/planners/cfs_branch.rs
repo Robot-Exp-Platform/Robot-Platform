@@ -128,9 +128,12 @@ impl ROSThread for CfsBranch {
             .clone()
             .unwrap_or(self.node.target_queue.pop().unwrap());
         self.state.target = Some(target.clone());
-        let (target_pose, relative_planner) = match target {
+        let (target_pose, indices, end_space_trans) = match target {
             // 根据不同的 target 类型，执行不同的任务，也可以将不同的 Target 类型处理为相同的类型
-            Target::EndSpace(target_pose, relative_planner) => (target_pose, relative_planner),
+            Target::EndSpace(target_pose, robot_names, end_space_trans) => {
+                let indices = self.robot.read().unwrap().get_robot_indices(robot_names);
+                (target_pose, indices, end_space_trans)
+            }
             _ => unimplemented!("unsupported target type"),
         };
 
@@ -142,7 +145,7 @@ impl ROSThread for CfsBranch {
         // ! 第一次求解,意在求出参考路径,
 
         // 临时变量初始化
-        let ndof = indptr[indptr.len() - 1];
+        let ndof = indices.len();
         let dim = ndof * (self.params.interpolation + 1);
 
         // 构建第一次求解,建立参考路径.

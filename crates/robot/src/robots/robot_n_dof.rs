@@ -239,6 +239,13 @@ impl<const N: usize, const N_ADD_ONE: usize> Robot for RobotNDof<N, N_ADD_ONE> {
             .as_slice()
             .to_vec()
     }
+    fn get_robot_indices(&self, robot_names: Vec<String>) -> Vec<usize> {
+        if self.name == robot_names[0] {
+            vec![0]
+        } else {
+            vec![]
+        }
+    }
 
     fn set_name(&mut self, name: String) {
         self.name = name

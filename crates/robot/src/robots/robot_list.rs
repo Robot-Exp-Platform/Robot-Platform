@@ -1,6 +1,6 @@
 use std::sync::{Arc, RwLock};
 
-use crate::robot_trait::Robot;
+use crate::robot_trait::{BranchRobot, Robot};
 use message::{CollisionObject, Message, Pose};
 
 pub struct RobotList {
@@ -33,6 +33,8 @@ impl RobotList {
         self.robots.push(robot)
     }
 }
+
+impl BranchRobot for RobotList {}
 
 impl Robot for RobotList {
     fn get_name(&self) -> String {
@@ -84,6 +86,17 @@ impl Robot for RobotList {
 
     fn get_distance_to_collision(&self, _: &CollisionObject) -> f64 {
         unimplemented!()
+    }
+    fn get_robot_indices(&self, robot_names: Vec<String>) -> Vec<usize> {
+        robot_names
+            .into_iter()
+            .map(|name| {
+                self.robots
+                    .iter()
+                    .position(|robot| robot.read().unwrap().get_name() == name)
+                    .unwrap()
+            })
+            .collect()
     }
 
     fn reset_state(&mut self) {
