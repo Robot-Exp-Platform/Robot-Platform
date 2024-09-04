@@ -11,3 +11,4 @@ pub use robots::{
     robot_list::RobotList,
     robot_n_dof::RobotNDof,
 };
+pub use utilities::*;

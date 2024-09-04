@@ -1,11 +1,12 @@
 use crossbeam::queue::SegQueue;
 use message::problem::QuadraticProgramming;
-use message::{Constraint, Pose, Target};
-use robot::Robot;
+use message::{Constraint, Target};
+use robot::robot_trait::BranchRobot;
 use serde::Deserialize;
 use serde_json::Value;
 use solver::{OsqpSolver, Solver};
 // use serde_yaml::Value;
+use nalgebra as na;
 use std::sync::{Arc, Mutex, RwLock};
 use std::time::Duration;
 
@@ -23,7 +24,7 @@ pub struct CfsBranch {
     node: CfsBranchNode,
 
     planners: Vec<Arc<Mutex<dyn Planner>>>,
-    robot: Arc<RwLock<dyn Robot>>,
+    robot: Arc<RwLock<dyn BranchRobot>>,
 }
 
 #[derive(Default)]
@@ -49,13 +50,13 @@ pub struct CfsBranchNode {
 }
 
 impl CfsBranch {
-    pub fn new(name: String, path: String, robot: Arc<RwLock<dyn Robot>>) -> Self {
+    pub fn new(name: String, path: String, robot: Arc<RwLock<dyn BranchRobot>>) -> Self {
         Self::from_planners(name, path, robot, vec![])
     }
     pub fn from_planners(
         name: String,
         path: String,
-        robot: Arc<RwLock<dyn Robot>>,
+        robot: Arc<RwLock<dyn BranchRobot>>,
         planners: Vec<Arc<Mutex<dyn Planner>>>,
     ) -> Self {
         CfsBranch {
@@ -67,17 +68,6 @@ impl CfsBranch {
             planners,
             robot,
         }
-    }
-
-    // 以下是本节点可能会用到的函数
-    pub fn get_end_space_constraint(
-        &self,
-        _robot1: &(String, Pose),
-        _robot2: &(String, Pose),
-    ) -> Constraint {
-        let constraint = Constraint::Intersection(0, 0, vec![]);
-        // TODO 根据梯度法生成两个机械臂受末端空间的约束
-        constraint
     }
 }
 
@@ -128,33 +118,41 @@ impl ROSThread for CfsBranch {
             .clone()
             .unwrap_or(self.node.target_queue.pop().unwrap());
         self.state.target = Some(target.clone());
-        let (target_pose, relative_planner) = match target {
+        let (target_pose, indices, end_space_trans) = match target {
             // 根据不同的 target 类型，执行不同的任务，也可以将不同的 Target 类型处理为相同的类型
-            Target::EndSpace(target_pose, relative_planner) => (target_pose, relative_planner),
+            Target::EndSpace(target_pose, robot_names, end_space_trans) => {
+                let indices = self.robot.read().unwrap().get_robot_indices(robot_names);
+                (target_pose, indices, end_space_trans)
+            }
             _ => unimplemented!("unsupported target type"),
         };
 
         // 获取 robot 状态
-        let (indptr, q) = self.robot.read().unwrap().get_q_with_indptr();
+        let q = self.robot.read().unwrap().get_q();
 
         // TODO 检查任务完成状态,如果已经完成,则将target更新为无
 
-        // ! 第一次求解,意在求出参考路径,
+        // ! 第一次求解,意在求出参考路径,第一次求解所得的参考路径并不可靠,需要后续迭代求解
 
         // 临时变量初始化
-        let ndof = indptr[indptr.len() - 1];
+        let ndof = indices.len();
         let dim = ndof * (self.params.interpolation + 1);
 
         // 构建第一次求解,建立参考路径.
-        let mut constraint_task =
-            Constraint::CartesianProduct(1, ndof, vec![Constraint::Equared(q)]);
+        let mut constraint_task = Constraint::CartesianProduct(1, ndof, vec![]);
 
         // 根据任务生成等式约束,并重复  次
         let mut constraint_once = Constraint::CartesianProduct(1, 0, vec![]);
-        for i in 1..relative_planner.len() {
-            constraint_once
-                .push(self.get_end_space_constraint(&relative_planner[0], &relative_planner[i]));
-        }
+        // 生成每个机械臂的末端空间约束，
+        // for i in 1..indices.len() {
+        //     let diff = self.robot.read().unwrap().get_end_trans_difference_with_q(
+        //         (indices[0], indices[i]),
+        //         na::DVector::<f64>::zeros(7),
+        //         na::DVector::<f64>::zeros(7),
+        //         trans1,
+        //         trans2,
+        //     );
+        // }
         for _ in 0..self.params.interpolation {
             constraint_task.push(constraint_once.clone());
         }
