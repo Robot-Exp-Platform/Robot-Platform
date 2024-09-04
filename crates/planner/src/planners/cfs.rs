@@ -11,7 +11,7 @@ use std::io::{BufWriter, Write};
 use std::sync::{Arc, Mutex, RwLock};
 use std::time::Duration;
 
-use crate::planner_trait::{CfsTrait, OptimizationBasedPlanner, Planner, PlannerN};
+use crate::planner_trait::{Planner, PlannerN};
 use crate::utilities;
 use message::problem::QuadraticProgramming;
 use message::{Target, TrackN};
@@ -36,7 +36,7 @@ pub struct Cfs<R: SeriesRobot<N>, const N: usize> {
 
 #[derive(Default)]
 pub struct CfsState {
-    solve_suppressor: bool,
+    target: Option<Target>,
 }
 
 #[derive(Deserialize, Default)]
@@ -78,14 +78,6 @@ impl<R: SeriesRobot<N>, const N: usize> Cfs<R, N> {
     }
 }
 
-impl<R: SeriesRobot<N>, const N: usize> CfsTrait for Cfs<R, N> {}
-
-impl<R: SeriesRobot<N>, const N: usize> OptimizationBasedPlanner for Cfs<R, N> {
-    fn supperssion(&mut self) {
-        self.state.solve_suppressor = true;
-    }
-}
-
 impl<R: SeriesRobot<N>, const N: usize> PlannerN<N> for Cfs<R, N> {
     fn set_track_queue(&mut self, track_queue: Arc<SegQueue<TrackN<N>>>) {
         self.node.track_queue = track_queue;
@@ -94,10 +86,6 @@ impl<R: SeriesRobot<N>, const N: usize> PlannerN<N> for Cfs<R, N> {
 
 impl<R: SeriesRobot<N>, const N: usize> Planner for Cfs<R, N> {
     generate_planner_method!();
-
-    fn as_cfs_planner(&self) -> Option<&dyn CfsTrait> {
-        Some(self)
-    }
 }
 
 impl<R: SeriesRobot<N>, const N: usize> ROSThread for Cfs<R, N> {
@@ -139,18 +127,18 @@ impl<R: SeriesRobot<N>, const N: usize> ROSThread for Cfs<R, N> {
     }
 
     fn update(&mut self) {
-        // 更新 target
-        let target = match self.node.target_queue.pop() {
-            // 根据不同的 target 类型，执行不同的任务，也可以将不同的 Target 类型处理为相同的类型
-            Some(Target::Joint(joint)) => joint,
-            None => {
-                // 任务已经全部完成，进入结束状态，并通知所有线程
-                let (state, cvar) = &*self.node.state_collector;
-                state.lock().unwrap().finish();
-                cvar.notify_all();
+        // TODO 检查target是否抵达
 
-                return;
-            }
+        // 检查上次任务是否完成, 若完成则获取新的 target
+        // TODO 任务完成的判断条件
+        let target = self
+            .state
+            .target
+            .clone()
+            .unwrap_or(self.node.target_queue.pop().unwrap());
+        let target = match target {
+            // 根据不同的 target 类型，执行不同的任务，也可以将不同的 Target 类型处理为相同的类型
+            Target::Joint(joint) => joint,
             _ => unimplemented!("CFS planner does not support target of type."),
         };
         let target = na::SVector::from_vec(target);
@@ -173,6 +161,8 @@ impl<R: SeriesRobot<N>, const N: usize> ROSThread for Cfs<R, N> {
             .unwrap()
             .get_collision();
         let mut solver_result = Vec::new();
+        // TODO 检验参考轨迹是否安全可靠,取不可靠段做重规划
+        // TODO 理论上最新轨迹应该为被重新规划的段落
         let mut last_result = Vec::new();
 
         // 初始化二次规划的目标函数矩阵
@@ -180,39 +170,22 @@ impl<R: SeriesRobot<N>, const N: usize> ROSThread for Cfs<R, N> {
 
         let dim = (self.params.interpolation + 1) * N;
 
-        let q1 = na::DMatrix::<f64>::identity(dim, dim);
-
-        let mut v_diff = na::DMatrix::<f64>::identity(dim - N, dim);
-        for i in 0..dim - N {
-            v_diff[(i, i + N)] = -1.0;
-        }
-        let q2 = v_diff.transpose() * v_diff;
-
-        let mut a_diff = na::DMatrix::<f64>::identity(dim - 2 * N, dim);
-        for i in 0..dim - 2 * N {
-            a_diff[(i, i + N)] = -2.0;
-            a_diff[(i, i + 2 * N)] = 1.0;
-        }
-        let q3 = a_diff.transpose() * a_diff;
-
-        let h = q1 * self.params.cost_weight[0]
-            + q2 * self.params.cost_weight[1]
-            + q3 * self.params.cost_weight[2];
+        let h = utilities::get_optimize_function(dim, N, self.params.cost_weight.clone());
 
         let f = na::DVector::<f64>::zeros(dim);
 
-        // 线性插值时，f为0
+        // f 应该是什么呢？
 
         for _ in 0..self.params.niter {
             // 提前分配空间
-            let mut combined_constraint = Constraint::CartesianProduct(
+            let mut constraints = Constraint::CartesianProduct(
                 0,
                 0,
                 Vec::with_capacity(self.params.interpolation + 1),
             );
 
             // 生成约束 包括三部分，起点终点约束、障碍物约束、关节边界约束
-            combined_constraint.push(Constraint::Equared(q.as_slice().to_vec()));
+            constraints.push(Constraint::Equared(q.as_slice().to_vec()));
 
             for q_ref in q_ref_list.iter() {
                 let mut obstacle_constraint =
@@ -221,37 +194,37 @@ impl<R: SeriesRobot<N>, const N: usize> ROSThread for Cfs<R, N> {
                 for (distance, gradient) in collision_objects.iter().map(|collision| {
                     (
                         robot_read.get_distance_with_joint(q_ref, collision),
-                        robot_read.get_distance_diff_with_joint(q_ref, collision),
+                        robot_read.get_distance_grad_with_joint(q_ref, collision),
                     )
                 }) {
                     obstacle_constraint.push(Constraint::Intersection(
-                        1 + N,
+                        1,
                         N,
-                        vec![
-                            Constraint::Halfspace(
-                                (-gradient).as_slice().to_vec(),
-                                distance - (gradient.transpose() * q_ref)[(0, 0)],
-                            ),
-                            Constraint::Rectangle(q_min_bound.clone(), q_max_bound.clone()),
-                        ],
+                        vec![Constraint::Halfspace(
+                            (-gradient).as_slice().to_vec(),
+                            distance - (gradient.transpose() * q_ref)[(0, 0)],
+                        )],
                     ));
                 }
-
-                combined_constraint.push(obstacle_constraint);
+                obstacle_constraint.push(Constraint::Rectangle(
+                    q_min_bound.clone(),
+                    q_max_bound.clone(),
+                ));
+                constraints.push(obstacle_constraint);
             }
 
-            combined_constraint.push(Constraint::Equared(target.as_slice().to_vec()));
+            constraints.push(Constraint::Equared(target.as_slice().to_vec()));
 
             let problem = QuadraticProgramming {
                 h: &h,
-                f: &f,
-                constraints: combined_constraint,
+                f: f.as_slice(),
+                constraints: constraints,
             };
 
             // 获得优化方程及其梯度
             // 求解优化问题
             solver_result = match self.params.solver.as_str() {
-                "osqp" if !self.state.solve_suppressor => {
+                "osqp" => {
                     let mut osqp_solver = OsqpSolver::from_problem(problem);
                     osqp_solver.solve()
                 }
