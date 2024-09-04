@@ -37,6 +37,9 @@ impl RobotList {
 }
 
 impl BranchRobot for RobotList {
+    fn get_q(&self) -> Vec<nalgebra::DVector<f64>> {
+        unimplemented!()
+    }
     fn get_end_trans_difference_with_q(
         &self,
         indices: (usize, usize),

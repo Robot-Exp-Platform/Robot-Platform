@@ -50,6 +50,7 @@ pub trait SeriesRobot<const N: usize>: Robot {
 }
 
 pub trait BranchRobot: Robot {
+    fn get_q(&self) -> Vec<na::DVector<f64>>;
     fn get_end_trans_difference_with_q(
         &self,
         indices: (usize, usize),
