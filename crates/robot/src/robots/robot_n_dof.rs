@@ -177,7 +177,7 @@ impl<const N: usize, const N_ADD_ONE: usize> SeriesRobot<N> for RobotNDof<N, N_A
         bj: &CollisionObject,
     ) -> nalgebra::SVector<f64, N> {
         let mut distance_grad = na::SVector::from_element(0.0);
-        let epsilon = 1e-2;
+        let epsilon = 1e-3;
         for i in 0..N {
             let mut joint_plus = *joint;
             joint_plus[i] += epsilon;
@@ -205,6 +205,9 @@ impl<const N: usize, const N_ADD_ONE: usize> SeriesRobot<N> for RobotNDof<N, N_A
 }
 
 impl<const N: usize, const N_ADD_ONE: usize> Robot for RobotNDof<N, N_ADD_ONE> {
+    fn get_ndof(&self) -> usize {
+        N
+    }
     fn get_name(&self) -> String {
         self.name.clone()
     }
@@ -217,7 +220,7 @@ impl<const N: usize, const N_ADD_ONE: usize> Robot for RobotNDof<N, N_ADD_ONE> {
     fn get_end_effector_pose(&self) -> Vec<Pose> {
         vec![self.state.base_pose]
     }
-    fn get_end_effector_pose_with_q(&self, _: &na::DVector<f64>) {
+    fn get_end_effector_pose_with_q(&self, _: &na::DVector<f64>) -> Pose {
         unimplemented!()
     }
     fn get_joint_capsules(&self) -> Vec<message::collision_object::Capsule> {

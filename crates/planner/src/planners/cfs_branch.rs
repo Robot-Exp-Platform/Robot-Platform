@@ -68,17 +68,6 @@ impl CfsBranch {
             robot,
         }
     }
-
-    // 以下是本节点可能会用到的函数
-    pub fn get_end_space_constraint(
-        &self,
-        _robot1: &(String, Pose),
-        _robot2: &(String, Pose),
-    ) -> Constraint {
-        let constraint = Constraint::Intersection(0, 0, vec![]);
-        // TODO 根据梯度法生成两个机械臂受末端空间的约束
-        constraint
-    }
 }
 
 impl Planner for CfsBranch {
@@ -154,7 +143,7 @@ impl ROSThread for CfsBranch {
 
         // 根据任务生成等式约束,并重复  次
         let mut constraint_once = Constraint::CartesianProduct(1, 0, vec![]);
-        for i in 1..relative_planner.len() {
+        for i in 1..indices.len() {
             constraint_once
                 .push(self.get_end_space_constraint(&relative_planner[0], &relative_planner[i]));
         }
