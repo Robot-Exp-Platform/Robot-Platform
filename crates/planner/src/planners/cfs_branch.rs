@@ -68,17 +68,6 @@ impl CfsBranch {
             robot,
         }
     }
-
-    // 以下是本节点可能会用到的函数
-    pub fn get_end_space_constraint(
-        &self,
-        _robot1: &(String, Pose),
-        _robot2: &(String, Pose),
-    ) -> Constraint {
-        let constraint = Constraint::Intersection(0, 0, vec![]);
-        // TODO 根据梯度法生成两个机械臂受末端空间的约束
-        constraint
-    }
 }
 
 impl Planner for CfsBranch {
@@ -128,9 +117,12 @@ impl ROSThread for CfsBranch {
             .clone()
             .unwrap_or(self.node.target_queue.pop().unwrap());
         self.state.target = Some(target.clone());
-        let (target_pose, relative_planner) = match target {
+        let (target_pose, indices, end_space_trans) = match target {
             // 根据不同的 target 类型，执行不同的任务，也可以将不同的 Target 类型处理为相同的类型
-            Target::EndSpace(target_pose, relative_planner) => (target_pose, relative_planner),
+            Target::EndSpace(target_pose, robot_names, end_space_trans) => {
+                let indices = self.robot.read().unwrap().get_robot_indices(robot_names);
+                (target_pose, indices, end_space_trans)
+            }
             _ => unimplemented!("unsupported target type"),
         };
 
@@ -142,7 +134,7 @@ impl ROSThread for CfsBranch {
         // ! 第一次求解,意在求出参考路径,
 
         // 临时变量初始化
-        let ndof = indptr[indptr.len() - 1];
+        let ndof = indices.len();
         let dim = ndof * (self.params.interpolation + 1);
 
         // 构建第一次求解,建立参考路径.
@@ -151,7 +143,7 @@ impl ROSThread for CfsBranch {
 
         // 根据任务生成等式约束,并重复  次
         let mut constraint_once = Constraint::CartesianProduct(1, 0, vec![]);
-        for i in 1..relative_planner.len() {
+        for i in 1..indices.len() {
             constraint_once
                 .push(self.get_end_space_constraint(&relative_planner[0], &relative_planner[i]));
         }

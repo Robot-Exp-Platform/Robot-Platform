@@ -7,5 +7,5 @@ use crate::state::Pose;
 pub enum Target {
     Pose(Pose),
     Joint(Vec<f64>),
-    EndSpace(Pose, Vec<(String, Isometry3<f64>)>),
+    EndSpace(Pose, Vec<String>, Vec<Isometry3<f64>>),
 }
