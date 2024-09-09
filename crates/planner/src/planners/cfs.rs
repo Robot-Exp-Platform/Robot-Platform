@@ -218,7 +218,7 @@ impl<R: SeriesRobot<N>, const N: usize> ROSThread for Cfs<R, N> {
             let problem = QuadraticProgramming {
                 h: &h,
                 f: f.as_slice(),
-                constraints: constraints,
+                constraints,
             };
 
             // 获得优化方程及其梯度

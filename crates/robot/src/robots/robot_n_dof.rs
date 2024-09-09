@@ -240,59 +240,51 @@ impl<const N: usize, const N_ADD_ONE: usize> SeriesRobot<N> for RobotNDof<N, N_A
             RobotMessageN::ControlCommandN(command) => match command {
                 ControlCommandN::Joint(joint) => (
                     0.0,
-                    joint.clone(),
+                    *joint,
                     nalgebra::SVector::zeros(),
                     nalgebra::SVector::zeros(),
                     nalgebra::SVector::zeros(),
                 ),
                 ControlCommandN::JointWithPeriod(period, joint) => (
                     *period,
-                    joint.clone(),
+                    *joint,
                     nalgebra::SVector::zeros(),
                     nalgebra::SVector::zeros(),
                     nalgebra::SVector::zeros(),
                 ),
                 ControlCommandN::JointVel(joint, vel) => (
                     0.0,
-                    joint.clone(),
-                    vel.clone(),
+                    *joint,
+                    *vel,
                     nalgebra::SVector::zeros(),
                     nalgebra::SVector::zeros(),
                 ),
                 ControlCommandN::JointVelWithPeriod(period, joint, vel) => (
                     *period,
-                    joint.clone(),
-                    vel.clone(),
+                    *joint,
+                    *vel,
                     nalgebra::SVector::zeros(),
                     nalgebra::SVector::zeros(),
                 ),
-                ControlCommandN::JointVelAcc(joint, vel, acc) => (
-                    0.0,
-                    joint.clone(),
-                    vel.clone(),
-                    acc.clone(),
-                    nalgebra::SVector::zeros(),
-                ),
-                ControlCommandN::JointVelAccWithPeriod(period, joint, vel, acc) => (
-                    *period,
-                    joint.clone(),
-                    vel.clone(),
-                    acc.clone(),
-                    nalgebra::SVector::zeros(),
-                ),
+                ControlCommandN::JointVelAcc(joint, vel, acc) => {
+                    (0.0, *joint, *vel, *acc, nalgebra::SVector::zeros())
+                }
+                ControlCommandN::JointVelAccWithPeriod(period, joint, vel, acc) => {
+                    (*period, *joint, *vel, *acc, nalgebra::SVector::zeros())
+                }
                 ControlCommandN::Tau(tau) => (
                     0.0,
                     nalgebra::SVector::zeros(),
                     nalgebra::SVector::zeros(),
                     nalgebra::SVector::zeros(),
-                    tau.clone(),
+                    *tau,
                 ),
                 ControlCommandN::TauWithPeriod(period, tau) => (
                     *period,
                     nalgebra::SVector::zeros(),
                     nalgebra::SVector::zeros(),
                     nalgebra::SVector::zeros(),
-                    tau.clone(),
+                    *tau,
                 ),
             },
             _ => return false, // 处理非ControlCommandN的情况，直接返回false
@@ -308,7 +300,7 @@ impl<const N: usize, const N_ADD_ONE: usize> SeriesRobot<N> for RobotNDof<N, N_A
         {
             return true;
         }
-        return false;
+        false
     }
 }
 

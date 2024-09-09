@@ -3,7 +3,7 @@ use std::sync::{Arc, RwLock};
 
 use crate::pose_to_svecter;
 use crate::robot_trait::{BranchRobot, Robot};
-use message::{CollisionObject, Message, Pose};
+use message::{CollisionObject, Pose};
 
 pub struct RobotList {
     name: String,
@@ -51,11 +51,11 @@ impl BranchRobot for RobotList {
         let pose1 = self.robots[indices.0]
             .read()
             .unwrap()
-            .get_end_effector_pose_with_q(&joint1);
+            .get_end_effector_pose_with_q(joint1);
         let pose2 = self.robots[indices.1]
             .read()
             .unwrap()
-            .get_end_effector_pose_with_q(&joint2);
+            .get_end_effector_pose_with_q(joint2);
         pose_to_svecter(&pose1.inv_mul(&trans1.inv_mul(&(pose2 * trans2))))
     }
 
