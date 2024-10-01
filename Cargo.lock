@@ -294,6 +294,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "controller"
+version = "0.1.0"
+
+[[package]]
 name = "core-foundation-sys"
 version = "0.8.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -753,6 +757,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a7a70ba024b9dc04c27ea2f0c0548feb474ec5c54bba33a7f72f873a39d07b24"
 
 [[package]]
+name = "manager"
+version = "0.1.0"
+
+[[package]]
 name = "match_cfg"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1036,6 +1044,23 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "953ec861398dccce10c670dfeaf3ec4911ca479e9c02154b3a215178c5f566f2"
 
 [[package]]
+name = "planner"
+version = "0.1.0"
+dependencies = [
+ "crossbeam",
+ "generate_tools",
+ "manager",
+ "message",
+ "nalgebra",
+ "osqp",
+ "robot",
+ "sensor",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+]
+
+[[package]]
 name = "portable-atomic"
 version = "1.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1135,6 +1160,10 @@ dependencies = [
  "crossbeam-deque",
  "crossbeam-utils",
 ]
+
+[[package]]
+name = "recoder"
+version = "0.1.0"
 
 [[package]]
 name = "redox_syscall"
@@ -1369,6 +1398,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "sensor"
+version = "0.1.0"
+dependencies = [
+ "message",
+ "serde_json",
+]
+
+[[package]]
 name = "serde"
 version = "1.0.210"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1468,6 +1505,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "simulator"
+version = "0.1.0"
+
+[[package]]
 name = "smallvec"
 version = "1.13.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1482,6 +1523,10 @@ dependencies = [
  "libc",
  "winapi",
 ]
+
+[[package]]
+name = "solver"
+version = "0.1.0"
 
 [[package]]
 name = "syn"

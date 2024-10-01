@@ -1,0 +1,22 @@
+[package]
+name = "planner"
+version = "0.1.0"
+edition = "2021"
+repository.workspace = true
+
+[dependencies]
+crossbeam.workspace = true
+nalgebra.workspace = true
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+serde_yaml.workspace = true
+osqp.workspace = true
+
+manager.workspace = true
+robot.workspace = true
+sensor.workspace = true
+message.workspace = true
+generate_tools.workspace = true
+
+[features]
+recode = []
