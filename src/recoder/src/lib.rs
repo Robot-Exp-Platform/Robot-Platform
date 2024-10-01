@@ -1,14 +1,12 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
-}
+pub mod recoder_trait;
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+pub use chrono::Local;
+pub use recoder_trait::Recoder;
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
+use lazy_static::lazy_static;
+use std::sync::Mutex;
+
+lazy_static! {
+    pub static ref EXP_NAME: String = Local::now().format("%Y-%m-%d_%H_%M").to_string();
+    pub static ref TASK_NAME: Mutex<String> = Mutex::new(String::from("task_name"));
 }

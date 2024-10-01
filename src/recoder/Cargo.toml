@@ -5,3 +5,7 @@ edition = "2021"
 repository.workspace = true
 
 [dependencies]
+chrono.workspace = true
+lazy_static.workspace = true
+
+message.workspace = true
