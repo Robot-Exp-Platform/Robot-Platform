@@ -97,6 +97,7 @@ impl DRobot for DSeriseRobot {
         (tau_bound, params),
         (tau_dot_bound, params)
     );
+    get_fn!((base: Pose, state));
 
     set_fn!(
         (set_q, q, state),
@@ -105,11 +106,7 @@ impl DRobot for DSeriseRobot {
         (set_q_jerk, q_jerk, state)
     );
 
-    fn base(&self) -> na::Isometry3<f64> {
-        self.state.base
-    }
-
-    fn end_effector(&self) -> na::Isometry3<f64> {
+    fn end_effector(&self) -> Pose {
         self.cul_end_effector(&self.state.q)
     }
 
@@ -198,14 +195,11 @@ impl DRobot for DSeriseRobot {
 }
 
 impl Robot for DSeriseRobot {
+    get_fn!((name: String));
+    set_fn!((set_name, name: String));
+
     fn dof(&self) -> usize {
         self.params.nlink
-    }
-    fn name(&self) -> String {
-        self.name.clone()
-    }
-    fn set_name(&mut self, name: String) {
-        self.name = name;
     }
     fn capsules(&self) -> Vec<Capsule> {
         self.cul_capsules(&self.state.q)

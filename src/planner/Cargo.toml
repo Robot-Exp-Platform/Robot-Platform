@@ -17,6 +17,7 @@ robot.workspace = true
 sensor.workspace = true
 message.workspace = true
 generate_tools.workspace = true
+solver.workspace = true
 
 [features]
 recode = []
