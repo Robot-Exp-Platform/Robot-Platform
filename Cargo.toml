@@ -1,5 +1,5 @@
 [workspace]
-members = []
+members = ["src/generate_tools", "src/message", "src/robot"]
 
 [workspace.package]
 repository = "https://github.com/Robot-Exp-Platform/Robot-Platform"
@@ -27,6 +27,10 @@ lazy_static = "*"
 approx = "*"
 osqp = "*"
 optimization_engine = "0.9.1"
+
+message = { path = "src/message" }
+robot = { path = "src/robot" }
+generate_tools = { path = "src/generate_tools" }
 
 [dependencies]
 serde = { workspace = true, features = ["derive"] }

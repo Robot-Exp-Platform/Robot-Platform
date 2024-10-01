@@ -1,0 +1,11 @@
+[package]
+name = "robot"
+version = "0.1.0"
+edition = "2021"
+repository.workspace = true
+
+[dependencies]
+nalgebra.workspace = true
+
+message.workspace = true
+generate_tools.workspace = true
