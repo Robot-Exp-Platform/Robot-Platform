@@ -86,8 +86,8 @@ impl<R: DRobot> DPid<R> {
 }
 
 impl<R: DRobot> DController for DPid<R> {
-    set_fn!((set_track_queue, track_queue: Arc<SegQueue<DTrack>>, node));
-    set_fn!((set_control_cmd_queue, control_cmd_queue: Arc<SegQueue<DControlCommand>>, node));
+    set_fn!((set_track_queue, track_queue: Arc<SegQueue<DTrack>>, node),
+            (set_control_cmd_queue, control_cmd_queue: Arc<SegQueue<DControlCommand>>, node));
 }
 
 impl<R: DRobot> Controller for DPid<R> {
