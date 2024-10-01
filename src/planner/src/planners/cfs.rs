@@ -133,7 +133,6 @@ impl<R: DRobot> Node for DCfs<R> {
         let dim = (self.params.ninterp + 1) * ndof;
 
         let h = get_optimize_function(dim, ndof, self.params.cost_weight.clone());
-
         let f = na::DVector::<f64>::zeros(dim);
 
         // f 应该是什么呢？
@@ -144,6 +143,8 @@ impl<R: DRobot> Node for DCfs<R> {
                 Constraint::CartesianProduct(0, 0, Vec::with_capacity(self.params.ninterp + 1));
 
             // 生成约束 包括三部分，起点终点约束、障碍物约束、关节边界约束
+
+            // 起点位置的约束，这是绝对约束
             constraints.push(Constraint::Equared(q.as_slice().to_vec()));
 
             for q_ref in q_ref_list.iter() {
@@ -156,22 +157,18 @@ impl<R: DRobot> Node for DCfs<R> {
                         robot_read.cul_dis_grad_to_collision(q_ref, collision),
                     )
                 }) {
-                    obstacle_constraint.push(Constraint::Intersection(
-                        1,
-                        ndof,
-                        vec![Constraint::Halfspace(
+                    // 过程中对每个障碍物的碰撞约束与关节角约束
+                    obstacle_constraint.push(
+                        Constraint::Halfspace(
                             (-&grad).as_slice().to_vec(),
                             dis - (&grad.transpose() * q_ref)[(0, 0)],
-                        )],
-                    ));
+                        ) + Constraint::Rectangle(q_min_bound.clone(), q_max_bound.clone()),
+                    );
                 }
-                obstacle_constraint.push(Constraint::Rectangle(
-                    q_min_bound.clone(),
-                    q_max_bound.clone(),
-                ));
                 constraints.push(obstacle_constraint);
             }
 
+            // 终点位置的约束，这是绝对约束
             constraints.push(Constraint::Equared(target.as_slice().to_vec()));
 
             let problem = QuadraticProgramming {

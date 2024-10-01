@@ -1,6 +1,9 @@
 use nalgebra as na;
 use osqp::CscMatrix;
-use std::borrow::Cow;
+use std::{
+    borrow::Cow,
+    ops::{Add, Mul},
+};
 
 #[derive(Debug, Default, Clone)]
 pub enum Constraint {
@@ -489,5 +492,26 @@ impl Constraint {
 
             _ => unimplemented!(),
         }
+    }
+}
+
+impl Add for Constraint {
+    type Output = Constraint;
+
+    fn add(self, rhs: Constraint) -> Self::Output {
+        assert_eq!(self.ncols(), rhs.ncols());
+        Constraint::Intersection(self.nrows() + rhs.nrows(), self.ncols(), vec![self, rhs])
+    }
+}
+
+impl Mul<Constraint> for Constraint {
+    type Output = Constraint;
+
+    fn mul(self, rhs: Constraint) -> Self::Output {
+        Constraint::CartesianProduct(
+            self.nrows() + rhs.nrows(),
+            self.ncols() + rhs.ncols(),
+            vec![self, rhs],
+        )
     }
 }
