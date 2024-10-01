@@ -305,6 +305,21 @@ dependencies = [
 [[package]]
 name = "controller"
 version = "0.1.0"
+dependencies = [
+ "chrono",
+ "crossbeam",
+ "generate_tools",
+ "manager",
+ "message",
+ "nalgebra",
+ "robot",
+ "sensor",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "solver",
+ "zmq",
+]
 
 [[package]]
 name = "core-foundation-sys"

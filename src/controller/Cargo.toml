@@ -5,3 +5,20 @@ edition = "2021"
 repository.workspace = true
 
 [dependencies]
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+serde_yaml.workspace = true
+nalgebra.workspace = true
+crossbeam.workspace = true
+chrono.workspace = true
+zmq = { workspace = true, optional = true }
+
+manager.workspace = true
+robot.workspace = true
+sensor.workspace = true
+message.workspace = true
+generate_tools.workspace = true
+solver.workspace = true
+
+[features]
+recode = []

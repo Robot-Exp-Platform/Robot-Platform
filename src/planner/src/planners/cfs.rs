@@ -1,7 +1,5 @@
 use crossbeam::queue::SegQueue;
-use manager::Node;
 use nalgebra as na;
-use robot::DRobot;
 use serde::Deserialize;
 use serde_json::{from_value, Value};
 // use serde_yaml::{from_value, Value};
@@ -12,7 +10,11 @@ use std::time::Duration;
 
 use crate::{utilities::*, DPlanner, Planner};
 use generate_tools::{get_fn, set_fn};
+use manager::Node;
 use message::{Constraint, DTrack, QuadraticProgramming, Target};
+#[cfg(feature = "recode")]
+use recoder::*;
+use robot::DRobot;
 use sensor::Sensor;
 use solver::{OsqpSolver, Solver};
 
