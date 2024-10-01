@@ -1664,6 +1664,21 @@ dependencies = [
 [[package]]
 name = "simulator"
 version = "0.1.0"
+dependencies = [
+ "crossbeam",
+ "generate_tools",
+ "manager",
+ "message",
+ "nalgebra",
+ "recoder",
+ "robot",
+ "sensor",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "typenum",
+ "zmq",
+]
 
 [[package]]
 name = "smallvec"
