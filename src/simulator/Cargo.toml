@@ -19,3 +19,9 @@ message.workspace = true
 recoder.workspace = true
 sensor.workspace = true
 generate_tools.workspace = true
+
+[features]
+default = ["rszmq"]
+rszmq = ["zmq"]
+recode = []
+ros = []
