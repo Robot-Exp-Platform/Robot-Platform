@@ -11,46 +11,50 @@ use std::time::Duration;
 use crate::controller_trait::{Controller, DController};
 use generate_tools::{get_fn, set_fn};
 use manager::Node;
-use message::{DControlCommand, DTrack};
+use message::{DControlCommand, DTrack, SControlCommand, STrack};
 #[cfg(feature = "recode")]
 use recoder::*;
-use robot::DRobot;
+use robot::{DRobot, Robot};
 use sensor::Sensor;
 
-pub struct DPid<R> {
+pub struct Pid<R: Robot<V>, V, M, TRK, CMD> {
     /// The name of the controller.
     name: String,
     /// The path of the controller.
-    state: DPidState,
+    state: PidState<V>,
     /// The parameters of the controller.
-    params: DPidParams,
+    params: PidParams<M>,
     /// The node of the controller.
-    node: DPidNode,
+    node: PidNode<TRK, CMD>,
     /// The robot that the controller is controlling.
     robot: Arc<RwLock<R>>,
 }
 
-pub struct DPidState {
-    track: na::DVector<f64>,
-    error: na::DVector<f64>,
-    integral: na::DVector<f64>,
-    derivative: na::DVector<f64>,
+pub type DPid<R> = Pid<R, na::DVector<f64>, na::DMatrix<f64>, DTrack, DControlCommand>;
+pub type SPid<R, const N: usize> =
+    Pid<R, na::SVector<f64, N>, na::SMatrix<f64, N, N>, STrack<N>, SControlCommand<N>>;
+
+pub struct PidState<V> {
+    track: V,
+    error: V,
+    integral: V,
+    derivative: V,
 }
 
 #[derive(Deserialize)]
-pub struct DPidParams {
+pub struct PidParams<M> {
     period: f64,
-    kp: na::DMatrix<f64>,
-    ki: na::DMatrix<f64>,
-    kd: na::DMatrix<f64>,
+    kp: M,
+    ki: M,
+    kd: M,
 }
 
 #[derive(Default)]
-pub struct DPidNode {
+pub struct PidNode<TRK, CMD> {
     sensor: Option<Arc<RwLock<Sensor>>>,
     recoder: Option<BufWriter<fs::File>>,
-    track_queue: Arc<SegQueue<DTrack>>,
-    control_cmd_queue: Arc<SegQueue<DControlCommand>>,
+    track_queue: Arc<SegQueue<TRK>>,
+    control_cmd_queue: Arc<SegQueue<CMD>>,
 }
 
 impl<R: DRobot> DPid<R> {
@@ -58,7 +62,7 @@ impl<R: DRobot> DPid<R> {
         let ndof = robot.read().unwrap().dof();
         DPid::from_params(
             name,
-            DPidParams {
+            PidParams {
                 period: 0.0,
                 kp: na::DMatrix::zeros(ndof, ndof),
                 ki: na::DMatrix::zeros(ndof, ndof),
@@ -67,11 +71,15 @@ impl<R: DRobot> DPid<R> {
             robot,
         )
     }
-    pub fn from_params(name: String, params: DPidParams, robot: Arc<RwLock<R>>) -> DPid<R> {
+    pub fn from_params(
+        name: String,
+        params: PidParams<na::DMatrix<f64>>,
+        robot: Arc<RwLock<R>>,
+    ) -> DPid<R> {
         let ndof = robot.read().unwrap().dof();
         DPid {
             name,
-            state: DPidState {
+            state: PidState {
                 track: na::DVector::zeros(ndof),
                 error: na::DVector::zeros(ndof),
                 integral: na::DVector::zeros(ndof),
@@ -79,7 +87,7 @@ impl<R: DRobot> DPid<R> {
             },
             params,
 
-            node: DPidNode::default(),
+            node: PidNode::default(),
             robot,
         }
     }

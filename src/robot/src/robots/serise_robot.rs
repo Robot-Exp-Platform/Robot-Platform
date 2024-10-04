@@ -1,116 +1,119 @@
 use message::{get_distance, Pose};
 use nalgebra as na;
 
-use crate::{DRobot, Robot};
+use crate::{DRobot, Robot, SRobot};
 use generate_tools::{get_fn, set_fn};
 use message::{Capsule, CollisionObject};
 
-pub struct SSeriseRobot<const N: usize, const N_ADD_ONE: usize> {}
-
-pub struct DSeriseRobot {
+pub struct SeriseRobot<T>
+where
+    T: Send + Sync,
+{
     pub name: String,
 
-    pub state: DSeriseRobotState,
-    pub params: DSeriseRobotParams,
+    pub state: SeriseRobotState<T>,
+    pub params: SeriseRobotParams<T>,
 }
 
-pub struct DSeriseRobotState {
-    pub q: na::DVector<f64>,
-    pub q_dot: na::DVector<f64>,
-    pub q_ddot: na::DVector<f64>,
-    pub q_jerk: na::DVector<f64>,
+pub type SSeriseRobot<const N: usize> = SeriseRobot<na::SVector<f64, N>>;
+
+pub type DSeriseRobot = SeriseRobot<na::DVector<f64>>;
+
+// #[derive(Default)]
+pub struct SeriseRobotState<T> {
+    pub q: T,
+    pub q_dot: T,
+    pub q_ddot: T,
+    pub q_jerk: T,
     pub base: Pose,
 }
 
-pub struct DSeriseRobotParams {
+// #[derive(Default)]
+pub struct SeriseRobotParams<T> {
     pub nlink: usize,
-    pub q_default: na::DVector<f64>,
-    pub q_min_bound: na::DVector<f64>,
-    pub q_max_bound: na::DVector<f64>,
-    pub q_dot_bound: na::DVector<f64>,
-    pub q_ddot_bound: na::DVector<f64>,
-    pub q_jerk_bound: na::DVector<f64>,
-    pub tau_bound: na::DVector<f64>,
-    pub tau_dot_bound: na::DVector<f64>,
+    pub q_default: T,
+    pub q_min_bound: T,
+    pub q_max_bound: T,
+    pub q_dot_bound: T,
+    pub q_ddot_bound: T,
+    pub q_jerk_bound: T,
+    pub tau_bound: T,
+    pub tau_dot_bound: T,
     pub dh: na::DMatrix<f64>,
     pub capsules: Vec<Capsule>,
 }
 
-impl DSeriseRobot {
-    pub fn new(nlink: usize, name: String) -> DSeriseRobot {
-        DSeriseRobot::from_params(nlink, name, DSeriseRobotParams::new(nlink))
-    }
-    pub fn from_params(nlink: usize, name: String, params: DSeriseRobotParams) -> DSeriseRobot {
-        DSeriseRobot {
-            name,
-            state: DSeriseRobotState::new(nlink),
-            params,
-        }
-    }
-    pub fn from_file() -> DSeriseRobot {
+impl<T> SeriseRobot<T>
+where
+    T: Send + Sync,
+{
+    // pub fn from_params(name: String, params: SeriseRobotParams<T>) -> SeriseRobot<T> {
+    //     SeriseRobot {
+    //         name,
+    //         state: SeriseRobotState::<T>::default(),
+    //         params,
+    //     }
+    // }
+    pub fn from_file() -> SeriseRobot<T> {
         unimplemented!()
     }
 }
 
-impl DSeriseRobotState {
-    pub fn new(nlink: usize) -> DSeriseRobotState {
-        DSeriseRobotState {
-            q: na::DVector::zeros(nlink),
-            q_dot: na::DVector::zeros(nlink),
-            q_ddot: na::DVector::zeros(nlink),
-            q_jerk: na::DVector::zeros(nlink),
-            base: Pose::identity(),
-        }
-    }
-}
+impl<T> Robot<T> for SeriseRobot<T>
+where
+    T: Clone + Send + Sync,
+{
+    get_fn!((name: String));
+    get_fn!(
+        (q: T, state),
+        (q_dot: T, state),
+        (q_ddot: T, state),
+        (q_jerk: T, state),
+        (q_default: T, params),
+        (q_min_bound: T, params),
+        (q_max_bound: T, params),
+        (q_dot_bound: T, params),
+        (q_ddot_bound: T, params),
+        (q_jerk_bound: T, params),
+        (tau_bound: T, params),
+        (tau_dot_bound: T, params),
+        (base: Pose, state)
+    );
 
-impl DSeriseRobotParams {
-    pub fn new(nlink: usize) -> DSeriseRobotParams {
-        DSeriseRobotParams {
-            nlink,
-            q_default: na::DVector::zeros(nlink),
-            q_min_bound: na::DVector::zeros(nlink),
-            q_max_bound: na::DVector::zeros(nlink),
-            q_dot_bound: na::DVector::zeros(nlink),
-            q_ddot_bound: na::DVector::zeros(nlink),
-            q_jerk_bound: na::DVector::zeros(nlink),
-            tau_bound: na::DVector::zeros(nlink),
-            tau_dot_bound: na::DVector::zeros(nlink),
-            dh: na::DMatrix::zeros(nlink + 1, 4),
-            capsules: vec![Capsule::default(); nlink],
-        }
+    set_fn!((set_name, name: String));
+    set_fn!(
+        (set_q, q: T, state),
+        (set_q_dot, q_dot: T, state),
+        (set_q_ddot, q_ddot: T, state),
+        (set_q_jerk, q_jerk: T, state)
+    );
+
+    fn dof(&self) -> usize {
+        self.params.nlink
     }
 }
 
 impl DRobot for DSeriseRobot {
-    get_fn!(
-        (q, state),
-        (q_dot, state),
-        (q_ddot, state),
-        (q_jerk, state),
-        (q_default, params),
-        (q_min_bound, params),
-        (q_max_bound, params),
-        (q_dot_bound, params),
-        (q_ddot_bound, params),
-        (q_jerk_bound, params),
-        (tau_bound, params),
-        (tau_dot_bound, params)
-    );
-    get_fn!((base: Pose, state));
-
-    set_fn!(
-        (set_q, q, state),
-        (set_q_dot, q_dot, state),
-        (set_q_ddot, q_ddot, state),
-        (set_q_jerk, q_jerk, state)
-    );
-
     fn end_effector(&self) -> Pose {
         self.cul_end_effector(&self.state.q)
     }
+    fn capsules(&self) -> Vec<Capsule> {
+        self.cul_capsules(&self.state.q)
+    }
+    fn dis_to_collision(&self, obj: &CollisionObject) -> f64 {
+        self.cul_dis_to_collision(&self.state.q, obj)
+    }
 
-    fn cul_end_effector(&self, q: &nalgebra::DVector<f64>) -> Pose {
+    /// 重置机器人状态，包括将位置设置为默认值以及将运动归零
+    fn reset(&mut self) {
+        self.state.q = self.params.q_default.clone();
+        self.state.q_dot = na::DVector::zeros(self.params.nlink);
+        self.state.q_ddot = na::DVector::zeros(self.params.nlink);
+        self.state.q_jerk = na::DVector::zeros(self.params.nlink);
+    }
+
+    /// 给定机器人的广义变量，计算末端执行器位姿
+    fn cul_end_effector(&self, q: &na::DVector<f64>) -> Pose {
         let dh = &self.params.dh;
         let mut isometry = self.state.base;
         for i in 0..self.params.nlink {
@@ -129,6 +132,7 @@ impl DRobot for DSeriseRobot {
         isometry
     }
 
+    /// 给定机器人的广义变量，计算机器人对应的所有胶囊体，这里需要留意的是，此时的胶囊体不包括末端执行器以及所夹取的物体。
     fn cul_capsules(&self, q: &nalgebra::DVector<f64>) -> Vec<Capsule> {
         let dh = &self.params.dh;
         let mut capsules = Vec::new();
@@ -161,6 +165,7 @@ impl DRobot for DSeriseRobot {
         capsules
     }
 
+    /// 给定机器人的广义变量，计算机器人到碰撞体的最小距禂
     fn cul_dis_to_collision(
         &self,
         q: &nalgebra::DVector<f64>,
@@ -174,6 +179,7 @@ impl DRobot for DSeriseRobot {
             .unwrap()
     }
 
+    /// 给定机器人的广义变量，计算机器人到碰撞体的最小距概的梯度
     fn cul_dis_grad_to_collision(
         &self,
         q: &nalgebra::DVector<f64>,
@@ -194,12 +200,9 @@ impl DRobot for DSeriseRobot {
     }
 }
 
-impl Robot for DSeriseRobot {
-    get_fn!((name: String));
-    set_fn!((set_name, name: String));
-
-    fn dof(&self) -> usize {
-        self.params.nlink
+impl<const N: usize> SRobot<N> for SSeriseRobot<N> {
+    fn end_effector(&self) -> Pose {
+        self.cul_end_effector(&self.state.q)
     }
     fn capsules(&self) -> Vec<Capsule> {
         self.cul_capsules(&self.state.q)
@@ -207,10 +210,99 @@ impl Robot for DSeriseRobot {
     fn dis_to_collision(&self, obj: &CollisionObject) -> f64 {
         self.cul_dis_to_collision(&self.state.q, obj)
     }
+
+    /// 重置机器人状态，包括将位置设置为默认值以及将运动归零
     fn reset(&mut self) {
         self.state.q = self.params.q_default.clone();
-        self.state.q_dot = na::DVector::zeros(self.params.nlink);
-        self.state.q_ddot = na::DVector::zeros(self.params.nlink);
-        self.state.q_jerk = na::DVector::zeros(self.params.nlink);
+        self.state.q_dot = na::SVector::zeros();
+        self.state.q_ddot = na::SVector::zeros();
+        self.state.q_jerk = na::SVector::zeros();
+    }
+
+    /// 给定机器人的广义变量，计算末端执行器位姿
+    fn cul_end_effector(&self, q: &na::SVector<f64, N>) -> Pose {
+        let dh = &self.params.dh;
+        let mut isometry = self.state.base;
+        for i in 0..self.params.nlink {
+            let isometry_increment = na::Isometry::from_parts(
+                na::Translation3::new(
+                    dh[(i, 2)],
+                    -dh[(i, 1)] * dh[(i, 3)].sin(),
+                    dh[(i, 1)] * dh[(i, 3)].cos(),
+                ),
+                na::UnitQuaternion::from_euler_angles(q[i], 0.0, dh[(i, 3)]),
+            );
+
+            // Update the cumulative transformation matrix
+            isometry *= isometry_increment;
+        }
+        isometry
+    }
+
+    /// 给定机器人的广义变量，计算机器人对应的所有胶囊体，这里需要留意的是，此时的胶囊体不包括末端执行器以及所夹取的物体。
+    fn cul_capsules(&self, q: &nalgebra::SVector<f64, N>) -> Vec<Capsule> {
+        let dh = &self.params.dh;
+        let mut capsules = Vec::new();
+        let mut isometry = self.state.base;
+
+        for i in 0..self.params.nlink {
+            let isometry_increment = na::Isometry::from_parts(
+                na::Translation3::new(
+                    dh[(i, 2)],
+                    -dh[(i, 1)] * dh[(i, 3)].sin(),
+                    dh[(i, 1)] * dh[(i, 3)].cos(),
+                ),
+                na::UnitQuaternion::from_euler_angles(q[i], 0.0, dh[(i, 3)]),
+            );
+
+            // Update the cumulative transformation matrix
+            isometry *= isometry_increment;
+
+            // Calculate the positions of the capsule's end points in the global frame
+            let capsule_start = isometry * self.params.capsules[i].ball_center1;
+            let capsule_end = isometry * self.params.capsules[i].ball_center2;
+
+            // Create a new Capsule object and add it to the vector
+            capsules.push(Capsule {
+                ball_center1: capsule_start,
+                ball_center2: capsule_end,
+                radius: self.params.capsules[i].radius,
+            });
+        }
+        capsules
+    }
+
+    /// 给定机器人的广义变量，计算机器人到碰撞体的最小距禂
+    fn cul_dis_to_collision(
+        &self,
+        q: &nalgebra::SVector<f64, N>,
+        obj: &message::CollisionObject,
+    ) -> f64 {
+        let capsules = self.cul_capsules(q);
+        capsules
+            .iter()
+            .map(|&c| get_distance(&CollisionObject::Capsule(c), obj))
+            .min_by(|a, b| a.partial_cmp(b).unwrap())
+            .unwrap()
+    }
+
+    /// 给定机器人的广义变量，计算机器人到碰撞体的最小距概的梯度
+    fn cul_dis_grad_to_collision(
+        &self,
+        q: &nalgebra::SVector<f64, N>,
+        obj: &message::CollisionObject,
+    ) -> nalgebra::SVector<f64, N> {
+        let mut dis_grad = na::SVector::zeros();
+        let epsilon = 1e-3;
+        for i in 0..self.params.nlink {
+            let mut q_plus = q.clone();
+            q_plus[i] += epsilon;
+            let mut q_minus = q.clone();
+            q_minus[i] -= epsilon;
+            let dis_plus = self.cul_dis_to_collision(&q_plus, obj);
+            let dis_minus = self.cul_dis_to_collision(&q_minus, obj);
+            dis_grad[i] = (dis_plus - dis_minus) / (2.0 * epsilon);
+        }
+        dis_grad
     }
 }

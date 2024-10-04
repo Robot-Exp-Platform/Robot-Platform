@@ -1,19 +1,29 @@
 use nalgebra as na;
 use std::f64::consts::{FRAC_PI_2, FRAC_PI_4};
 
-use crate::{DSeriseRobot, DSeriseRobotParams};
+use crate::{DSeriseRobot, SeriseRobotParams};
 use message::Capsule;
+
+use super::SeriseRobotState;
 
 pub const PANDA_DOF: usize = 7;
 
-pub type Panda = DSeriseRobot;
+pub type DPanda = DSeriseRobot;
 
-impl Panda {
-    pub fn new_panda(name: String) -> Panda {
-        DSeriseRobot::from_params(
-            PANDA_DOF,
+impl DPanda {
+    pub fn new_panda(name: String) -> DPanda {
+        DSeriseRobot {
             name,
-            DSeriseRobotParams {
+            state: SeriseRobotState::<na::DVector<f64>> {
+                q: na::DVector::from_vec(vec![
+                    0.0, -FRAC_PI_4, 0.0, -2.3562, 0.0, FRAC_PI_2, FRAC_PI_4,
+                ]),
+                q_dot: na::DVector::zeros(PANDA_DOF),
+                q_ddot: na::DVector::zeros(PANDA_DOF),
+                q_jerk: na::DVector::zeros(PANDA_DOF),
+                base: na::Isometry3::identity(),
+            },
+            params: SeriseRobotParams::<na::DVector<f64>> {
                 nlink: PANDA_DOF,
                 q_default: na::DVector::from_vec(vec![
                     0.0, -FRAC_PI_4, 0.0, -2.3562, 0.0, FRAC_PI_2, FRAC_PI_4,
@@ -58,6 +68,6 @@ impl Panda {
                     Capsule::from_vec(vec![0.0, -0.05, 0.0, 0.0, 0.05, 0.0, 0.1]),
                 ],
             },
-        )
+        }
     }
 }

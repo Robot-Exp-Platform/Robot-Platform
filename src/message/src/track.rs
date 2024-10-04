@@ -23,10 +23,17 @@ pub enum STrack<const N: usize> {
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub enum DTrack {
+    NoneTrack,
     Pose(DVector<f64>),
     Joint(DVector<f64>),
     Velocity(DVector<f64>),
     Acceleration(DVector<f64>),
     JointVel(DVector<f64>, DVector<f64>),
     JointVelAcc(DVector<f64>, DVector<f64>, DVector<f64>),
+}
+
+impl Default for DTrack {
+    fn default() -> Self {
+        DTrack::NoneTrack
+    }
 }

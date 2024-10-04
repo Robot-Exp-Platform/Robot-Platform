@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize)]
 pub enum ControlCommand {
+    NoneCmd,
     Joint(Vec<f64>),
     JointWithPeriod(f64, Vec<f64>),
     JointVel(Vec<f64>, Vec<f64>),
@@ -15,6 +16,7 @@ pub enum ControlCommand {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub enum SControlCommand<const N: usize> {
+    NoneCmd,
     Joint(SVector<f64, N>),
     JointWithPeriod(f64, SVector<f64, N>),
     JointVel(SVector<f64, N>, SVector<f64, N>),
@@ -27,6 +29,7 @@ pub enum SControlCommand<const N: usize> {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub enum DControlCommand {
+    NoneCmd,
     Joint(DVector<f64>),
     JointWithPeriod(f64, DVector<f64>),
     JointVel(DVector<f64>, DVector<f64>),
@@ -35,4 +38,22 @@ pub enum DControlCommand {
     JointVelAccWithPeriod(f64, DVector<f64>, DVector<f64>, DVector<f64>),
     Tau(DVector<f64>),
     TauWithPeriod(f64, DVector<f64>),
+}
+
+impl Default for ControlCommand {
+    fn default() -> Self {
+        ControlCommand::NoneCmd
+    }
+}
+
+impl<const N: usize> Default for SControlCommand<N> {
+    fn default() -> Self {
+        SControlCommand::NoneCmd
+    }
+}
+
+impl Default for DControlCommand {
+    fn default() -> Self {
+        DControlCommand::NoneCmd
+    }
 }
