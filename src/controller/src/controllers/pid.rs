@@ -3,21 +3,21 @@ use nalgebra as na;
 use serde::Deserialize;
 use serde_json::{from_value, Value};
 // use serde_yaml::{from_value, Value};
-use std::fs;
 use std::io::{BufWriter, Write};
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
+use std::{f64, fs};
 
-use crate::controller_trait::{Controller, DController};
+use crate::{Controller, TController};
 use generate_tools::{get_fn, set_fn};
 use manager::Node;
-use message::{DControlCommand, DTrack, SControlCommand, STrack};
+use message::{ControlCommand, DControlCommand, DTrack, Track};
 #[cfg(feature = "recode")]
 use recoder::*;
-use robot::{DRobot, Robot};
+use robot::{DRobot, Robot, SRobot};
 use sensor::Sensor;
 
-pub struct Pid<R: Robot<V>, V, M, TRK, CMD> {
+pub struct Pid<R: Robot<V>, V, M> {
     /// The name of the controller.
     name: String,
     /// The path of the controller.
@@ -25,14 +25,13 @@ pub struct Pid<R: Robot<V>, V, M, TRK, CMD> {
     /// The parameters of the controller.
     params: PidParams<M>,
     /// The node of the controller.
-    node: PidNode<TRK, CMD>,
+    node: PidNode<V>,
     /// The robot that the controller is controlling.
     robot: Arc<RwLock<R>>,
 }
 
-pub type DPid<R> = Pid<R, na::DVector<f64>, na::DMatrix<f64>, DTrack, DControlCommand>;
-pub type SPid<R, const N: usize> =
-    Pid<R, na::SVector<f64, N>, na::SMatrix<f64, N, N>, STrack<N>, SControlCommand<N>>;
+pub type DPid<R> = Pid<R, na::DVector<f64>, na::DMatrix<f64>>;
+pub type SPid<R, const N: usize> = Pid<R, na::SVector<f64, N>, na::SMatrix<f64, N, N>>;
 
 pub struct PidState<V> {
     track: V,
@@ -50,11 +49,11 @@ pub struct PidParams<M> {
 }
 
 #[derive(Default)]
-pub struct PidNode<TRK, CMD> {
+pub struct PidNode<V> {
     sensor: Option<Arc<RwLock<Sensor>>>,
     recoder: Option<BufWriter<fs::File>>,
-    track_queue: Arc<SegQueue<TRK>>,
-    control_cmd_queue: Arc<SegQueue<CMD>>,
+    track_queue: Arc<SegQueue<Track<V>>>,
+    control_cmd_queue: Arc<SegQueue<ControlCommand<V>>>,
 }
 
 impl<R: DRobot> DPid<R> {
@@ -93,12 +92,51 @@ impl<R: DRobot> DPid<R> {
     }
 }
 
-impl<R: DRobot> DController for DPid<R> {
+impl<R: SRobot<N>, const N: usize> SPid<R, N> {
+    pub fn new(name: String, robot: Arc<RwLock<R>>) -> SPid<R, N> {
+        SPid::from_params(
+            name,
+            PidParams {
+                period: 0.0,
+                kp: na::SMatrix::zeros(),
+                ki: na::SMatrix::zeros(),
+                kd: na::SMatrix::zeros(),
+            },
+            robot,
+        )
+    }
+    pub fn from_params(
+        name: String,
+        params: PidParams<na::SMatrix<f64, N, N>>,
+        robot: Arc<RwLock<R>>,
+    ) -> SPid<R, N> {
+        SPid {
+            name,
+            state: PidState {
+                track: na::SVector::zeros(),
+                error: na::SVector::zeros(),
+                integral: na::SVector::zeros(),
+                derivative: na::SVector::zeros(),
+            },
+            params,
+
+            node: PidNode {
+                sensor: None,
+                recoder: None,
+                track_queue: Arc::new(SegQueue::new()),
+                control_cmd_queue: Arc::new(SegQueue::new()),
+            },
+            robot,
+        }
+    }
+}
+
+impl<R: Robot<na::DVector<f64>>> TController<na::DVector<f64>> for DPid<R> {
     set_fn!((set_track_queue, track_queue: Arc<SegQueue<DTrack>>, node),
             (set_control_cmd_queue, control_cmd_queue: Arc<SegQueue<DControlCommand>>, node));
 }
 
-impl<R: DRobot> Controller for DPid<R> {
+impl<R: Robot<na::DVector<f64>>> Controller for DPid<R> {
     get_fn!((name: String));
 
     fn set_sensor(&mut self, sensor: Arc<RwLock<Sensor>>) {
@@ -109,7 +147,7 @@ impl<R: DRobot> Controller for DPid<R> {
     }
 }
 
-impl<R: DRobot> Node for DPid<R> {
+impl<R: Robot<na::DVector<f64>>> Node for DPid<R> {
     fn init(&mut self) {
         println!("{} 向您问好. {} says hello.", self.name, self.name);
     }
@@ -125,10 +163,8 @@ impl<R: DRobot> Node for DPid<R> {
             _ => return,
         };
 
-        println!("{} get track: {:?}", self.name, self.state.track);
-
         // 执行 pid 逻辑
-        let new_error = &self.state.track - q;
+        let new_error = &self.state.track - &q;
         self.state.integral += &new_error * self.params.period;
         self.state.derivative = (&new_error - &self.state.error) / self.params.period;
         self.state.error = new_error;
@@ -146,7 +182,7 @@ impl<R: DRobot> Node for DPid<R> {
         // 发送控制指令
         self.node
             .control_cmd_queue
-            .push(DControlCommand::JointWithPeriod(self.params.period, output));
+            .push(ControlCommand::JointWithPeriod(self.params.period, output));
     }
 
     fn start(&mut self) {

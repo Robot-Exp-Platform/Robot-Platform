@@ -1,10 +1,11 @@
 use crossbeam::queue::SegQueue;
 use serde_json::Value;
 // use serde_yaml::Value;
+use nalgebra as na;
 use std::sync::{Arc, RwLock};
 
 use manager::Node;
-use message::{DControlCommand, DTrack, SControlCommand, STrack};
+use message::{ControlCommand, Track};
 use sensor::Sensor;
 
 pub trait Controller: Node {
@@ -14,12 +15,10 @@ pub trait Controller: Node {
     fn set_sensor(&mut self, sensor: Arc<RwLock<Sensor>>);
 }
 
-pub trait SController<const N: usize>: Controller {
-    fn set_track_queue(&mut self, track_queue: Arc<SegQueue<STrack<N>>>);
-    fn set_control_cmd_queue(&mut self, control_cmd_queue: Arc<SegQueue<SControlCommand<N>>>);
+pub trait TController<V>: Controller {
+    fn set_track_queue(&mut self, track_queue: Arc<SegQueue<Track<V>>>);
+    fn set_control_cmd_queue(&mut self, control_cmd_queue: Arc<SegQueue<ControlCommand<V>>>);
 }
 
-pub trait DController: Controller {
-    fn set_track_queue(&mut self, track_queue: Arc<SegQueue<DTrack>>);
-    fn set_control_cmd_queue(&mut self, control_cmd_queue: Arc<SegQueue<DControlCommand>>);
-}
+pub trait DController = TController<na::DVector<f64>>;
+pub trait SController<const N: usize> = TController<na::SVector<f64, N>>;

@@ -5,51 +5,60 @@ use serde_json::{from_value, Value};
 // use serde_yaml::{from_value, Value};
 use std::fs;
 use std::io::{BufWriter, Write};
+use std::ops::{Mul, Sub};
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
 
-use crate::controller_trait::{Controller, DController};
+use crate::controller_trait::Controller;
+use crate::TController;
 use generate_tools::{get_fn, set_fn};
 use manager::Node;
-use message::{DControlCommand, DTrack};
+use message::{ControlCommand, Track};
 #[cfg(feature = "recode")]
 use recoder::*;
-use robot::DRobot;
+use robot::{DRobot, Robot};
 use sensor::Sensor;
 
-pub struct DImpedence<R> {
+pub struct Impedence<R, V, M>
+where
+    V: Sub + Send + Sync,
+    M: Mul<V, Output = V> + Sub + Send + Sync,
+{
     /// The name of the controller.
     name: String,
     /// The path of the controller.
-    state: DImpedenceState,
+    state: ImpedenceState<V>,
     /// The parameters of the controller.
-    params: DImpedenceParams,
+    params: ImpedenceParams<M>,
     /// The node of the controller.
-    node: DImpedenceNode,
+    node: ImpedenceNode<V>,
     /// The robot that the controller is controlling.
     robot: Arc<RwLock<R>>,
 }
 
-pub struct DImpedenceState {
-    ref_q: na::DVector<f64>,
-    ref_q_dot: na::DVector<f64>,
-    ref_q_ddot: na::DVector<f64>,
+pub type DImpedence<R> = Impedence<R, na::DVector<f64>, na::DMatrix<f64>>;
+pub type SImpedence<R, const N: usize> = Impedence<R, na::SVector<f64, N>, na::SMatrix<f64, N, N>>;
+
+pub struct ImpedenceState<V> {
+    ref_q: V,
+    ref_q_dot: V,
+    ref_q_ddot: V,
 }
 
 #[derive(Deserialize)]
-pub struct DImpedenceParams {
+pub struct ImpedenceParams<M> {
     period: f64,
-    k: na::DMatrix<f64>,
-    b: na::DMatrix<f64>,
-    m: na::DMatrix<f64>,
+    k: M,
+    b: M,
+    m: M,
 }
 
 #[derive(Default)]
-pub struct DImpedenceNode {
+pub struct ImpedenceNode<V> {
     sensor: Option<Arc<RwLock<Sensor>>>,
     recoder: Option<BufWriter<fs::File>>,
-    track_queue: Arc<SegQueue<DTrack>>,
-    control_cmd_queue: Arc<SegQueue<DControlCommand>>,
+    track_queue: Arc<SegQueue<Track<V>>>,
+    control_cmd_queue: Arc<SegQueue<ControlCommand<V>>>,
 }
 
 impl<R: DRobot> DImpedence<R> {
@@ -57,7 +66,7 @@ impl<R: DRobot> DImpedence<R> {
         let ndof = robot.read().unwrap().dof();
         DImpedence::from_params(
             name,
-            DImpedenceParams {
+            ImpedenceParams {
                 period: 0.0,
                 k: na::DMatrix::zeros(ndof, ndof),
                 b: na::DMatrix::zeros(ndof, ndof),
@@ -69,30 +78,38 @@ impl<R: DRobot> DImpedence<R> {
 
     pub fn from_params(
         name: String,
-        params: DImpedenceParams,
+        params: ImpedenceParams<na::DMatrix<f64>>,
         robot: Arc<RwLock<R>>,
     ) -> DImpedence<R> {
         let ndof = robot.read().unwrap().dof();
-        DImpedence {
+        Impedence {
             name,
-            state: DImpedenceState {
+            state: ImpedenceState {
                 ref_q: na::DVector::zeros(ndof),
                 ref_q_dot: na::DVector::zeros(ndof),
                 ref_q_ddot: na::DVector::zeros(ndof),
             },
             params,
-            node: DImpedenceNode::default(),
+            node: ImpedenceNode::default(),
             robot,
         }
     }
 }
 
-impl<R: DRobot> DController for DImpedence<R> {
-    set_fn!((set_track_queue, track_queue: Arc<SegQueue<DTrack>>, node),
-            (set_control_cmd_queue, control_cmd_queue: Arc<SegQueue<DControlCommand>>, node));
+impl<R: Robot<V>, V, M> TController<V> for Impedence<R, V, M>
+where
+    V: Sub + Send + Sync,
+    M: Mul<V, Output = V> + Sub + Send + Sync,
+{
+    set_fn!((set_track_queue, track_queue: Arc<SegQueue<Track<V>>>, node),
+            (set_control_cmd_queue, control_cmd_queue: Arc<SegQueue<ControlCommand<V>>>, node));
 }
 
-impl<R: DRobot> Controller for DImpedence<R> {
+impl<R: Robot<V>, V, M> Controller for Impedence<R, V, M>
+where
+    V: Sub + Send + Sync,
+    M: Mul<V, Output = V> + Sub + Send + Sync,
+{
     get_fn!((name: String));
 
     fn set_sensor(&mut self, sensor: Arc<RwLock<Sensor>>) {
@@ -103,7 +120,11 @@ impl<R: DRobot> Controller for DImpedence<R> {
     }
 }
 
-impl<R: DRobot> Node for DImpedence<R> {
+impl<R: Robot<V>, V, M> Node for Impedence<R, V, M>
+where
+    V: Sub + Send + Sync,
+    M: Mul<V, Output = V> + Sub + Send + Sync,
+{
     fn init(&mut self) {
         println!("{} 向您问好. {} says hello.", self.name, self.name);
     }
@@ -118,11 +139,11 @@ impl<R: DRobot> Node for DImpedence<R> {
         // TODO 检查任务是否完成
 
         match self.node.track_queue.pop() {
-            Some(DTrack::Joint(ref_q)) => {
+            Some(Track::Joint(ref_q)) => {
                 self.state.ref_q = ref_q;
                 println!("{} get track: {:?}", self.name, self.state.ref_q);
             }
-            Some(DTrack::JointVel(ref_q, ref_q_dot)) => {
+            Some(Track::JointVel(ref_q, ref_q_dot)) => {
                 self.state.ref_q = ref_q;
                 self.state.ref_q_dot = ref_q_dot;
                 println!(
@@ -130,7 +151,7 @@ impl<R: DRobot> Node for DImpedence<R> {
                     self.name, self.state.ref_q, self.state.ref_q_dot
                 );
             }
-            Some(DTrack::JointVelAcc(ref_q, ref_q_dot, ref_q_ddot)) => {
+            Some(Track::JointVelAcc(ref_q, ref_q_dot, ref_q_ddot)) => {
                 self.state.ref_q = ref_q;
                 self.state.ref_q_dot = ref_q_dot;
                 self.state.ref_q_ddot = ref_q_ddot;
@@ -145,8 +166,8 @@ impl<R: DRobot> Node for DImpedence<R> {
         // 执行 impedance 逻辑
 
         let control_output = &self.params.k * (&self.state.ref_q - q)
-            + &self.params.b * (&self.state.ref_q_dot - q_dot)
-            + &self.params.m * (&self.state.ref_q_ddot - q_ddot);
+            + &self.params.b * (&self.state.ref_q_dot - &q_dot)
+            + &self.params.m * (&self.state.ref_q_ddot - &q_ddot);
 
         // 记录控制指令
         #[cfg(feature = "recode")]
@@ -155,7 +176,7 @@ impl<R: DRobot> Node for DImpedence<R> {
         }
 
         // 发送控制指令
-        let control_command = DControlCommand::TauWithPeriod(self.params.period, control_output);
+        let control_command = ControlCommand::TauWithPeriod(self.params.period, control_output);
         self.node.control_cmd_queue.push(control_command);
     }
 
