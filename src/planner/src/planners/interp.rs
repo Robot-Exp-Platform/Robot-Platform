@@ -1,6 +1,6 @@
 use crossbeam::queue::SegQueue;
 use manager::Node;
-use robot::DRobot;
+use nalgebra as na;
 use serde::Deserialize;
 use serde_json::{from_value, Value};
 // use serde_yaml::{from_value, Value};
@@ -11,54 +11,58 @@ use std::time::Duration;
 
 use crate::{utilities::lerp, DPlanner, Planner};
 use generate_tools::{get_fn, set_fn};
-use message::{DTrack, Target};
+use message::{DTrack, Target, Track};
+use robot::{DRobot, Robot};
 use sensor::Sensor;
 
 /// 通过插值实现的路径规划器，在不考虑逆运动学的情况下实现轨迹插值。
-pub struct DInterp<R> {
+pub struct Interp<R: Robot<V>, V> {
     /// The name of the planner.
     name: String,
     /// The state of the planner.
-    _state: DinterpState,
+    _state: InterpState,
     /// The parameters of the planner.
-    params: DInterpParams,
+    params: InterpParams,
     /// The node of the planner.
-    node: DInterpNode,
+    node: InterpNode<V>,
     /// The robot that the planner is controlling.
     robot: Arc<RwLock<R>>,
 }
 
+pub type DInterp<R> = Interp<R, na::DVector<f64>>;
+pub type SInterp<R, const N: usize> = Interp<R, na::SVector<f64, N>>;
+
 #[derive(Default)]
-pub struct DinterpState {
+pub struct InterpState {
     /// The current target of the planner.
     _target: Option<Target>,
 }
 
 #[derive(Deserialize, Default)]
-pub struct DInterpParams {
+pub struct InterpParams {
     period: f64,
     interp_fn: String,
     ninter: usize,
 }
 
 #[derive(Default)]
-pub struct DInterpNode {
+pub struct InterpNode<V> {
     sensor: Option<Arc<RwLock<Sensor>>>,
     recoder: Option<BufWriter<fs::File>>,
     target_queue: Arc<SegQueue<Target>>,
-    track_queue: Arc<SegQueue<DTrack>>,
+    track_queue: Arc<SegQueue<Track<V>>>,
 }
 
 impl<R: DRobot> DInterp<R> {
     pub fn new(name: String, robot: Arc<RwLock<R>>) -> DInterp<R> {
-        DInterp::from_params(name, DInterpParams::default(), robot)
+        DInterp::from_params(name, InterpParams::default(), robot)
     }
-    pub fn from_params(name: String, params: DInterpParams, robot: Arc<RwLock<R>>) -> DInterp<R> {
+    pub fn from_params(name: String, params: InterpParams, robot: Arc<RwLock<R>>) -> DInterp<R> {
         DInterp {
             name,
-            _state: DinterpState::default(),
+            _state: InterpState::default(),
             params,
-            node: DInterpNode::default(),
+            node: InterpNode::default(),
             robot,
         }
     }

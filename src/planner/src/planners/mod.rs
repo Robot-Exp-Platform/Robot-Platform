@@ -2,4 +2,4 @@ mod cfs;
 mod interp;
 
 pub use cfs::DCfs;
-pub use interp::DInterp;
+pub use interp::{DInterp, Interp, SInterp};
