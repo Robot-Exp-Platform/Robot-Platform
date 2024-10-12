@@ -10,6 +10,7 @@ type TaskId = usize;
 /// 任务管理器，负责任务的调度和依赖关系
 /// TODO 任务执行完成后会通过
 #[derive(Default)]
+#[allow(dead_code)]
 pub struct TaskManager {
     /// 存储所有任务节点
     tasks: HashMap<TaskId, Task>,
@@ -49,8 +50,10 @@ impl TaskManager {
         let task_list: Vec<Task> =
             serde_json::from_str(&file_content).expect("Invalid JSON format");
 
-        let mut task_manager = TaskManager::default();
-        task_manager.receiver = Some(receiver);
+        let mut task_manager = TaskManager {
+            receiver: Some(receiver),
+            ..Default::default()
+        };
         for task in task_list {
             task_manager.add_task(task);
         }
@@ -63,15 +66,12 @@ impl TaskManager {
 
         // 将任务插入 DAG
         self.tasks.insert(task_id, task.clone());
-        self.adj_list.entry(task_id).or_insert_with(HashSet::new);
+        self.adj_list.entry(task_id).or_default();
         self.in_degree.entry(task_id).or_insert(0);
 
         // 添加依赖关系
         for &rely_id in &task.rely {
-            self.adj_list
-                .entry(rely_id)
-                .or_insert_with(HashSet::new)
-                .insert(task_id);
+            self.adj_list.entry(rely_id).or_default().insert(task_id);
             *self.in_degree.entry(task_id).or_insert(0) += 1;
         }
 

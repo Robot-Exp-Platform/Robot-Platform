@@ -1,8 +1,9 @@
 use nalgebra::{DVector, SVector};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Default, Deserialize, Serialize)]
 pub enum ControlCommand<V> {
+    #[default]
     NoneCmd,
     Joint(V),
     JointWithPeriod(f64, V),
@@ -16,9 +17,3 @@ pub enum ControlCommand<V> {
 
 pub type DControlCommand = ControlCommand<DVector<f64>>;
 pub type SControlCommand<const N: usize> = ControlCommand<SVector<f64, N>>;
-
-impl<V> Default for ControlCommand<V> {
-    fn default() -> Self {
-        ControlCommand::NoneCmd
-    }
-}

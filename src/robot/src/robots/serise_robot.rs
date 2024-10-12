@@ -213,7 +213,7 @@ impl<const N: usize> SRobot<N> for SSeriseRobot<N> {
 
     /// 重置机器人状态，包括将位置设置为默认值以及将运动归零
     fn reset(&mut self) {
-        self.state.q = self.params.q_default.clone();
+        self.state.q = self.params.q_default;
         self.state.q_dot = na::SVector::zeros();
         self.state.q_ddot = na::SVector::zeros();
         self.state.q_jerk = na::SVector::zeros();
@@ -295,9 +295,9 @@ impl<const N: usize> SRobot<N> for SSeriseRobot<N> {
         let mut dis_grad = na::SVector::zeros();
         let epsilon = 1e-3;
         for i in 0..self.params.nlink {
-            let mut q_plus = q.clone();
+            let mut q_plus = *q;
             q_plus[i] += epsilon;
-            let mut q_minus = q.clone();
+            let mut q_minus = *q;
             q_minus[i] -= epsilon;
             let dis_plus = self.cul_dis_to_collision(&q_plus, obj);
             let dis_minus = self.cul_dis_to_collision(&q_minus, obj);

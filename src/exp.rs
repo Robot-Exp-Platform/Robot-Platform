@@ -1,4 +1,3 @@
-use nalgebra as na;
 use serde_json::from_reader;
 use std::{
     fs,
