@@ -65,7 +65,16 @@ rosrust = { workspace = true, optional = true }
 rosrust_msg = { workspace = true, optional = true }
 osqp.workspace = true
 
-[build-dependencies]
+message.workspace = true
+robot.workspace = true
+generate_tools.workspace = true
+manager.workspace = true
+planner.workspace = true
+recoder.workspace = true
+sensor.workspace = true
+simulator.workspace = true
+solver.workspace = true
+controller.workspace = true
 
 
 [features]

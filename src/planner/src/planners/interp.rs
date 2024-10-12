@@ -85,10 +85,6 @@ impl<R: DRobot> Planner for DInterp<R> {
 }
 
 impl<R: DRobot> Node for DInterp<R> {
-    fn init(&mut self) {
-        println!("{} 向您问好. {} says hello.", self.name, self.name);
-    }
-
     fn update(&mut self) {
         // 获取当前 robot 状态
         let robot_read = self.robot.read().unwrap();

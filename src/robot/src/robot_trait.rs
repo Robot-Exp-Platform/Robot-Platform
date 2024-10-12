@@ -2,30 +2,30 @@ use nalgebra as na;
 
 use message::{Capsule, CollisionObject, Pose};
 
-pub trait Robot<T>: Send + Sync {
+pub trait Robot<V>: Send + Sync {
     // get functions
     fn name(&self) -> String;
     fn dof(&self) -> usize;
-    fn q(&self) -> T;
-    fn q_dot(&self) -> T;
-    fn q_ddot(&self) -> T;
-    fn q_jerk(&self) -> T;
-    fn q_default(&self) -> T;
-    fn q_min_bound(&self) -> T;
-    fn q_max_bound(&self) -> T;
-    fn q_dot_bound(&self) -> T;
-    fn q_ddot_bound(&self) -> T;
-    fn q_jerk_bound(&self) -> T;
-    fn tau_bound(&self) -> T;
-    fn tau_dot_bound(&self) -> T;
+    fn q(&self) -> V;
+    fn q_dot(&self) -> V;
+    fn q_ddot(&self) -> V;
+    fn q_jerk(&self) -> V;
+    fn q_default(&self) -> V;
+    fn q_min_bound(&self) -> V;
+    fn q_max_bound(&self) -> V;
+    fn q_dot_bound(&self) -> V;
+    fn q_ddot_bound(&self) -> V;
+    fn q_jerk_bound(&self) -> V;
+    fn tau_bound(&self) -> V;
+    fn tau_dot_bound(&self) -> V;
     fn base(&self) -> Pose;
 
     // set functions
     fn set_name(&mut self, name: String);
-    fn set_q(&mut self, q: T);
-    fn set_q_dot(&mut self, q_dot: T);
-    fn set_q_ddot(&mut self, q_ddot: T);
-    fn set_q_jerk(&mut self, q_jerk: T);
+    fn set_q(&mut self, q: V);
+    fn set_q_dot(&mut self, q_dot: V);
+    fn set_q_ddot(&mut self, q_ddot: V);
+    fn set_q_jerk(&mut self, q_jerk: V);
 }
 
 pub trait SRobot<const N: usize>: Robot<na::SVector<f64, N>> {

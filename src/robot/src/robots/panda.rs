@@ -4,11 +4,12 @@ use std::f64::consts::{FRAC_PI_2, FRAC_PI_4};
 use crate::{DSeriseRobot, SeriseRobotParams};
 use message::Capsule;
 
-use super::SeriseRobotState;
+use super::{SeriseRobot, SeriseRobotState};
 
 pub const PANDA_DOF: usize = 7;
 
-pub type DPanda = DSeriseRobot;
+pub type Panda<V> = SeriseRobot<V>;
+pub type DPanda = Panda<na::DVector<f64>>;
 
 impl DPanda {
     pub fn new_panda(name: String) -> DPanda {

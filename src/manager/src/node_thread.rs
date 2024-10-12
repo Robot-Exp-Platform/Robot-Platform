@@ -11,7 +11,7 @@ pub trait Node: Send + Sync {
     fn period(&self) -> Duration {
         Duration::from_secs(0)
     }
-    fn thread_name(&self) -> String {
+    fn node_name(&self) -> String {
         String::from("unnamed_thread")
     }
 }

@@ -148,10 +148,6 @@ impl<R: Robot<na::DVector<f64>>> Controller for DPid<R> {
 }
 
 impl<R: Robot<na::DVector<f64>>> Node for DPid<R> {
-    fn init(&mut self) {
-        println!("{} 向您问好. {} says hello.", self.name, self.name);
-    }
-
     fn update(&mut self) {
         // 获取 robot 状态
         let robot_read = self.robot.read().unwrap();

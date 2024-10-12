@@ -86,9 +86,7 @@ impl<R: DRobot> Planner for DCfs<R> {
 }
 
 impl<R: DRobot> Node for DCfs<R> {
-    fn init(&mut self) {
-        println!("{} 向您问好. {} says hello.", self.name, self.name);
-    }
+    
 
     fn update(&mut self) {
         // 获取 robot 状态

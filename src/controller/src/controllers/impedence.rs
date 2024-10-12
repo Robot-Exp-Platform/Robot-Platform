@@ -125,10 +125,6 @@ where
     V: Sub + Send + Sync,
     M: Mul<V, Output = V> + Sub + Send + Sync,
 {
-    fn init(&mut self) {
-        println!("{} 向您问好. {} says hello.", self.name, self.name);
-    }
-
     fn update(&mut self) {
         // 获取 robot 状态
         let robot_read = self.robot.read().unwrap();
