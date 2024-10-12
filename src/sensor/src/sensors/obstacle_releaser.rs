@@ -9,7 +9,7 @@ pub struct ObstacleReleaser {
 }
 
 impl ObstacleReleaser {
-    pub fn from_name(name: String) -> ObstacleReleaser {
+    pub fn new(name: String) -> ObstacleReleaser {
         ObstacleReleaser {
             name,
             obstacle: Vec::new(),

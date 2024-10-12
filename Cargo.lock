@@ -812,6 +812,7 @@ dependencies = [
  "message",
  "nalgebra",
  "robot",
+ "sensor",
  "serde",
  "serde_json",
  "serde_yaml",
@@ -1582,7 +1583,10 @@ name = "sensor"
 version = "0.1.0"
 dependencies = [
  "message",
+ "nalgebra",
+ "serde",
  "serde_json",
+ "serde_yaml",
 ]
 
 [[package]]

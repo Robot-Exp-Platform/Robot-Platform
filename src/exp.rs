@@ -1,5 +1,3 @@
-use core::task;
-use crossbeam::thread;
 use nalgebra as na;
 use serde_json::from_reader;
 use std::{
@@ -8,7 +6,7 @@ use std::{
 };
 
 use manager::{Config, TaskManager, ThreadManager};
-use robot::Robot;
+use robot::{self, DRobot};
 use sensor::Sensor;
 
 #[derive(Default)]
@@ -16,7 +14,7 @@ pub struct Exp {
     pub thread_manager: ThreadManager,
     pub task_manager: TaskManager,
 
-    pub robot_pool: Vec<Arc<RwLock<dyn Robot<na::DVector<f64>>>>>,
+    pub robot_pool: Vec<Arc<RwLock<dyn DRobot>>>,
     pub sensor_pool: Vec<Arc<RwLock<Sensor>>>,
 }
 
@@ -32,8 +30,23 @@ impl Exp {
         }
         // 根据配置开始初始化，关键在于搭建通讯
         let (sender, receiver) = mpsc::channel();
-        let mut thread_manager = ThreadManager::new(sender);
-        let mut task_manager = TaskManager::from_json(receiver, task);
+        let thread_manager = ThreadManager::new(sender);
+        let task_manager = TaskManager::from_json(receiver, task);
+        let mut robot_pool = Vec::new();
+        let mut sensor_pool = Vec::new();
+        for robot in config.robots {
+            robot_pool.push(robot::from_config(robot));
+        }
+        for sensor in config.sensors {
+            sensor_pool.push(sensor::from_config(sensor));
+        }
+
+        Exp {
+            thread_manager,
+            task_manager,
+            robot_pool,
+            sensor_pool,
+        }
     }
 
     pub fn init(&mut self) {}
