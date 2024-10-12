@@ -1,3 +1,4 @@
+use chrono::Local;
 use serde_json::from_reader;
 use std::{
     fs,
@@ -48,8 +49,15 @@ impl Exp {
         }
     }
 
-    pub fn init(&mut self) {}
-    pub fn start(&mut self) {}
+    // 实验初始化过程
+    pub fn init(&mut self) {
+        println!(
+            "现在是 {}，先生，祝您早上、中午、晚上好",
+            Local::now().format("%Y-%m-%d %H:%M:%S")
+        );
+    }
+
+    // 实验进行过程，需要从任务管理器中取出位于开放列表中的任务并筹备对应的节点，然后交给线程管理器
     pub fn update(&mut self) {}
     pub fn is_running(&mut self) -> bool {
         true

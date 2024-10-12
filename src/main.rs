@@ -8,7 +8,6 @@ fn main() {
     let mut exp = Exp::default();
 
     exp.init();
-    exp.start();
 
     while exp.is_running() {
         exp.update();
