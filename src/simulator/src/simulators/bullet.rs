@@ -19,12 +19,12 @@ use manager::Node;
 use message::DControlCommand;
 #[cfg(feature = "recode")]
 use recoder::*;
-use robot::DRobot;
+use robot::RobotType;
 use sensor::Sensor;
 
 // bullet 结构体声明，包含其名称，路径，消息节点，以及机器人
 #[allow(dead_code)]
-pub struct DBullet<R> {
+pub struct DBullet {
     /// The name of the simulator.
     name: String,
     /// The parameters of the simulator.
@@ -32,7 +32,7 @@ pub struct DBullet<R> {
     /// The path of the simulator.
     node: DBulletNode,
     /// The robot that the simulator is controlling.
-    robot: Arc<RwLock<R>>,
+    robot: Arc<RwLock<RobotType>>,
 }
 
 #[derive(Deserialize)]
@@ -52,11 +52,15 @@ struct DBulletNode {
 }
 
 // 为结构体 Bullet 实现方法，这里主要是初始化方法
-impl<R: DRobot> DBullet<R> {
-    pub fn new(name: String, robot: Arc<RwLock<R>>) -> DBullet<R> {
+impl DBullet {
+    pub fn new(name: String, robot: Arc<RwLock<RobotType>>) -> DBullet {
         DBullet::from_params(name, DBulletParams { period: 0.0 }, robot)
     }
-    pub fn from_params(name: String, params: DBulletParams, robot: Arc<RwLock<R>>) -> DBullet<R> {
+    pub fn from_params(
+        name: String,
+        params: DBulletParams,
+        robot: Arc<RwLock<RobotType>>,
+    ) -> DBullet {
         #[cfg(feature = "rszmq")]
         let context = Arc::new(zmq::Context::new());
         #[cfg(feature = "rszmq")]
@@ -81,14 +85,14 @@ impl<R: DRobot> DBullet<R> {
     }
 }
 
-impl<R: DRobot> DSimulator for DBullet<R> {
+impl DSimulator for DBullet {
     set_fn!(
         (set_control_cmd_queue, control_cmd_queue: Arc<SegQueue<DControlCommand>>, node)
     );
 }
 
 // 为 Bullet 实现 Simulator 特征，使得其是一个仿真器
-impl<R: DRobot> Simulator for DBullet<R> {
+impl Simulator for DBullet {
     get_fn!((name: String));
 
     fn set_sensor(&mut self, sensor: Arc<RwLock<Sensor>>) {
@@ -107,7 +111,7 @@ impl<R: DRobot> Simulator for DBullet<R> {
 }
 
 // 为 Bullet 实现 ROSThread 特征，使得其可以被类似 ros 的线程管理器调用，而实际上并不一定用到了ros，只是结构相似罢了
-impl<R: DRobot> Node for DBullet<R> {
+impl Node for DBullet {
     fn init(&mut self) {
         println!("{} 向您问好. {} says hello.", self.name, self.name);
         #[cfg(feature = "rszmq")]

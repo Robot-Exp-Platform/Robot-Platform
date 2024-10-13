@@ -36,3 +36,9 @@ pub enum DRobotState {
     JointVel(na::DVector<f64>, na::DVector<f64>),
     JointVelAcc(na::DVector<f64>, na::DVector<f64>, na::DVector<f64>),
 }
+
+#[derive(Debug, Deserialize)]
+pub enum TaskState {
+    PlanEnd(String),
+    ControlEnd(String),
+}

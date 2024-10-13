@@ -14,4 +14,7 @@ pub trait Node: Send + Sync {
     fn node_name(&self) -> String {
         String::from("unnamed_thread")
     }
+    fn node_type(&self) -> String {
+        String::from("unnamed_type")
+    }
 }

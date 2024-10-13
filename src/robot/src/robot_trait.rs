@@ -2,6 +2,8 @@ use nalgebra as na;
 
 use message::{Capsule, CollisionObject, Pose};
 
+pub type RobotType = dyn DRobot;
+
 pub trait Robot<V>: Send + Sync {
     // get functions
     fn name(&self) -> String;

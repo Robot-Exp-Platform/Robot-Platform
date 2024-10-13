@@ -3,7 +3,7 @@ use serde_json::Value;
 use std::collections::{HashMap, HashSet};
 use std::sync::mpsc::Receiver;
 
-use message::Target;
+use message::{Target, TaskState};
 
 type TaskId = usize;
 
@@ -22,7 +22,7 @@ pub struct TaskManager {
     open_tasks: HashSet<TaskId>,
 
     /// 与线程管理器通信的接收器
-    receiver: Option<Receiver<String>>,
+    receiver: Option<Receiver<TaskState>>,
 }
 
 #[derive(Deserialize, Default, Clone)]
@@ -45,7 +45,7 @@ pub struct Node {
 
 impl TaskManager {
     /// 从 JSON 文件读取任务并构建 DAG
-    pub fn from_json(receiver: Receiver<String>, file_path: &str) -> Self {
+    pub fn from_json(receiver: Receiver<TaskState>, file_path: &str) -> Self {
         let file_content = std::fs::read_to_string(file_path).expect("Failed to read JSON file");
         let task_list: Vec<Task> =
             serde_json::from_str(&file_content).expect("Invalid JSON format");

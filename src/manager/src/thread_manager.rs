@@ -3,6 +3,8 @@ use std::sync::{Arc, Mutex, RwLock};
 use std::thread;
 use std::time::Instant;
 
+use message::TaskState;
+
 use crate::Node;
 
 #[derive(Default)]
@@ -11,12 +13,12 @@ pub struct ThreadManager {
 
     /// 与 taskmanager 通信的通道,用于报告任务完成情况
     /// 考虑之后将传递的消息改为枚举类型，或许更加有利于管理
-    sender: Option<Sender<String>>,
+    sender: Option<Sender<TaskState>>,
 }
 
 impl ThreadManager {
     /// 创建一个线程管理器
-    pub fn new(sender: Sender<String>) -> Self {
+    pub fn new(sender: Sender<TaskState>) -> Self {
         ThreadManager {
             threads: Vec::new(),
             sender: Some(sender),
@@ -61,7 +63,9 @@ impl ThreadManager {
                     }
                 }
                 node.finalize();
-                sender.send(name).unwrap();
+                if "planner" == node.node_type().as_str() {
+                    sender.send(TaskState::PlanEnd(name)).unwrap();
+                }
             })
             .unwrap();
         self.threads.push(thread);
@@ -95,7 +99,9 @@ impl ThreadManager {
                     }
                 }
                 node.finalize();
-                sender.send(name).unwrap();
+                if "planner" == node.node_type().as_str() {
+                    sender.send(TaskState::PlanEnd(name)).unwrap();
+                }
             })
             .unwrap();
         self.threads.push(thread);
@@ -129,7 +135,9 @@ impl ThreadManager {
                     }
                 }
                 node.finalize();
-                sender.send(name).unwrap();
+                if "planner" == node.node_type().as_str() {
+                    sender.send(TaskState::PlanEnd(name)).unwrap();
+                }
             })
             .unwrap();
         self.threads.push(thread);
