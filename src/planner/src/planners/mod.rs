@@ -1,5 +1,5 @@
 mod cfs;
 mod interp;
 
-pub use cfs::DCfs;
+pub use cfs::{Cfs, DCfs, SCfs};
 pub use interp::{DInterp, Interp, SInterp};

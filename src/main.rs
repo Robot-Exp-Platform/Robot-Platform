@@ -4,6 +4,7 @@
 pub mod exp;
 
 use exp::Exp;
+use manager::Node;
 fn main() {
     let mut exp = Exp::default();
 

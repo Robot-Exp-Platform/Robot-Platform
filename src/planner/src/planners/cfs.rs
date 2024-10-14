@@ -11,33 +11,36 @@ use std::time::Duration;
 use crate::{utilities::*, DPlanner, Planner};
 use generate_tools::{get_fn, set_fn};
 use manager::Node;
-use message::{Constraint, DTrack, QuadraticProgramming, Target};
+use message::{Constraint, DTrack, QuadraticProgramming, Target, Track};
 #[cfg(feature = "recode")]
 use recoder::*;
-use robot::DRobot;
+use robot::RobotType;
 use sensor::Sensor;
 use solver::{OsqpSolver, Solver};
 
-pub struct DCfs<R> {
+pub struct Cfs<V> {
     /// The name of the planner.
     name: String,
     /// The state of the planner.
-    state: DCfsState,
+    state: CfsState,
     /// The parameters of the planner.
-    params: DCfsParams,
+    params: CfsParams,
     /// The node of the planner.
-    node: DCfsNode,
+    node: CfsNode<V>,
     /// The robot that the planner is controlling.
-    robot: Arc<RwLock<R>>,
+    robot: Arc<RwLock<RobotType>>,
 }
 
+pub type DCfs = Cfs<na::DVector<f64>>;
+pub type SCfs<const N: usize> = Cfs<na::SVector<f64, N>>;
+
 #[derive(Default)]
-pub struct DCfsState {
+pub struct CfsState {
     target: Option<Target>,
 }
 
 #[derive(Deserialize, Default)]
-pub struct DCfsParams {
+pub struct CfsParams {
     period: f64,
     ninterp: usize,
     niter: usize,
@@ -46,34 +49,38 @@ pub struct DCfsParams {
 }
 
 #[derive(Default)]
-pub struct DCfsNode {
+pub struct CfsNode<V> {
     sensor: Option<Arc<RwLock<Sensor>>>,
     recoder: Option<BufWriter<fs::File>>,
     target_queue: Arc<SegQueue<Target>>,
-    track_queue: Arc<SegQueue<DTrack>>,
+    track_queue: Arc<SegQueue<Track<V>>>,
 }
 
-impl<R: DRobot> DCfs<R> {
-    pub fn new(name: String, robot: Arc<RwLock<R>>) -> DCfs<R> {
-        DCfs::from_params(name, DCfsParams::default(), robot)
+impl DCfs {
+    pub fn new(name: String, robot: Arc<RwLock<RobotType>>) -> DCfs {
+        DCfs::from_params(name, CfsParams::default(), robot)
     }
 
-    pub fn from_params(name: String, params: DCfsParams, robot: Arc<RwLock<R>>) -> DCfs<R> {
+    pub fn from_json(name: String, robot: Arc<RwLock<RobotType>>, json: Value) -> DCfs {
+        DCfs::from_params(name, from_value(json).unwrap(), robot)
+    }
+
+    pub fn from_params(name: String, params: CfsParams, robot: Arc<RwLock<RobotType>>) -> DCfs {
         DCfs {
             name,
-            state: DCfsState::default(),
+            state: CfsState::default(),
             params,
-            node: DCfsNode::default(),
+            node: CfsNode::default(),
             robot,
         }
     }
 }
 
-impl<R: DRobot> DPlanner for DCfs<R> {
+impl DPlanner for DCfs {
     set_fn!((set_track_queue, track_queue: Arc<SegQueue<DTrack>>, node));
 }
 
-impl<R: DRobot> Planner for DCfs<R> {
+impl Planner for DCfs {
     get_fn!((name: String));
     set_fn!((set_target_queue, target_queue: Arc<SegQueue<Target>>, node));
 
@@ -85,9 +92,7 @@ impl<R: DRobot> Planner for DCfs<R> {
     }
 }
 
-impl<R: DRobot> Node for DCfs<R> {
-    
-
+impl Node for DCfs {
     fn update(&mut self) {
         // 获取 robot 状态
         let robot_read = self.robot.read().unwrap();
