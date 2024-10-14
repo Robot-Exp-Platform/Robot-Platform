@@ -6,7 +6,7 @@ use std::{
     sync::{mpsc, Arc, RwLock},
 };
 
-use manager::{Config, PostOffice, TaskManager, ThreadManager};
+use manager::{Config, Node, PostOffice, TaskManager, ThreadManager};
 use robot::{self, DRobot};
 use sensor::Sensor;
 
@@ -74,8 +74,30 @@ impl Exp {
         }
     }
 
+    /// 从机器人池中抓取机器人
+    /// TODO 需要做机器人状态管理，避免多个任务
+    pub fn get_robot_from_name(&self, name: &str) -> Option<Arc<RwLock<dyn DRobot>>> {
+        for robot in &self.robot_pool {
+            if robot.read().unwrap().name() == name {
+                return Some(robot.clone());
+            }
+        }
+        None
+    }
+
+    pub fn get_sensor_from_name(&self, name: &str) -> Option<Arc<RwLock<Sensor>>> {
+        for sensor in &self.sensor_pool {
+            if sensor.read().unwrap().name() == name {
+                return Some(sensor.clone());
+            }
+        }
+        None
+    }
+}
+
+impl Node for Exp {
     // 实验初始化过程
-    pub fn init(&mut self) {
+    fn init(&mut self) {
         println!(
             "现在是 {}，先生，祝您早上、中午、晚上好",
             Local::now().format("%Y-%m-%d %H:%M:%S")
@@ -87,8 +109,9 @@ impl Exp {
     /// 1. 在任务管理器中检查 `open_list` 是否为空，如果为空则结束任务。否则就对每个任务新建节点
     /// 2. 新建节点的过程中首先需要从机器人池子里面找到对应的机器人，然后针对任务描述新建规划器节点以及控制器节点
     ///    一般来说规划器节点直接对应任务，可以以规划器生命的结束作为任务的结束，而控制器更多的是针对机器人的控制
-    pub fn update(&mut self) {}
-    pub fn is_running(&mut self) -> bool {
-        true
+    fn update(&mut self) {
+        let tasks = self.task_manager.get_open_tasks();
+
+        for task in tasks {}
     }
 }

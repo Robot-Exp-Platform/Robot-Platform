@@ -2,6 +2,7 @@ use serde::Deserialize;
 use serde_json::Value;
 use std::collections::{HashMap, HashSet};
 use std::sync::mpsc::Receiver;
+use std::sync::{Arc, Mutex};
 
 use message::{Target, TaskState};
 
@@ -22,7 +23,7 @@ pub struct TaskManager {
     open_tasks: HashSet<TaskId>,
 
     /// 与线程管理器通信的接收器
-    receiver: Option<Receiver<TaskState>>,
+    receiver: Option<Arc<Mutex<Receiver<TaskState>>>>,
 }
 
 #[derive(Deserialize, Default, Clone)]
@@ -39,6 +40,7 @@ pub struct Task {
 pub struct Node {
     pub node_type: String,
     pub name: String,
+
     pub sensor: Option<String>,
     pub param: Value,
 }
@@ -51,7 +53,7 @@ impl TaskManager {
             serde_json::from_str(&file_content).expect("Invalid JSON format");
 
         let mut task_manager = TaskManager {
-            receiver: Some(receiver),
+            receiver: Some(Arc::new(Mutex::new(receiver))),
             ..Default::default()
         };
         for task in task_list {
@@ -82,7 +84,7 @@ impl TaskManager {
     }
 
     /// 获取所有入度为 0 的任务
-    pub fn get_open_tasks_tasks(&self) -> Vec<&Task> {
+    pub fn get_open_tasks(&self) -> Vec<&Task> {
         self.open_tasks
             .iter()
             .filter_map(|id| self.tasks.get(id))

@@ -12,11 +12,11 @@ use std::time::Duration;
 use crate::{utilities::lerp, DPlanner, Planner};
 use generate_tools::{get_fn, set_fn};
 use message::{DTrack, Target, Track};
-use robot::{DRobot, Robot};
+use robot::RobotType;
 use sensor::Sensor;
 
 /// 通过插值实现的路径规划器，在不考虑逆运动学的情况下实现轨迹插值。
-pub struct Interp<R: Robot<V>, V> {
+pub struct Interp<V> {
     /// The name of the planner.
     name: String,
     /// The state of the planner.
@@ -26,11 +26,11 @@ pub struct Interp<R: Robot<V>, V> {
     /// The node of the planner.
     node: InterpNode<V>,
     /// The robot that the planner is controlling.
-    robot: Arc<RwLock<R>>,
+    robot: Arc<RwLock<RobotType>>,
 }
 
-pub type DInterp<R> = Interp<R, na::DVector<f64>>;
-pub type SInterp<R, const N: usize> = Interp<R, na::SVector<f64, N>>;
+pub type DInterp = Interp<na::DVector<f64>>;
+pub type SInterp<const N: usize> = Interp<na::SVector<f64, N>>;
 
 #[derive(Default)]
 pub struct InterpState {
@@ -53,11 +53,18 @@ pub struct InterpNode<V> {
     track_queue: Arc<SegQueue<Track<V>>>,
 }
 
-impl<R: DRobot> DInterp<R> {
-    pub fn new(name: String, robot: Arc<RwLock<R>>) -> DInterp<R> {
+impl DInterp {
+    pub fn new(name: String, robot: Arc<RwLock<RobotType>>) -> DInterp {
         DInterp::from_params(name, InterpParams::default(), robot)
     }
-    pub fn from_params(name: String, params: InterpParams, robot: Arc<RwLock<R>>) -> DInterp<R> {
+    pub fn from_json(name: String, robot: Arc<RwLock<RobotType>>, json: Value) -> DInterp {
+        DInterp::from_params(name, from_value(json).unwrap(), robot)
+    }
+    pub fn from_params(
+        name: String,
+        params: InterpParams,
+        robot: Arc<RwLock<RobotType>>,
+    ) -> DInterp {
         DInterp {
             name,
             _state: InterpState::default(),
@@ -68,11 +75,11 @@ impl<R: DRobot> DInterp<R> {
     }
 }
 
-impl<R: DRobot> DPlanner for DInterp<R> {
+impl DPlanner for DInterp {
     set_fn!((set_track_queue, track_queue: Arc<SegQueue<DTrack>>, node));
 }
 
-impl<R: DRobot> Planner for DInterp<R> {
+impl Planner for DInterp {
     get_fn!((name: String));
     set_fn!((set_target_queue, target_queue: Arc<SegQueue<Target>>, node));
 
@@ -84,7 +91,7 @@ impl<R: DRobot> Planner for DInterp<R> {
     }
 }
 
-impl<R: DRobot> Node for DInterp<R> {
+impl Node for DInterp {
     fn update(&mut self) {
         // 获取当前 robot 状态
         let robot_read = self.robot.read().unwrap();
