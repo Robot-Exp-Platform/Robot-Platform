@@ -14,10 +14,10 @@ use manager::Node;
 use message::{ControlCommand, DControlCommand, DTrack, Track};
 #[cfg(feature = "recode")]
 use recoder::*;
-use robot::{DRobot, Robot, SRobot};
+use robot::RobotType;
 use sensor::Sensor;
 
-pub struct Pid<R: Robot<V>, V, M> {
+pub struct Pid<V, M> {
     /// The name of the controller.
     name: String,
     /// The path of the controller.
@@ -27,11 +27,11 @@ pub struct Pid<R: Robot<V>, V, M> {
     /// The node of the controller.
     node: PidNode<V>,
     /// The robot that the controller is controlling.
-    robot: Arc<RwLock<R>>,
+    robot: Arc<RwLock<RobotType>>,
 }
 
-pub type DPid<R> = Pid<R, na::DVector<f64>, na::DMatrix<f64>>;
-pub type SPid<R, const N: usize> = Pid<R, na::SVector<f64, N>, na::SMatrix<f64, N, N>>;
+pub type DPid = Pid<na::DVector<f64>, na::DMatrix<f64>>;
+pub type SPid<const N: usize> = Pid<na::SVector<f64, N>, na::SMatrix<f64, N, N>>;
 
 pub struct PidState<V> {
     track: V,
@@ -56,8 +56,8 @@ pub struct PidNode<V> {
     control_cmd_queue: Arc<SegQueue<ControlCommand<V>>>,
 }
 
-impl<R: DRobot> DPid<R> {
-    pub fn new(name: String, robot: Arc<RwLock<R>>) -> DPid<R> {
+impl DPid {
+    pub fn new(name: String, robot: Arc<RwLock<RobotType>>) -> DPid {
         let ndof = robot.read().unwrap().dof();
         DPid::from_params(
             name,
@@ -70,11 +70,16 @@ impl<R: DRobot> DPid<R> {
             robot,
         )
     }
+
+    pub fn from_json(name: String, robot: Arc<RwLock<RobotType>>, json: Value) -> DPid {
+        DPid::from_params(name, from_value(json).unwrap(), robot)
+    }
+
     pub fn from_params(
         name: String,
         params: PidParams<na::DMatrix<f64>>,
-        robot: Arc<RwLock<R>>,
-    ) -> DPid<R> {
+        robot: Arc<RwLock<RobotType>>,
+    ) -> DPid {
         let ndof = robot.read().unwrap().dof();
         DPid {
             name,
@@ -92,8 +97,8 @@ impl<R: DRobot> DPid<R> {
     }
 }
 
-impl<R: SRobot<N>, const N: usize> SPid<R, N> {
-    pub fn new(name: String, robot: Arc<RwLock<R>>) -> SPid<R, N> {
+impl<const N: usize> SPid<N> {
+    pub fn new(name: String, robot: Arc<RwLock<RobotType>>) -> SPid<N> {
         SPid::from_params(
             name,
             PidParams {
@@ -108,8 +113,8 @@ impl<R: SRobot<N>, const N: usize> SPid<R, N> {
     pub fn from_params(
         name: String,
         params: PidParams<na::SMatrix<f64, N, N>>,
-        robot: Arc<RwLock<R>>,
-    ) -> SPid<R, N> {
+        robot: Arc<RwLock<RobotType>>,
+    ) -> SPid<N> {
         SPid {
             name,
             state: PidState {
@@ -131,12 +136,12 @@ impl<R: SRobot<N>, const N: usize> SPid<R, N> {
     }
 }
 
-impl<R: Robot<na::DVector<f64>>> TController<na::DVector<f64>> for DPid<R> {
+impl TController<na::DVector<f64>> for DPid {
     set_fn!((set_track_queue, track_queue: Arc<SegQueue<DTrack>>, node),
             (set_control_cmd_queue, control_cmd_queue: Arc<SegQueue<DControlCommand>>, node));
 }
 
-impl<R: Robot<na::DVector<f64>>> Controller for DPid<R> {
+impl Controller for DPid {
     get_fn!((name: String));
 
     fn set_sensor(&mut self, sensor: Arc<RwLock<Sensor>>) {
@@ -147,7 +152,7 @@ impl<R: Robot<na::DVector<f64>>> Controller for DPid<R> {
     }
 }
 
-impl<R: Robot<na::DVector<f64>>> Node for DPid<R> {
+impl Node for DPid {
     fn update(&mut self) {
         // 获取 robot 状态
         let robot_read = self.robot.read().unwrap();
