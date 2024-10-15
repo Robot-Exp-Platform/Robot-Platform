@@ -12,9 +12,9 @@ pub struct RobotConfig {
 
 /// 通过配置文件生成机器人实例
 /// TODO 该函数目前只有动态版本，需要考虑如何实现对于其他储存类型的支持
-pub fn from_config(robot_config: &RobotConfig) -> Arc<RwLock<RobotType>> {
+pub fn from_config(robot_config: &RobotConfig) -> RobotType {
     match robot_config.robot_type.as_str() {
-        "panda" => Arc::new(RwLock::new(RobotType::DSeriseRobot(DPanda::new_panda(
+        "panda" => RobotType::DSeriseRobot(Arc::new(RwLock::new(DPanda::new_panda(
             robot_config.name.clone(),
         )))),
         _ => panic!("Unknown robot type: {}", robot_config.robot_type),

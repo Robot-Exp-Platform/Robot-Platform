@@ -15,7 +15,7 @@ pub struct Exp {
     pub task_manager: TaskManager,
     pub post_office: PostOffice,
 
-    pub robot_pool: Vec<Arc<RwLock<RobotType>>>,
+    pub robot_pool: Vec<RobotType>,
     pub sensor_pool: Vec<Arc<RwLock<Sensor>>>,
 }
 
@@ -68,9 +68,9 @@ impl Exp {
 
     /// 从机器人池中抓取机器人
     /// TODO 需要做机器人状态管理，避免多个任务
-    pub fn get_robot_from_name(&self, name: &str) -> Option<Arc<RwLock<RobotType>>> {
+    pub fn get_robot_from_name(&self, name: &str) -> Option<RobotType> {
         for robot in &self.robot_pool {
-            if robot.read().unwrap().name() == name {
+            if robot.name() == name {
                 return Some(robot.clone());
             }
         }
