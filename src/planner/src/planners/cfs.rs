@@ -14,11 +14,11 @@ use manager::Node;
 use message::{Constraint, DTrack, QuadraticProgramming, Target, Track};
 #[cfg(feature = "recode")]
 use recoder::*;
-use robot::RobotType;
+use robot::DRobot;
 use sensor::Sensor;
 use solver::{OsqpSolver, Solver};
 
-pub struct Cfs<V> {
+pub struct Cfs<R, V> {
     /// The name of the planner.
     name: String,
     /// The state of the planner.
@@ -28,11 +28,11 @@ pub struct Cfs<V> {
     /// The node of the planner.
     node: CfsNode<V>,
     /// The robot that the planner is controlling.
-    robot: Arc<RwLock<RobotType>>,
+    robot: Arc<RwLock<R>>,
 }
 
-pub type DCfs = Cfs<na::DVector<f64>>;
-pub type SCfs<const N: usize> = Cfs<na::SVector<f64, N>>;
+pub type DCfs<R> = Cfs<R, na::DVector<f64>>;
+pub type SCfs<R, const N: usize> = Cfs<R, na::SVector<f64, N>>;
 
 #[derive(Default)]
 pub struct CfsState {
@@ -56,16 +56,16 @@ pub struct CfsNode<V> {
     track_queue: Arc<SegQueue<Track<V>>>,
 }
 
-impl DCfs {
-    pub fn new(name: String, robot: Arc<RwLock<RobotType>>) -> DCfs {
+impl<R: DRobot> DCfs<R> {
+    pub fn new(name: String, robot: Arc<RwLock<R>>) -> DCfs<R> {
         DCfs::from_params(name, CfsParams::default(), robot)
     }
 
-    pub fn from_json(name: String, robot: Arc<RwLock<RobotType>>, json: Value) -> DCfs {
+    pub fn from_json(name: String, robot: Arc<RwLock<R>>, json: Value) -> DCfs<R> {
         DCfs::from_params(name, from_value(json).unwrap(), robot)
     }
 
-    pub fn from_params(name: String, params: CfsParams, robot: Arc<RwLock<RobotType>>) -> DCfs {
+    pub fn from_params(name: String, params: CfsParams, robot: Arc<RwLock<R>>) -> DCfs<R> {
         DCfs {
             name,
             state: CfsState::default(),
@@ -76,11 +76,11 @@ impl DCfs {
     }
 }
 
-impl DPlanner for DCfs {
+impl<R: DRobot> DPlanner for DCfs<R> {
     set_fn!((set_track_queue, track_queue: Arc<SegQueue<DTrack>>, node));
 }
 
-impl Planner for DCfs {
+impl<R: DRobot> Planner for DCfs<R> {
     get_fn!((name: String));
     set_fn!((set_target_queue, target_queue: Arc<SegQueue<Target>>, node));
 
@@ -92,7 +92,7 @@ impl Planner for DCfs {
     }
 }
 
-impl Node for DCfs {
+impl<R: DRobot> Node for DCfs<R> {
     fn update(&mut self) {
         // 获取 robot 状态
         let robot_read = self.robot.read().unwrap();

@@ -10,6 +10,7 @@ pub const PANDA_DOF: usize = 7;
 
 pub type Panda<V> = SeriseRobot<V>;
 pub type DPanda = Panda<na::DVector<f64>>;
+pub type SPanda = Panda<na::SVector<f64, PANDA_DOF>>;
 
 impl DPanda {
     pub fn new_panda(name: String) -> DPanda {

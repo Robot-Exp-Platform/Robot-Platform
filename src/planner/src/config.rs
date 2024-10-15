@@ -1,13 +1,13 @@
+use robot::DRobot;
 use serde_json::Value;
 use std::sync::{Arc, RwLock};
 
 use crate::{Cfs, Interp, Planner};
-use robot::RobotType;
 
-pub fn create_planner(
+pub fn create_planner<R: DRobot + 'static>(
     planner_type: &str,
     robot_name: String,
-    robot: Arc<RwLock<RobotType>>,
+    robot: Arc<RwLock<R>>,
     json: Value,
 ) -> Box<dyn Planner> {
     match planner_type {

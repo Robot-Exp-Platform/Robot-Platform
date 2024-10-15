@@ -1,5 +1,4 @@
 use chrono::Local;
-use crossbeam::queue::SegQueue;
 use serde_json::from_reader;
 use std::{
     fs,
@@ -7,7 +6,7 @@ use std::{
 };
 
 use manager::{Config, Node, PostOffice, TaskManager, ThreadManager};
-use robot::{self, DRobot};
+use robot::{self, RobotType};
 use sensor::Sensor;
 
 #[derive(Default)]
@@ -16,7 +15,7 @@ pub struct Exp {
     pub task_manager: TaskManager,
     pub post_office: PostOffice,
 
-    pub robot_pool: Vec<Arc<RwLock<dyn DRobot>>>,
+    pub robot_pool: Vec<Arc<RwLock<RobotType>>>,
     pub sensor_pool: Vec<Arc<RwLock<Sensor>>>,
 }
 
@@ -38,7 +37,7 @@ impl Exp {
         // 创建任务管理器，任务管理器接受线程管理器的汇报内容
         let task_manager = TaskManager::from_json(receiver, task);
         // 创建消息邮局，消息邮局负责保管传输信道以及负责统合或分发控制指令
-        let mut post_office = PostOffice::default();
+        let post_office = PostOffice::default();
 
         // 根据配置文件创建机器人池和传感器池，这些机器人和传感器将伴随整个实验过程，当有节点需要时从池中取出
         // TODO 设置使用状态，避免多个任务同时发布至同一个机器人
@@ -47,15 +46,8 @@ impl Exp {
         for robot_config in config.robots {
             let robot = robot::from_config(&robot_config);
             // 为 robot 配置仿真模式
-            for mode in robot_config.modes {
+            for _mode in robot_config.modes {
                 // 创建仿真器节点
-                let mut simulator =
-                    simulator::create_simulator(&mode, robot_config.name.clone(), robot.clone());
-
-                // 创建控制指令队列，由邮局暂为保管，之后由控制器节点调用
-                let control_cmd_queue = Arc::new(SegQueue::new());
-                simulator.set_control_cmd_queue(control_cmd_queue.clone());
-                post_office.add_control_cmd_channel(robot_config.name.clone(), control_cmd_queue);
 
                 // 创建与邮局的通讯
             }
@@ -76,7 +68,7 @@ impl Exp {
 
     /// 从机器人池中抓取机器人
     /// TODO 需要做机器人状态管理，避免多个任务
-    pub fn get_robot_from_name(&self, name: &str) -> Option<Arc<RwLock<dyn DRobot>>> {
+    pub fn get_robot_from_name(&self, name: &str) -> Option<Arc<RwLock<RobotType>>> {
         for robot in &self.robot_pool {
             if robot.read().unwrap().name() == name {
                 return Some(robot.clone());
@@ -112,6 +104,6 @@ impl Node for Exp {
     fn update(&mut self) {
         let tasks = self.task_manager.get_open_tasks();
 
-        for task in tasks {}
+        for _task in tasks {}
     }
 }

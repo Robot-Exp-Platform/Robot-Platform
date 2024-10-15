@@ -1,13 +1,13 @@
+use robot::DRobot;
 use serde_json::Value;
 use std::sync::{Arc, RwLock};
 
 use crate::{Controller, Pid};
-use robot::RobotType;
 
-pub fn create_controller(
+pub fn create_controller<R: DRobot + 'static>(
     controller_type: &str,
     robot_name: String,
-    robot: Arc<RwLock<RobotType>>,
+    robot: Arc<RwLock<R>>,
     json: Value,
 ) -> Box<dyn Controller> {
     match controller_type {

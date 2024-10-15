@@ -1,4 +1,5 @@
 use message::DRobotState;
+use robot::RobotType;
 use serde::Deserialize;
 use serde_json::{from_value, Value};
 // use serde_yaml::Value;
@@ -19,7 +20,6 @@ use manager::Node;
 use message::DControlCommand;
 #[cfg(feature = "recode")]
 use recoder::*;
-use robot::RobotType;
 use sensor::Sensor;
 
 // bullet 结构体声明，包含其名称，路径，消息节点，以及机器人
@@ -166,14 +166,14 @@ impl Node for DBullet {
             responder.send(&reply, 0).expect("Failed to send reply");
 
             // 处理消息，将消息中的状态信息写入到机器人状态中
-            let mut robot_write = self.robot.write().unwrap();
+            // let mut robot_write = self.robot.write().unwrap();
             match robot_state {
-                DRobotState::Joint(joint) => robot_write.set_q(joint),
-                DRobotState::Velocity(velocity) => robot_write.set_q_dot(velocity),
-                DRobotState::JointVel(joint, velocity) => {
-                    robot_write.set_q(joint);
-                    robot_write.set_q_dot(velocity);
-                }
+                // DRobotState::Joint(joint) => robot_write.set_q(joint),
+                // DRobotState::Velocity(velocity) => robot_write.set_q_dot(velocity),
+                // DRobotState::JointVel(joint, velocity) => {
+                //     robot_write.set_q(joint);
+                //     robot_write.set_q_dot(velocity);
+                // }
                 _ => {}
             }
         }
