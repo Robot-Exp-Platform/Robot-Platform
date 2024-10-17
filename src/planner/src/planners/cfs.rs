@@ -266,4 +266,8 @@ impl<R: DRobot> Node for DCfs<R> {
     fn period(&self) -> Duration {
         Duration::from_secs_f64(self.params.period)
     }
+
+    fn node_name(&self) -> String {
+        self.name.clone()
+    }
 }

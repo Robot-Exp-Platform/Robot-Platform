@@ -1,12 +1,14 @@
 use chrono::Local;
+use controller::create_controller;
+use planner::create_planner;
 use serde_json::from_reader;
 use std::{
     fs,
     sync::{mpsc, Arc, RwLock},
 };
 
-use manager::{Config, Node, PostOffice, TaskManager, ThreadManager};
-use robot::{self, RobotType};
+use manager::{Config, Node, PostOffice, Task, TaskManager, ThreadManager};
+use robot::{self, DRobot, RobotType};
 use sensor::Sensor;
 
 #[derive(Default)]
@@ -85,6 +87,26 @@ impl Exp {
         }
         None
     }
+
+    /// 根据机器人类型创建对应的节点
+    pub fn create_nodes<R: DRobot + 'static>(&mut self, robot: Arc<RwLock<R>>, task: &Task) {
+        let planner = create_planner(
+            task.planner.0.as_str(),
+            format!("task_{}", task.id),
+            robot.clone(),
+            task.planner.1.clone(),
+        );
+
+        let controller = create_controller(
+            task.controller.0.as_str(),
+            format!("task_{}", task.id),
+            robot.clone(),
+            task.controller.1.clone(),
+        );
+
+        self.thread_manager.add_node(planner);
+        self.thread_manager.add_node(controller);
+    }
 }
 
 impl Node for Exp {
@@ -102,8 +124,19 @@ impl Node for Exp {
     /// 2. 新建节点的过程中首先需要从机器人池子里面找到对应的机器人，然后针对任务描述新建规划器节点以及控制器节点
     ///    一般来说规划器节点直接对应任务，可以以规划器生命的结束作为任务的结束，而控制器更多的是针对机器人的控制
     fn update(&mut self) {
-        let tasks = self.task_manager.get_open_tasks();
+        let tasks: Vec<Task> = self
+            .task_manager
+            .get_open_tasks()
+            .into_iter()
+            .cloned()
+            .collect();
 
-        for _task in tasks {}
+        // 直接在循环中进行操作
+        for task in tasks {
+            if let Some(RobotType::DSeriseRobot(robot)) = self.get_robot_from_name(&task.robots[0])
+            {
+                self.create_nodes(robot, &task); // task 使用引用即可
+            }
+        }
     }
 }

@@ -10,9 +10,10 @@ pub fn create_planner<R: DRobot + 'static>(
     robot: Arc<RwLock<R>>,
     json: Value,
 ) -> Box<dyn Planner> {
+    let name = format!("{}:{}", planner_type, robot_name);
     match planner_type {
-        "interp" => Box::new(Interp::from_json(robot_name, robot, json)),
-        "cfs" => Box::new(Cfs::from_json(robot_name, robot, json)),
+        "interp" => Box::new(Interp::from_json(name, robot, json)),
+        "cfs" => Box::new(Cfs::from_json(name, robot, json)),
         _ => panic!("Unknown planner type: {}", planner_type),
     }
 }

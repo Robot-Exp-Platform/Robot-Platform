@@ -32,17 +32,11 @@ pub struct Task {
     pub rely: Vec<TaskId>,
 
     pub robots: Vec<String>,
-    pub nodes: Vec<Node>,
-    pub target: Target,
-}
-
-#[derive(Debug, Deserialize, Clone)]
-pub struct Node {
-    pub node_type: String,
-    pub name: String,
-
     pub sensor: Option<String>,
-    pub param: Value,
+    pub target: Vec<Target>,
+
+    pub planner: (String, Value),
+    pub controller: (String, Value),
 }
 
 impl TaskManager {

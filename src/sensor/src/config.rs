@@ -11,7 +11,7 @@ pub struct SensorConfig {
 
 pub fn from_config(sensor_config: SensorConfig) -> Arc<RwLock<Sensor>> {
     match sensor_config.sensor_type.as_str() {
-        "obstacle_relaser" => Arc::new(RwLock::new(Sensor::ObstacleReleaser(
+        "obstacle_releaser" => Arc::new(RwLock::new(Sensor::ObstacleReleaser(
             ObstacleReleaser::new(sensor_config.name),
         ))),
         _ => panic!("Unknown sensor type: {}", sensor_config.sensor_type),

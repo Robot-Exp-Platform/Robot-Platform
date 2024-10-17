@@ -6,7 +6,7 @@ pub mod exp;
 use exp::Exp;
 use manager::Node;
 fn main() {
-    let mut exp = Exp::default();
+    let mut exp = Exp::from_json("./config.json", "./task.json");
 
     exp.init();
 
