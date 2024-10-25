@@ -13,12 +13,22 @@ use sensor::Sensor;
 
 #[derive(Default)]
 pub struct Exp {
+    pub state: ExpState,
+
     pub thread_manager: ThreadManager,
     pub task_manager: TaskManager,
     pub post_office: PostOffice,
 
     pub robot_pool: Vec<RobotType>,
     pub sensor_pool: Vec<Arc<RwLock<Sensor>>>,
+}
+
+#[derive(Default, PartialEq)]
+pub enum ExpState {
+    #[default]
+    Init,
+    Running,
+    TaskFinishCallback,
 }
 
 impl Exp {
@@ -40,6 +50,8 @@ impl Exp {
         let task_manager = TaskManager::from_json(receiver, task);
         // 创建消息邮局，消息邮局负责保管传输信道以及负责统合或分发控制指令
         let post_office = PostOffice::default();
+        // 创建实验状态机，实验状态机负责管理实验的整个过程
+        let state = ExpState::Init;
 
         // 根据配置文件创建机器人池和传感器池，这些机器人和传感器将伴随整个实验过程，当有节点需要时从池中取出
         // TODO 设置使用状态，避免多个任务同时发布至同一个机器人
@@ -60,6 +72,7 @@ impl Exp {
         }
 
         Exp {
+            state,
             thread_manager,
             task_manager,
             post_office,
@@ -116,6 +129,11 @@ impl Node for Exp {
             "现在是 {}，先生，祝您早上、中午、晚上好",
             Local::now().format("%Y-%m-%d %H:%M:%S")
         );
+        self.state = ExpState::Running;
+    }
+
+    fn is_running(&mut self) -> bool {
+        self.state == ExpState::Running
     }
 
     /// 实验进行过程，需要从任务管理器中取出位于开放列表中的任务并筹备对应的节点，然后交给线程管理器

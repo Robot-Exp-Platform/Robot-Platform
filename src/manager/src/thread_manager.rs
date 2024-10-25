@@ -1,7 +1,7 @@
 use std::sync::mpsc::Sender;
 use std::sync::{Arc, Mutex, RwLock};
 use std::thread;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use message::TaskState;
 
@@ -61,6 +61,8 @@ impl ThreadManager {
                     if period > elapsed_time {
                         thread::sleep(period - elapsed_time);
                     }
+
+                    thread::sleep(Duration::from_secs(1));
                 }
                 node.finalize();
                 if "planner" == node.node_type().as_str() {

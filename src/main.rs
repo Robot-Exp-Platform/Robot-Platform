@@ -1,7 +1,10 @@
 #![feature(trait_alias)]
 #![feature(trait_upcasting)]
+#![feature(more_float_constants)]
 
 pub mod exp;
+
+use std::{thread, time::Duration};
 
 use exp::Exp;
 use manager::Node;
@@ -12,5 +15,6 @@ fn main() {
 
     while exp.is_running() {
         exp.update();
+        thread::sleep(Duration::from_secs(10));
     }
 }
