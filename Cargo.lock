@@ -303,26 +303,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "controller"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "crossbeam",
- "generate_tools",
- "manager",
- "message",
- "nalgebra",
- "node",
- "robot",
- "sensor",
- "serde",
- "serde_json",
- "serde_yaml",
- "solver",
- "zmq",
-]
-
-[[package]]
 name = "core-foundation-sys"
 version = "0.8.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1201,25 +1181,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "953ec861398dccce10c670dfeaf3ec4911ca479e9c02154b3a215178c5f566f2"
 
 [[package]]
-name = "planner"
-version = "0.1.0"
-dependencies = [
- "crossbeam",
- "generate_tools",
- "manager",
- "message",
- "nalgebra",
- "node",
- "osqp",
- "robot",
- "sensor",
- "serde",
- "serde_json",
- "serde_yaml",
- "solver",
-]
-
-[[package]]
 name = "portable-atomic"
 version = "1.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1426,7 +1387,6 @@ version = "0.1.0"
 dependencies = [
  "approx 0.5.1",
  "chrono",
- "controller",
  "crossbeam",
  "generate_tools",
  "manager",
@@ -1434,7 +1394,6 @@ dependencies = [
  "nalgebra",
  "node",
  "osqp",
- "planner",
  "rand",
  "recoder",
  "robot",

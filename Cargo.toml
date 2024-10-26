@@ -1,11 +1,9 @@
 [workspace]
 members = [
-    "src/controller",
     "src/generate_tools",
     "src/manager",
     "src/message",
     "src/node",
-    "src/planner",
     "src/recoder",
     "src/robot",
     "src/sensor",
@@ -44,12 +42,10 @@ message = { path = "src/message" }
 robot = { path = "src/robot" }
 generate_tools = { path = "src/generate_tools" }
 manager = { path = "src/manager" }
-planner = { path = "src/planner" }
 recoder = { path = "src/recoder" }
 sensor = { path = "src/sensor" }
 simulator = { path = "src/simulator" }
 solver = { path = "src/solver" }
-controller = { path = "src/controller" }
 node = { path = "src/node" }
 
 
@@ -71,12 +67,10 @@ message.workspace = true
 robot.workspace = true
 generate_tools.workspace = true
 manager.workspace = true
-planner.workspace = true
 recoder.workspace = true
 sensor.workspace = true
 simulator.workspace = true
 solver.workspace = true
-controller.workspace = true
 node.workspace = true
 
 

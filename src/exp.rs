@@ -1,6 +1,5 @@
 use chrono::Local;
-use controller::create_controller;
-use planner::create_planner;
+use node::create_node;
 use serde_json::from_reader;
 use std::{
     fs,
@@ -9,7 +8,7 @@ use std::{
 
 use manager::{Config, PostOffice, Task, TaskManager, ThreadManager};
 use node::NodeBehavior;
-use robot::{self, DRobot, RobotType};
+use robot::{self, RobotType};
 use sensor::Sensor;
 
 #[derive(Default)]
@@ -102,25 +101,25 @@ impl Exp {
         None
     }
 
-    /// 根据机器人类型创建对应的节点
-    pub fn create_nodes<R: DRobot + 'static>(&mut self, robot: Arc<RwLock<R>>, task: &Task) {
-        let planner = create_planner(
-            task.planner.0.as_str(),
-            format!("task_{}", task.id),
-            robot.clone(),
-            task.planner.1.clone(),
-        );
+    // /// 根据机器人类型创建对应的节点
+    // pub fn create_nodes<R: DRobot + 'static>(&mut self, robot: Arc<RwLock<R>>, task: &Task) {
+    //     let planner = create_planner(
+    //         task.planner.0.as_str(),
+    //         format!("task_{}", task.id),
+    //         robot.clone(),
+    //         task.planner.1.clone(),
+    //     );
 
-        let controller = create_controller(
-            task.controller.0.as_str(),
-            format!("task_{}", task.id),
-            robot.clone(),
-            task.controller.1.clone(),
-        );
+    //     let controller = create_controller(
+    //         task.controller.0.as_str(),
+    //         format!("task_{}", task.id),
+    //         robot.clone(),
+    //         task.controller.1.clone(),
+    //     );
 
-        self.thread_manager.add_node(planner);
-        self.thread_manager.add_node(controller);
-    }
+    //     self.thread_manager.add_node(planner);
+    //     self.thread_manager.add_node(controller);
+    // }
 }
 
 impl NodeBehavior for Exp {
@@ -154,7 +153,7 @@ impl NodeBehavior for Exp {
         for task in tasks {
             if let Some(RobotType::DSeriseRobot(robot)) = self.get_robot_from_name(&task.robots[0])
             {
-                self.create_nodes(robot, &task); // task 使用引用即可
+                // self.create_nodes(robot, &task); // task 使用引用即可
             }
         }
     }
