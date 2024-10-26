@@ -115,6 +115,7 @@ impl NodeBehavior for DCfs {
             .target
             .clone()
             .unwrap_or(self.node.input_queue.pop().unwrap());
+        self.state.target = Some(target.clone());
         let target = match target {
             // 根据不同的 target 类型，执行不同的任务，也可以将不同的 Target 类型处理为相同的类型
             DNodeMessage::Joint(joint) => joint,
@@ -133,7 +134,7 @@ impl NodeBehavior for DCfs {
         // 初始化二次规划的目标函数矩阵
         // 矩阵待修改，实际上为q1 为对角矩阵，q2 为离散拉普拉斯算子， q3 为
 
-        let dim = (self.params.ninterp + 1) * ndof;
+        let dim = (self.params.ninterp + 2) * ndof;
 
         let h = get_optimize_function(dim, ndof, self.params.cost_weight.clone());
         let f = na::DVector::<f64>::zeros(dim);
@@ -152,7 +153,7 @@ impl NodeBehavior for DCfs {
 
             for q_ref in q_ref_list.iter() {
                 let mut obstacle_constraint =
-                    Constraint::Intersection(0, 0, Vec::with_capacity(collision_objects.len()));
+                    Constraint::Intersection(0, ndof, Vec::with_capacity(collision_objects.len()));
 
                 for (dis, grad) in collision_objects.iter().map(|collision| {
                     (

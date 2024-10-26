@@ -1,7 +1,7 @@
 use std::sync::mpsc::Sender;
 use std::sync::{Arc, Mutex, RwLock};
 use std::thread;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 use message::TaskState;
 
@@ -40,7 +40,7 @@ impl ThreadManager {
     /// 此时的 node 是裸漏的，不具备任何多线程能力，扔进线程之后不可被外部访问
     /// 我们要组一辈子的线程啊
     pub fn add_node(&mut self, node: Box<dyn NodeBehavior>) {
-        let name = node.node_name() + "_thread";
+        let name = node.node_name();
         let sender = self.sender.clone().unwrap();
         let thread = thread::Builder::new()
             .name(name.clone())
@@ -61,8 +61,6 @@ impl ThreadManager {
                     if period > elapsed_time {
                         thread::sleep(period - elapsed_time);
                     }
-
-                    thread::sleep(Duration::from_secs(1));
                 }
                 node.finalize();
                 if "planner" == node.node_type().as_str() {
@@ -75,7 +73,7 @@ impl ThreadManager {
 
     pub fn add_mutex_node(&mut self, node: Arc<Mutex<dyn NodeBehavior>>) {
         let node_lock = node.lock().unwrap();
-        let name = node_lock.node_name() + "_thread";
+        let name = node_lock.node_name();
         drop(node_lock);
 
         let node = node.clone();
@@ -111,7 +109,7 @@ impl ThreadManager {
 
     pub fn add_rwlock_node(&mut self, node: Arc<RwLock<dyn NodeBehavior>>) {
         let node_lock = node.read().unwrap();
-        let name = node_lock.node_name() + "_thread";
+        let name = node_lock.node_name();
         drop(node_lock);
 
         let node = node.clone();

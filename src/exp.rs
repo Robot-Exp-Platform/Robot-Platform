@@ -1,6 +1,5 @@
 use chrono::Local;
 use crossbeam::queue::SegQueue;
-use nalgebra::uninit::Init;
 use node::create_node;
 use serde_json::from_reader;
 use std::{
@@ -10,7 +9,7 @@ use std::{
 
 use manager::{Config, PostOffice, Task, TaskManager, ThreadManager};
 use node::NodeBehavior;
-use robot::{self, DSeriseRobot, RobotType};
+use robot::{self, RobotType};
 use sensor::Sensor;
 
 #[derive(Default)]
@@ -133,7 +132,7 @@ impl Exp {
             let queue = Arc::new(SegQueue::new());
             if edge_config.0 == 0 {
                 // 如果是起始节点，就狠狠注入任务目标
-                node_list[edge_config.1].set_input_queue(queue.clone());
+                node_list[edge_config.1 - 1].set_input_queue(queue.clone());
                 for target in task.target.clone() {
                     queue.push(target);
                 }
@@ -141,12 +140,12 @@ impl Exp {
             }
             if edge_config.1 == 0 {
                 // 如果是结束节点，就注入仿真器队列
-                node_list[edge_config.0].set_output_queue(queue.clone());
+                node_list[edge_config.0 - 1].set_output_queue(queue.clone());
                 continue;
             }
             // 如果是中间节点，就将彼此连接起来
-            node_list[edge_config.0].set_output_queue(queue.clone());
-            node_list[edge_config.1].set_input_queue(queue.clone());
+            node_list[edge_config.0 - 1].set_output_queue(queue.clone());
+            node_list[edge_config.1 - 1].set_input_queue(queue.clone());
         }
 
         // 将节点加入线程管理器
@@ -181,6 +180,7 @@ impl NodeBehavior for Exp {
                 for task in tasks {
                     self.create_nodes(&task);
                 }
+                self.state = ExpState::Running;
             }
             ExpState::Running => {
                 // 任务执行中，一般来说什么都不做，只是等待线程管理器汇报任务完成情况。

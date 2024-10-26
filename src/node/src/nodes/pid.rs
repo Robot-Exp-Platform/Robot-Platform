@@ -57,6 +57,17 @@ pub struct PidNode<V> {
     output_queue: NodeMessageQueue<V>,
 }
 
+impl PidState<na::DVector<f64>> {
+    pub fn new(dof: usize) -> PidState<na::DVector<f64>> {
+        PidState {
+            track: na::DVector::zeros(dof),
+            error: na::DVector::zeros(dof),
+            integral: na::DVector::zeros(dof),
+            derivative: na::DVector::zeros(dof),
+        }
+    }
+}
+
 impl DPid {
     pub fn from_json(name: String, json: Value) -> DPid {
         DPid::from_params(name, from_value(json).unwrap())
@@ -121,6 +132,7 @@ impl Node<na::DVector<f64>> for DPid {
 
     fn set_robot(&mut self, robot: RobotType) {
         if let RobotType::DSeriseRobot(robot) = robot {
+            self.state = PidState::new(robot.read().unwrap().dof());
             self.robot = Some(robot);
         }
     }
@@ -143,6 +155,8 @@ impl NodeBehavior for DPid {
             Some(DNodeMessage::Joint(track)) => track,
             _ => return,
         };
+
+        println!("{} get track: {:?}", self.name, self.state.track);
 
         // 执行 pid 逻辑
         let new_error = &self.state.track - &q;

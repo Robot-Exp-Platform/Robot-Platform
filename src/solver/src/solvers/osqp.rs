@@ -12,11 +12,12 @@ impl OsqpSolver {
         let p = problem.h.clone().into_upper_tri();
         let q = problem.f;
 
-        // println!("{:?}", problem.h.as_slice());
-        // println!("{:?}", problem.f.as_slice());
-        // println!("{:?}", problem.constraints.to_inequation().2);
-        // println!("{:?}", problem.constraints.to_inequation().3);
-        // println!("{:?}", problem.constraints.to_inequation().4);
+        // let (_, _, _a, _l, _u) = problem.constraints.to_namatrix();
+        // println!("p: {:?}", p);
+        // println!("q: {:?}", q);
+        // println!("a: {:?}", _a);
+        // println!("l: {:?}", _l);
+        // println!("u: {:?}", _u);
 
         let settings = osqp::Settings::default().verbose(false);
 
