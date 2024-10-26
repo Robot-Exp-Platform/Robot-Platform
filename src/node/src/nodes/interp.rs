@@ -24,7 +24,9 @@ pub struct Interp<R, V> {
     /// The node of the planner.
     node: InterpNode<V>,
     /// The robot that the planner is controlling.
-    robot: Arc<RwLock<R>>,
+    robot: Option<Arc<RwLock<R>>>,
+    /// The sensor that the planner is using.
+    sensor: Option<Arc<RwLock<Sensor>>>,
 }
 
 pub type DInterp = Interp<DSeriseRobot, na::DVector<f64>>;
@@ -45,30 +47,26 @@ pub struct InterpParams {
 
 #[derive(Default)]
 pub struct InterpNode<V> {
-    sensor: Option<Arc<RwLock<Sensor>>>,
     recoder: Option<BufWriter<fs::File>>,
     input_queue: DNodeMessageQueue,
     output_queue: NodeMessageQueue<V>,
 }
 
 impl DInterp {
-    pub fn new(name: String, robot: Arc<RwLock<DSeriseRobot>>) -> DInterp {
-        DInterp::from_params(name, InterpParams::default(), robot)
+    pub fn new(name: String) -> DInterp {
+        DInterp::from_params(name, InterpParams::default())
     }
-    pub fn from_json(name: String, robot: Arc<RwLock<DSeriseRobot>>, json: Value) -> DInterp {
-        DInterp::from_params(name, from_value(json).unwrap(), robot)
+    pub fn from_json(name: String, json: Value) -> DInterp {
+        DInterp::from_params(name, from_value(json).unwrap())
     }
-    pub fn from_params(
-        name: String,
-        params: InterpParams,
-        robot: Arc<RwLock<DSeriseRobot>>,
-    ) -> DInterp {
+    pub fn from_params(name: String, params: InterpParams) -> DInterp {
         DInterp {
             name,
             _state: InterpState::default(),
             params,
             node: InterpNode::default(),
-            robot,
+            robot: None,
+            sensor: None,
         }
     }
 }
@@ -80,11 +78,11 @@ impl Node<na::DVector<f64>> for DInterp {
 
     fn set_robot(&mut self, robot: RobotType) {
         if let RobotType::DSeriseRobot(robot) = robot {
-            self.robot = robot;
+            self.robot = Some(robot);
         }
     }
     fn set_sensor(&mut self, sensor: Arc<RwLock<Sensor>>) {
-        self.node.sensor = Some(sensor);
+        self.sensor = Some(sensor);
     }
     fn set_params(&mut self, params: Value) {
         self.params = from_value(params).unwrap();
@@ -94,7 +92,7 @@ impl Node<na::DVector<f64>> for DInterp {
 impl NodeBehavior for DInterp {
     fn update(&mut self) {
         // 获取当前 robot 状态
-        let robot_read = self.robot.read().unwrap();
+        let robot_read = self.robot.as_ref().unwrap().read().unwrap();
         let q = robot_read.q();
         // TODO 需要在此处检查任务是否完成，如果未完成则无需从队列中取出新的目标，而是应当继续执行当前目标
 

@@ -29,7 +29,9 @@ pub struct Cfs<R, V> {
     /// The node of the planner.
     node: CfsNode<V>,
     /// The robot that the planner is controlling.
-    robot: Arc<RwLock<R>>,
+    robot: Option<Arc<RwLock<R>>>,
+    /// The sensor that the planner is using.
+    sensor: Option<Arc<RwLock<Sensor>>>,
 }
 
 pub type DCfs = Cfs<DSeriseRobot, na::DVector<f64>>;
@@ -51,28 +53,28 @@ pub struct CfsParams {
 
 #[derive(Default)]
 pub struct CfsNode<V> {
-    sensor: Option<Arc<RwLock<Sensor>>>,
     recoder: Option<BufWriter<fs::File>>,
     input_queue: NodeMessageQueue<V>,
     output_queue: NodeMessageQueue<V>,
 }
 
 impl DCfs {
-    pub fn new(name: String, robot: Arc<RwLock<DSeriseRobot>>) -> DCfs {
-        DCfs::from_params(name, CfsParams::default(), robot)
+    pub fn new(name: String) -> DCfs {
+        DCfs::from_params(name, CfsParams::default())
     }
 
-    pub fn from_json(name: String, robot: Arc<RwLock<DSeriseRobot>>, json: Value) -> DCfs {
-        DCfs::from_params(name, from_value(json).unwrap(), robot)
+    pub fn from_json(name: String, json: Value) -> DCfs {
+        DCfs::from_params(name, from_value(json).unwrap())
     }
 
-    pub fn from_params(name: String, params: CfsParams, robot: Arc<RwLock<DSeriseRobot>>) -> DCfs {
+    pub fn from_params(name: String, params: CfsParams) -> DCfs {
         DCfs {
             name,
             state: CfsState::default(),
             params,
             node: CfsNode::default(),
-            robot,
+            robot: None,
+            sensor: None,
         }
     }
 }
@@ -84,11 +86,11 @@ impl Node<na::DVector<f64>> for DCfs {
 
     fn set_robot(&mut self, robot: RobotType) {
         if let RobotType::DSeriseRobot(robot) = robot {
-            self.robot = robot;
+            self.robot = Some(robot);
         }
     }
     fn set_sensor(&mut self, sensor: Arc<RwLock<Sensor>>) {
-        self.node.sensor = Some(sensor);
+        self.sensor = Some(sensor);
     }
     fn set_params(&mut self, params: Value) {
         self.params = from_value(params).unwrap();
@@ -98,7 +100,7 @@ impl Node<na::DVector<f64>> for DCfs {
 impl NodeBehavior for DCfs {
     fn update(&mut self) {
         // 获取 robot 状态
-        let robot_read = self.robot.read().unwrap();
+        let robot_read = self.robot.as_ref().unwrap().read().unwrap();
         let ndof = robot_read.dof();
         let q = robot_read.q();
         let q_min_bound = robot_read.q_min_bound().as_slice().to_vec();
@@ -122,14 +124,7 @@ impl NodeBehavior for DCfs {
 
         // 执行CFS逻辑
         let q_ref_list = lerp(&q, &vec![target.clone()], self.params.ninterp);
-        let collision_objects = self
-            .node
-            .sensor
-            .as_ref()
-            .unwrap()
-            .read()
-            .unwrap()
-            .collision();
+        let collision_objects = self.sensor.as_ref().unwrap().read().unwrap().collision();
         let mut solver_result = Vec::new();
         // TODO 检验参考轨迹是否安全可靠,取不可靠段做重规划
         // TODO 理论上最新轨迹应该为被重新规划的段落

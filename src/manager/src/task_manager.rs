@@ -30,13 +30,10 @@ pub struct TaskManager {
 pub struct Task {
     pub id: TaskId,
     pub rely: Vec<TaskId>,
-
-    pub robots: Vec<String>,
-    pub sensor: Option<String>,
     pub target: Vec<Target>,
 
-    pub planner: (String, Value),
-    pub controller: (String, Value),
+    pub nodes: Vec<(String, Vec<String>, Vec<String>, Value)>,
+    pub edges: Vec<(usize, usize)>,
 }
 
 impl TaskManager {
@@ -78,10 +75,10 @@ impl TaskManager {
     }
 
     /// 获取所有入度为 0 的任务
-    pub fn get_open_tasks(&self) -> Vec<&Task> {
+    pub fn get_open_tasks(&self) -> Vec<Task> {
         self.open_tasks
             .iter()
-            .filter_map(|id| self.tasks.get(id))
+            .filter_map(|id| self.tasks.get(id).cloned())
             .collect()
     }
 

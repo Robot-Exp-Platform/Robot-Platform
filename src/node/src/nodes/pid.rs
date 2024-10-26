@@ -26,12 +26,15 @@ pub struct Pid<R, V, M> {
     /// The node of the controller.
     node: PidNode<V>,
     /// The robot that the controller is controlling.
-    robot: Arc<RwLock<R>>,
+    robot: Option<Arc<RwLock<R>>>,
+    /// The sensor that the controller is using.
+    sensor: Option<Arc<RwLock<Sensor>>>,
 }
 
 pub type DPid = Pid<DSeriseRobot, na::DVector<f64>, na::DMatrix<f64>>;
 pub type SPid<R, const N: usize> = Pid<R, na::SVector<f64, N>, na::SMatrix<f64, N, N>>;
 
+#[derive(Default)]
 pub struct PidState<V> {
     track: V,
     error: V,
@@ -39,7 +42,7 @@ pub struct PidState<V> {
     derivative: V,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Default)]
 pub struct PidParams<M> {
     period: f64,
     kp: M,
@@ -49,49 +52,25 @@ pub struct PidParams<M> {
 
 #[derive(Default)]
 pub struct PidNode<V> {
-    sensor: Option<Arc<RwLock<Sensor>>>,
     recoder: Option<BufWriter<fs::File>>,
     input_queue: NodeMessageQueue<V>,
     output_queue: NodeMessageQueue<V>,
 }
 
 impl DPid {
-    pub fn new(name: String, robot: Arc<RwLock<DSeriseRobot>>) -> DPid {
-        let ndof = robot.read().unwrap().dof();
-        DPid::from_params(
-            name,
-            PidParams {
-                period: 0.0,
-                kp: na::DMatrix::zeros(ndof, ndof),
-                ki: na::DMatrix::zeros(ndof, ndof),
-                kd: na::DMatrix::zeros(ndof, ndof),
-            },
-            robot,
-        )
+    pub fn from_json(name: String, json: Value) -> DPid {
+        DPid::from_params(name, from_value(json).unwrap())
     }
 
-    pub fn from_json(name: String, robot: Arc<RwLock<DSeriseRobot>>, json: Value) -> DPid {
-        DPid::from_params(name, from_value(json).unwrap(), robot)
-    }
-
-    pub fn from_params(
-        name: String,
-        params: PidParams<na::DMatrix<f64>>,
-        robot: Arc<RwLock<DSeriseRobot>>,
-    ) -> DPid {
-        let ndof = robot.read().unwrap().dof();
+    pub fn from_params(name: String, params: PidParams<na::DMatrix<f64>>) -> DPid {
         DPid {
             name,
-            state: PidState {
-                track: na::DVector::zeros(ndof),
-                error: na::DVector::zeros(ndof),
-                integral: na::DVector::zeros(ndof),
-                derivative: na::DVector::zeros(ndof),
-            },
+            state: PidState::default(),
             params,
 
             node: PidNode::default(),
-            robot,
+            robot: None,
+            sensor: None,
         }
     }
 }
@@ -125,12 +104,12 @@ impl<R: SRobot<N>, const N: usize> SPid<R, N> {
             params,
 
             node: PidNode {
-                sensor: None,
                 recoder: None,
                 input_queue: Arc::new(SegQueue::new()),
                 output_queue: Arc::new(SegQueue::new()),
             },
-            robot,
+            robot: Some(robot),
+            sensor: None,
         }
     }
 }
@@ -142,11 +121,11 @@ impl Node<na::DVector<f64>> for DPid {
 
     fn set_robot(&mut self, robot: RobotType) {
         if let RobotType::DSeriseRobot(robot) = robot {
-            self.robot = robot;
+            self.robot = Some(robot);
         }
     }
     fn set_sensor(&mut self, sensor: Arc<RwLock<Sensor>>) {
-        self.node.sensor = Some(sensor);
+        self.sensor = Some(sensor);
     }
     fn set_params(&mut self, params: Value) {
         self.params = from_value(params).unwrap();
@@ -156,7 +135,7 @@ impl Node<na::DVector<f64>> for DPid {
 impl NodeBehavior for DPid {
     fn update(&mut self) {
         // 获取 robot 状态
-        let robot_read = self.robot.read().unwrap();
+        let robot_read = self.robot.as_ref().unwrap().read().unwrap();
         let q = robot_read.q();
 
         // 更新 Track

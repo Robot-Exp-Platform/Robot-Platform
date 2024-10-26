@@ -1,4 +1,6 @@
 use chrono::Local;
+use crossbeam::queue::SegQueue;
+use nalgebra::uninit::Init;
 use node::create_node;
 use serde_json::from_reader;
 use std::{
@@ -8,7 +10,7 @@ use std::{
 
 use manager::{Config, PostOffice, Task, TaskManager, ThreadManager};
 use node::NodeBehavior;
-use robot::{self, RobotType};
+use robot::{self, DSeriseRobot, RobotType};
 use sensor::Sensor;
 
 #[derive(Default)]
@@ -28,6 +30,7 @@ pub enum ExpState {
     #[default]
     Init,
     Running,
+    TaskSorting,
     TaskFinishCallback,
 }
 
@@ -101,25 +104,57 @@ impl Exp {
         None
     }
 
-    // /// 根据机器人类型创建对应的节点
-    // pub fn create_nodes<R: DRobot + 'static>(&mut self, robot: Arc<RwLock<R>>, task: &Task) {
-    //     let planner = create_planner(
-    //         task.planner.0.as_str(),
-    //         format!("task_{}", task.id),
-    //         robot.clone(),
-    //         task.planner.1.clone(),
-    //     );
+    /// 根据机器人类型创建对应的节点
+    /// TODO 当前对应节点只是对单一机器人新建节点，完整形态应当是根据机器人名称新建节点
+    pub fn create_nodes(&mut self, task: &Task) {
+        let mut node_list = Vec::new();
+        // 创建节点
+        for node_config in task.nodes.clone() {
+            // 创建节点
+            let mut node = create_node(&node_config.0, node_config.1.join("+"), node_config.3);
+            // 为新创建的节点赋予机器人
+            for robot_name in node_config.1 {
+                if let Some(RobotType::DSeriseRobot(robot)) = self.get_robot_from_name(&robot_name)
+                {
+                    node.set_robot(RobotType::DSeriseRobot(robot));
+                }
+            }
+            // 为新创建的节点赋予传感器
+            for sensor_name in node_config.2 {
+                if let Some(sensor) = self.get_sensor_from_name(&sensor_name) {
+                    node.set_sensor(sensor);
+                }
+            }
+            // 将新创建的节点加入节点列表
+            node_list.push(node);
+        }
+        // 创建边
+        for edge_config in task.edges.clone() {
+            let queue = Arc::new(SegQueue::new());
+            if edge_config.0 == 0 {
+                // 如果是起始节点，就狠狠注入任务目标
+                node_list[edge_config.1].set_input_queue(queue.clone());
+                for target in task.target.clone() {
+                    queue.push(target);
+                }
+                continue;
+            }
+            if edge_config.1 == 0 {
+                // 如果是结束节点，就注入仿真器队列
+                node_list[edge_config.0].set_output_queue(queue.clone());
+                continue;
+            }
+            // 如果是中间节点，就将彼此连接起来
+            node_list[edge_config.0].set_output_queue(queue.clone());
+            node_list[edge_config.1].set_input_queue(queue.clone());
+        }
 
-    //     let controller = create_controller(
-    //         task.controller.0.as_str(),
-    //         format!("task_{}", task.id),
-    //         robot.clone(),
-    //         task.controller.1.clone(),
-    //     );
-
-    //     self.thread_manager.add_node(planner);
-    //     self.thread_manager.add_node(controller);
-    // }
+        // 将节点加入线程管理器
+        // 你已经是一个成熟的节点了，该去自己打拼生活了
+        for node in node_list {
+            self.thread_manager.add_node(node);
+        }
+    }
 }
 
 impl NodeBehavior for Exp {
@@ -129,11 +164,7 @@ impl NodeBehavior for Exp {
             "现在是 {}，先生，祝您早上、中午、晚上好",
             Local::now().format("%Y-%m-%d %H:%M:%S")
         );
-        self.state = ExpState::Running;
-    }
-
-    fn is_running(&mut self) -> bool {
-        self.state == ExpState::Running
+        self.state = ExpState::TaskSorting;
     }
 
     /// 实验进行过程，需要从任务管理器中取出位于开放列表中的任务并筹备对应的节点，然后交给线程管理器
@@ -142,19 +173,19 @@ impl NodeBehavior for Exp {
     /// 2. 新建节点的过程中首先需要从机器人池子里面找到对应的机器人，然后针对任务描述新建规划器节点以及控制器节点
     ///    一般来说规划器节点直接对应任务，可以以规划器生命的结束作为任务的结束，而控制器更多的是针对机器人的控制
     fn update(&mut self) {
-        let tasks: Vec<Task> = self
-            .task_manager
-            .get_open_tasks()
-            .into_iter()
-            .cloned()
-            .collect();
+        let tasks: Vec<Task> = self.task_manager.get_open_tasks();
 
-        // 直接在循环中进行操作
-        for task in tasks {
-            if let Some(RobotType::DSeriseRobot(robot)) = self.get_robot_from_name(&task.robots[0])
-            {
-                // self.create_nodes(robot, &task); // task 使用引用即可
+        match self.state {
+            ExpState::TaskSorting => {
+                // 整理任务,检查当前任务森林的开放节点，及时更新任务节点
+                for task in tasks {
+                    self.create_nodes(&task);
+                }
             }
+            ExpState::Running => {
+                // 任务执行中，一般来说什么都不做，只是等待线程管理器汇报任务完成情况。
+            }
+            _ => (),
         }
     }
 }
