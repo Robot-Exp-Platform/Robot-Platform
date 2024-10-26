@@ -7,7 +7,7 @@ pub mod exp;
 use std::{thread, time::Duration};
 
 use exp::Exp;
-use manager::Node;
+use node::NodeBehavior;
 fn main() {
     let mut exp = Exp::from_json("./config.json", "./task.json");
 

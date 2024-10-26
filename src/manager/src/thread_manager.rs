@@ -5,7 +5,7 @@ use std::time::{Duration, Instant};
 
 use message::TaskState;
 
-use crate::Node;
+use node::NodeBehavior;
 
 #[derive(Default)]
 pub struct ThreadManager {
@@ -39,7 +39,7 @@ impl ThreadManager {
     /// 为节点开辟线程，节点符合 node 规范，是可以被线程管理器管理的线程
     /// 此时的 node 是裸漏的，不具备任何多线程能力，扔进线程之后不可被外部访问
     /// 我们要组一辈子的线程啊
-    pub fn add_node(&mut self, node: Box<dyn Node>) {
+    pub fn add_node(&mut self, node: Box<dyn NodeBehavior>) {
         let name = node.node_name() + "_thread";
         let sender = self.sender.clone().unwrap();
         let thread = thread::Builder::new()
@@ -73,7 +73,7 @@ impl ThreadManager {
         self.threads.push(thread);
     }
 
-    pub fn add_mutex_node(&mut self, node: Arc<Mutex<dyn Node>>) {
+    pub fn add_mutex_node(&mut self, node: Arc<Mutex<dyn NodeBehavior>>) {
         let node_lock = node.lock().unwrap();
         let name = node_lock.node_name() + "_thread";
         drop(node_lock);
@@ -109,7 +109,7 @@ impl ThreadManager {
         self.threads.push(thread);
     }
 
-    pub fn add_rwlock_node(&mut self, node: Arc<RwLock<dyn Node>>) {
+    pub fn add_rwlock_node(&mut self, node: Arc<RwLock<dyn NodeBehavior>>) {
         let node_lock = node.read().unwrap();
         let name = node_lock.node_name() + "_thread";
         drop(node_lock);

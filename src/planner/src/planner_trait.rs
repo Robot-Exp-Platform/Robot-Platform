@@ -3,11 +3,11 @@ use serde_json::Value;
 // use serde_yaml::Value;
 use std::sync::{Arc, RwLock};
 
-use manager::Node;
 use message::{DTrack, STrack, Target};
+use node::NodeBehavior;
 use sensor::Sensor;
 
-pub trait Planner: Node {
+pub trait Planner: NodeBehavior {
     fn name(&self) -> String;
 
     fn set_params(&mut self, params: Value);

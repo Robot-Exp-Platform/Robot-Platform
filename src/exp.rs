@@ -7,7 +7,8 @@ use std::{
     sync::{mpsc, Arc, RwLock},
 };
 
-use manager::{Config, Node, PostOffice, Task, TaskManager, ThreadManager};
+use manager::{Config, PostOffice, Task, TaskManager, ThreadManager};
+use node::NodeBehavior;
 use robot::{self, DRobot, RobotType};
 use sensor::Sensor;
 
@@ -122,7 +123,7 @@ impl Exp {
     }
 }
 
-impl Node for Exp {
+impl NodeBehavior for Exp {
     // 实验初始化过程
     fn init(&mut self) {
         println!(

@@ -8,13 +8,12 @@ use std::sync::{Arc, RwLock};
 use std::time::Duration;
 use std::{f64, fs};
 
-use crate::{Controller, TController};
+use crate::{Node, NodeBehavior};
 use generate_tools::{get_fn, set_fn};
-use node::NodeBehavior;
-use message::{ControlCommand, DControlCommand, DTrack, Track};
+use message::{DNodeMessage, DNodeMessageQueue, NodeMessageQueue};
 #[cfg(feature = "recode")]
 use recoder::*;
-use robot::{DRobot, SRobot};
+use robot::{DSeriseRobot, Robot, RobotType, SRobot};
 use sensor::Sensor;
 
 pub struct Pid<R, V, M> {
@@ -30,7 +29,7 @@ pub struct Pid<R, V, M> {
     robot: Arc<RwLock<R>>,
 }
 
-pub type DPid<R> = Pid<R, na::DVector<f64>, na::DMatrix<f64>>;
+pub type DPid = Pid<DSeriseRobot, na::DVector<f64>, na::DMatrix<f64>>;
 pub type SPid<R, const N: usize> = Pid<R, na::SVector<f64, N>, na::SMatrix<f64, N, N>>;
 
 pub struct PidState<V> {
@@ -52,12 +51,12 @@ pub struct PidParams<M> {
 pub struct PidNode<V> {
     sensor: Option<Arc<RwLock<Sensor>>>,
     recoder: Option<BufWriter<fs::File>>,
-    track_queue: Arc<SegQueue<Track<V>>>,
-    control_cmd_queue: Arc<SegQueue<ControlCommand<V>>>,
+    input_queue: NodeMessageQueue<V>,
+    output_queue: NodeMessageQueue<V>,
 }
 
-impl<R: DRobot> DPid<R> {
-    pub fn new(name: String, robot: Arc<RwLock<R>>) -> DPid<R> {
+impl DPid {
+    pub fn new(name: String, robot: Arc<RwLock<DSeriseRobot>>) -> DPid {
         let ndof = robot.read().unwrap().dof();
         DPid::from_params(
             name,
@@ -71,15 +70,15 @@ impl<R: DRobot> DPid<R> {
         )
     }
 
-    pub fn from_json(name: String, robot: Arc<RwLock<R>>, json: Value) -> DPid<R> {
+    pub fn from_json(name: String, robot: Arc<RwLock<DSeriseRobot>>, json: Value) -> DPid {
         DPid::from_params(name, from_value(json).unwrap(), robot)
     }
 
     pub fn from_params(
         name: String,
         params: PidParams<na::DMatrix<f64>>,
-        robot: Arc<RwLock<R>>,
-    ) -> DPid<R> {
+        robot: Arc<RwLock<DSeriseRobot>>,
+    ) -> DPid {
         let ndof = robot.read().unwrap().dof();
         DPid {
             name,
@@ -128,22 +127,24 @@ impl<R: SRobot<N>, const N: usize> SPid<R, N> {
             node: PidNode {
                 sensor: None,
                 recoder: None,
-                track_queue: Arc::new(SegQueue::new()),
-                control_cmd_queue: Arc::new(SegQueue::new()),
+                input_queue: Arc::new(SegQueue::new()),
+                output_queue: Arc::new(SegQueue::new()),
             },
             robot,
         }
     }
 }
 
-impl<R: DRobot> TController<na::DVector<f64>> for DPid<R> {
-    set_fn!((set_track_queue, track_queue: Arc<SegQueue<DTrack>>, node),
-            (set_control_cmd_queue, control_cmd_queue: Arc<SegQueue<DControlCommand>>, node));
-}
-
-impl<R: DRobot> Controller for DPid<R> {
+impl Node<na::DVector<f64>> for DPid {
     get_fn!((name: String));
+    set_fn!((set_input_queue, input_queue: DNodeMessageQueue, node),
+            (set_output_queue, output_queue: DNodeMessageQueue, node));
 
+    fn set_robot(&mut self, robot: RobotType) {
+        if let RobotType::DSeriseRobot(robot) = robot {
+            self.robot = robot;
+        }
+    }
     fn set_sensor(&mut self, sensor: Arc<RwLock<Sensor>>) {
         self.node.sensor = Some(sensor);
     }
@@ -152,15 +153,15 @@ impl<R: DRobot> Controller for DPid<R> {
     }
 }
 
-impl<R: DRobot> NodeBehavior for DPid<R> {
+impl NodeBehavior for DPid {
     fn update(&mut self) {
         // 获取 robot 状态
         let robot_read = self.robot.read().unwrap();
         let q = robot_read.q();
 
         // 更新 Track
-        self.state.track = match self.node.track_queue.pop() {
-            Some(DTrack::Joint(track)) => track,
+        self.state.track = match self.node.input_queue.pop() {
+            Some(DNodeMessage::Joint(track)) => track,
             _ => return,
         };
 
@@ -182,8 +183,8 @@ impl<R: DRobot> NodeBehavior for DPid<R> {
 
         // 发送控制指令
         self.node
-            .control_cmd_queue
-            .push(ControlCommand::JointWithPeriod(self.params.period, output));
+            .output_queue
+            .push(DNodeMessage::JointWithPeriod(self.params.period, output));
     }
 
     fn start(&mut self) {

@@ -1,6 +1,4 @@
-use crossbeam::queue::SegQueue;
 use nalgebra as na;
-use node::NodeBehavior;
 use serde::Deserialize;
 use serde_json::{from_value, Value};
 // use serde_yaml::{from_value, Value};
@@ -9,10 +7,10 @@ use std::io::{BufWriter, Write};
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
 
-use crate::{utilities::lerp, DPlanner, Planner};
+use crate::{utilities::lerp, Node, NodeBehavior};
 use generate_tools::{get_fn, set_fn};
-use message::{DTrack, Target, Track};
-use robot::DRobot;
+use message::{DNodeMessage, DNodeMessageQueue, DTrack, NodeMessageQueue};
+use robot::{DSeriseRobot, Robot, RobotType};
 use sensor::Sensor;
 
 /// 通过插值实现的路径规划器，在不考虑逆运动学的情况下实现轨迹插值。
@@ -29,13 +27,13 @@ pub struct Interp<R, V> {
     robot: Arc<RwLock<R>>,
 }
 
-pub type DInterp<R> = Interp<R, na::DVector<f64>>;
+pub type DInterp = Interp<DSeriseRobot, na::DVector<f64>>;
 pub type SInterp<R, const N: usize> = Interp<R, na::SVector<f64, N>>;
 
 #[derive(Default)]
 pub struct InterpState {
     /// The current target of the planner.
-    _target: Option<Target>,
+    _target: Option<DNodeMessage>,
 }
 
 #[derive(Deserialize, Default)]
@@ -49,18 +47,22 @@ pub struct InterpParams {
 pub struct InterpNode<V> {
     sensor: Option<Arc<RwLock<Sensor>>>,
     recoder: Option<BufWriter<fs::File>>,
-    target_queue: Arc<SegQueue<Target>>,
-    track_queue: Arc<SegQueue<Track<V>>>,
+    input_queue: DNodeMessageQueue,
+    output_queue: NodeMessageQueue<V>,
 }
 
-impl<R: DRobot> DInterp<R> {
-    pub fn new(name: String, robot: Arc<RwLock<R>>) -> DInterp<R> {
+impl DInterp {
+    pub fn new(name: String, robot: Arc<RwLock<DSeriseRobot>>) -> DInterp {
         DInterp::from_params(name, InterpParams::default(), robot)
     }
-    pub fn from_json(name: String, robot: Arc<RwLock<R>>, json: Value) -> DInterp<R> {
+    pub fn from_json(name: String, robot: Arc<RwLock<DSeriseRobot>>, json: Value) -> DInterp {
         DInterp::from_params(name, from_value(json).unwrap(), robot)
     }
-    pub fn from_params(name: String, params: InterpParams, robot: Arc<RwLock<R>>) -> DInterp<R> {
+    pub fn from_params(
+        name: String,
+        params: InterpParams,
+        robot: Arc<RwLock<DSeriseRobot>>,
+    ) -> DInterp {
         DInterp {
             name,
             _state: InterpState::default(),
@@ -71,14 +73,16 @@ impl<R: DRobot> DInterp<R> {
     }
 }
 
-impl<R: DRobot> DPlanner for DInterp<R> {
-    set_fn!((set_track_queue, track_queue: Arc<SegQueue<DTrack>>, node));
-}
-
-impl<R: DRobot> Planner for DInterp<R> {
+impl Node<na::DVector<f64>> for DInterp {
     get_fn!((name: String));
-    set_fn!((set_target_queue, target_queue: Arc<SegQueue<Target>>, node));
+    set_fn!((set_input_queue, input_queue: DNodeMessageQueue, node),
+            (set_output_queue, output_queue: DNodeMessageQueue, node));
 
+    fn set_robot(&mut self, robot: RobotType) {
+        if let RobotType::DSeriseRobot(robot) = robot {
+            self.robot = robot;
+        }
+    }
     fn set_sensor(&mut self, sensor: Arc<RwLock<Sensor>>) {
         self.node.sensor = Some(sensor);
     }
@@ -87,7 +91,7 @@ impl<R: DRobot> Planner for DInterp<R> {
     }
 }
 
-impl<R: DRobot> NodeBehavior for DInterp<R> {
+impl NodeBehavior for DInterp {
     fn update(&mut self) {
         // 获取当前 robot 状态
         let robot_read = self.robot.read().unwrap();
@@ -95,8 +99,8 @@ impl<R: DRobot> NodeBehavior for DInterp<R> {
         // TODO 需要在此处检查任务是否完成，如果未完成则无需从队列中取出新的目标，而是应当继续执行当前目标
 
         // 根据不同的Target生成插值轨迹，每两点之间的插值数量为 ninter
-        let track_list = match self.node.target_queue.pop() {
-            Some(Target::Joint(joint)) => match self.params.interp_fn.as_str() {
+        let track_list = match self.node.input_queue.pop() {
+            Some(DNodeMessage::Joint(joint)) => match self.params.interp_fn.as_str() {
                 "lerp" => lerp(&q, &vec![joint], self.params.ninter),
                 _ => panic!("Unknown interp function."),
             },
@@ -113,7 +117,7 @@ impl<R: DRobot> NodeBehavior for DInterp<R> {
 
         // 将 track_list 中的轨迹放入 track_queue 中
         for track in track_list {
-            self.node.track_queue.push(DTrack::Joint(track));
+            self.node.output_queue.push(DTrack::Joint(track));
         }
     }
 

@@ -15,3 +15,4 @@ zmq = { workspace = true, optional = true }
 message.workspace = true
 robot.workspace = true
 sensor.workspace = true
+node.workspace = true

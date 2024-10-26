@@ -4,6 +4,7 @@ members = [
     "src/generate_tools",
     "src/manager",
     "src/message",
+    "src/node",
     "src/planner",
     "src/recoder",
     "src/robot",
@@ -49,6 +50,7 @@ sensor = { path = "src/sensor" }
 simulator = { path = "src/simulator" }
 solver = { path = "src/solver" }
 controller = { path = "src/controller" }
+node = { path = "src/node" }
 
 
 [dependencies]
@@ -75,6 +77,7 @@ sensor.workspace = true
 simulator.workspace = true
 solver.workspace = true
 controller.workspace = true
+node.workspace = true
 
 
 [features]

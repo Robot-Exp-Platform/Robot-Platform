@@ -19,6 +19,7 @@ message.workspace = true
 recoder.workspace = true
 sensor.workspace = true
 generate_tools.workspace = true
+node.workspace = true
 
 [features]
 default = ["rszmq"]

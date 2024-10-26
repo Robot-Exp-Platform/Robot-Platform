@@ -312,6 +312,7 @@ dependencies = [
  "manager",
  "message",
  "nalgebra",
+ "node",
  "robot",
  "sensor",
  "serde",
@@ -811,6 +812,7 @@ dependencies = [
  "crossbeam",
  "message",
  "nalgebra",
+ "node",
  "robot",
  "sensor",
  "serde",
@@ -862,6 +864,7 @@ checksum = "78ca9ab1a0babb1e7d5695e3530886289c18cf2f87ec19a575a0abdce112e3a3"
 name = "message"
 version = "0.1.0"
 dependencies = [
+ "crossbeam",
  "nalgebra",
  "osqp",
  "serde",
@@ -996,6 +999,23 @@ dependencies = [
  "cfg-if",
  "cfg_aliases",
  "libc",
+]
+
+[[package]]
+name = "node"
+version = "0.1.0"
+dependencies = [
+ "crossbeam",
+ "generate_tools",
+ "message",
+ "nalgebra",
+ "osqp",
+ "robot",
+ "sensor",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "solver",
 ]
 
 [[package]]
@@ -1189,6 +1209,7 @@ dependencies = [
  "manager",
  "message",
  "nalgebra",
+ "node",
  "osqp",
  "robot",
  "sensor",
@@ -1411,6 +1432,7 @@ dependencies = [
  "manager",
  "message",
  "nalgebra",
+ "node",
  "osqp",
  "planner",
  "rand",
@@ -1697,6 +1719,7 @@ dependencies = [
  "manager",
  "message",
  "nalgebra",
+ "node",
  "recoder",
  "robot",
  "sensor",

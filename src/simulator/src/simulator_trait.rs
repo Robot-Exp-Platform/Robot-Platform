@@ -4,11 +4,11 @@ use serde_json::Value;
 // use serde_yaml::Value;
 use std::sync::{Arc, RwLock};
 
-use manager::Node;
+use node::NodeBehavior;
 use message::{DControlCommand, SControlCommand};
 use sensor::Sensor;
 
-pub trait Simulator: Node {
+pub trait Simulator: NodeBehavior {
     fn name(&self) -> String;
 
     fn set_params(&mut self, params: Value);

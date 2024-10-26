@@ -4,11 +4,11 @@ use serde_json::Value;
 use nalgebra as na;
 use std::sync::{Arc, RwLock};
 
-use manager::Node;
+use node::NodeBehavior;
 use message::{ControlCommand, Track};
 use sensor::Sensor;
 
-pub trait Controller: Node {
+pub trait Controller: NodeBehavior {
     fn name(&self) -> String;
 
     fn set_params(&mut self, params: Value);

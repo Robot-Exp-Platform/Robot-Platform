@@ -1,4 +1,3 @@
-use crossbeam::queue::SegQueue;
 use nalgebra as na;
 use serde::Deserialize;
 use serde_json::{from_value, Value};
@@ -8,13 +7,15 @@ use std::io::{BufWriter, Write};
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
 
-use crate::{utilities::*, DPlanner, Planner};
+use crate::{utilities::*, Node, NodeBehavior};
 use generate_tools::{get_fn, set_fn};
-use node::NodeBehavior;
-use message::{Constraint, DTrack, QuadraticProgramming, Target, Track};
+use message::{
+    Constraint, DNodeMessage, DNodeMessageQueue, NodeMessage, NodeMessageQueue,
+    QuadraticProgramming,
+};
 #[cfg(feature = "recode")]
 use recoder::*;
-use robot::DRobot;
+use robot::{DRobot, DSeriseRobot, Robot, RobotType};
 use sensor::Sensor;
 use solver::{OsqpSolver, Solver};
 
@@ -22,7 +23,7 @@ pub struct Cfs<R, V> {
     /// The name of the planner.
     name: String,
     /// The state of the planner.
-    state: CfsState,
+    state: CfsState<V>,
     /// The parameters of the planner.
     params: CfsParams,
     /// The node of the planner.
@@ -31,12 +32,12 @@ pub struct Cfs<R, V> {
     robot: Arc<RwLock<R>>,
 }
 
-pub type DCfs<R> = Cfs<R, na::DVector<f64>>;
+pub type DCfs = Cfs<DSeriseRobot, na::DVector<f64>>;
 pub type SCfs<R, const N: usize> = Cfs<R, na::SVector<f64, N>>;
 
 #[derive(Default)]
-pub struct CfsState {
-    target: Option<Target>,
+pub struct CfsState<V> {
+    target: Option<NodeMessage<V>>,
 }
 
 #[derive(Deserialize, Default)]
@@ -52,20 +53,20 @@ pub struct CfsParams {
 pub struct CfsNode<V> {
     sensor: Option<Arc<RwLock<Sensor>>>,
     recoder: Option<BufWriter<fs::File>>,
-    target_queue: Arc<SegQueue<Target>>,
-    track_queue: Arc<SegQueue<Track<V>>>,
+    input_queue: NodeMessageQueue<V>,
+    output_queue: NodeMessageQueue<V>,
 }
 
-impl<R: DRobot> DCfs<R> {
-    pub fn new(name: String, robot: Arc<RwLock<R>>) -> DCfs<R> {
+impl DCfs {
+    pub fn new(name: String, robot: Arc<RwLock<DSeriseRobot>>) -> DCfs {
         DCfs::from_params(name, CfsParams::default(), robot)
     }
 
-    pub fn from_json(name: String, robot: Arc<RwLock<R>>, json: Value) -> DCfs<R> {
+    pub fn from_json(name: String, robot: Arc<RwLock<DSeriseRobot>>, json: Value) -> DCfs {
         DCfs::from_params(name, from_value(json).unwrap(), robot)
     }
 
-    pub fn from_params(name: String, params: CfsParams, robot: Arc<RwLock<R>>) -> DCfs<R> {
+    pub fn from_params(name: String, params: CfsParams, robot: Arc<RwLock<DSeriseRobot>>) -> DCfs {
         DCfs {
             name,
             state: CfsState::default(),
@@ -76,14 +77,16 @@ impl<R: DRobot> DCfs<R> {
     }
 }
 
-impl<R: DRobot> DPlanner for DCfs<R> {
-    set_fn!((set_track_queue, track_queue: Arc<SegQueue<DTrack>>, node));
-}
-
-impl<R: DRobot> Planner for DCfs<R> {
+impl Node<na::DVector<f64>> for DCfs {
     get_fn!((name: String));
-    set_fn!((set_target_queue, target_queue: Arc<SegQueue<Target>>, node));
+    set_fn!((set_input_queue, input_queue: DNodeMessageQueue, node),
+            (set_output_queue, output_queue: DNodeMessageQueue, node));
 
+    fn set_robot(&mut self, robot: RobotType) {
+        if let RobotType::DSeriseRobot(robot) = robot {
+            self.robot = robot;
+        }
+    }
     fn set_sensor(&mut self, sensor: Arc<RwLock<Sensor>>) {
         self.node.sensor = Some(sensor);
     }
@@ -92,7 +95,7 @@ impl<R: DRobot> Planner for DCfs<R> {
     }
 }
 
-impl<R: DRobot> NodeBehavior for DCfs<R> {
+impl NodeBehavior for DCfs {
     fn update(&mut self) {
         // 获取 robot 状态
         let robot_read = self.robot.read().unwrap();
@@ -109,10 +112,10 @@ impl<R: DRobot> NodeBehavior for DCfs<R> {
             .state
             .target
             .clone()
-            .unwrap_or(self.node.target_queue.pop().unwrap());
+            .unwrap_or(self.node.input_queue.pop().unwrap());
         let target = match target {
             // 根据不同的 target 类型，执行不同的任务，也可以将不同的 Target 类型处理为相同的类型
-            Target::Joint(joint) => joint,
+            DNodeMessage::Joint(joint) => joint,
             _ => unimplemented!("CFS planner does not support target of type."),
         };
         println!("{} get target: {:?}", self.name, target);
@@ -214,7 +217,7 @@ impl<R: DRobot> NodeBehavior for DCfs<R> {
         // 生成 track
         let mut track_list = Vec::new();
         for i in 0..self.params.ninterp + 1 {
-            track_list.push(DTrack::Joint(na::DVector::from_column_slice(
+            track_list.push(DNodeMessage::Joint(na::DVector::from_column_slice(
                 &solver_result[i * ndof..(i + 1) * ndof],
             )));
         }
@@ -229,7 +232,7 @@ impl<R: DRobot> NodeBehavior for DCfs<R> {
 
         // 发送 track
         for track in track_list {
-            self.node.track_queue.push(track);
+            self.node.output_queue.push(track);
         }
     }
 
