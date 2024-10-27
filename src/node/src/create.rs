@@ -12,7 +12,7 @@ pub fn create_node(
     match node_type {
         "interp" => Box::new(Interp::from_json(name, params)),
         "cfs" => Box::new(Cfs::from_json(name, params)),
-        "pid" => Box::new(Pid::from_json(robot_name, params)),
+        "pid" => Box::new(Pid::from_json(name, params)),
         _ => panic!("Unknown node type: {}", node_type),
     }
 }

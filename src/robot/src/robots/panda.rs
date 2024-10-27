@@ -2,7 +2,7 @@ use nalgebra as na;
 use std::f64::consts::{FRAC_PI_2, FRAC_PI_4};
 
 use crate::{DSeriseRobot, SeriseRobotParams};
-use message::Capsule;
+use message::{Capsule, NodeMessage};
 
 use super::{SeriseRobot, SeriseRobotState};
 
@@ -24,6 +24,7 @@ impl DPanda {
                 q_ddot: na::DVector::zeros(PANDA_DOF),
                 q_jerk: na::DVector::zeros(PANDA_DOF),
                 base: na::Isometry3::identity(),
+                control_message: NodeMessage::NoneNodeMessage,
             },
             params: SeriseRobotParams::<na::DVector<f64>> {
                 nlink: PANDA_DOF,

@@ -1,6 +1,6 @@
 use nalgebra as na;
 
-use message::{Capsule, CollisionObject, Pose};
+use message::{Capsule, CollisionObject, NodeMessage, Pose};
 
 pub trait Robot<V>: Send + Sync {
     // get functions
@@ -19,6 +19,7 @@ pub trait Robot<V>: Send + Sync {
     fn tau_bound(&self) -> V;
     fn tau_dot_bound(&self) -> V;
     fn base(&self) -> Pose;
+    fn control_message(&self) -> NodeMessage<V>;
 
     // set functions
     fn set_name(&mut self, name: String);
@@ -26,6 +27,7 @@ pub trait Robot<V>: Send + Sync {
     fn set_q_dot(&mut self, q_dot: V);
     fn set_q_ddot(&mut self, q_ddot: V);
     fn set_q_jerk(&mut self, q_jerk: V);
+    fn set_control_message(&mut self, control_message: NodeMessage<V>);
 }
 
 pub trait SRobot<const N: usize>: Robot<na::SVector<f64, N>> {

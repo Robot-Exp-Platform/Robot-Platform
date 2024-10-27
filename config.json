@@ -1,7 +1,7 @@
 {
   "robots": [
-    { "name": "panda_1", "robot_type": "panda", "modes": ["bullet"] },
-    { "name": "panda_2", "robot_type": "panda", "modes": ["bullet"] }
+    { "name": "panda_1", "robot_type": "panda" },
+    { "name": "panda_2", "robot_type": "panda" }
   ],
   "sensors": [{ "name": "obstacle_releaser_1", "sensor_type": "obstacle_releaser" }]
 }

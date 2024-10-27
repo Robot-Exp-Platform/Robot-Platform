@@ -23,6 +23,8 @@ pub trait Node<V>: NodeBehavior {
     /// Set the output queue of the node.Each nod has at least one output queue.
     /// Every use of this function will add a new output queue for the node.
     fn set_output_queue(&mut self, output_queue: Arc<SegQueue<NodeMessage<V>>>);
+
+    fn is_end(&mut self) {}
 }
 
 // TODO consider using state machine to manage the node

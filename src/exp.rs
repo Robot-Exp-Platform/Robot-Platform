@@ -61,12 +61,6 @@ impl Exp {
         let mut sensor_pool = Vec::new();
         for robot_config in config.robots {
             let robot = robot::from_config(&robot_config);
-            // 为 robot 配置仿真模式
-            for _mode in robot_config.modes {
-                // 创建仿真器节点
-
-                // 创建与邮局的通讯
-            }
             robot_pool.push(robot);
         }
         for sensor in config.sensors {
@@ -139,8 +133,8 @@ impl Exp {
                 continue;
             }
             if edge_config.1 == 0 {
-                // 如果是结束节点，就注入仿真器队列
-                node_list[edge_config.0 - 1].set_output_queue(queue.clone());
+                // 如果是结束节点，就被确认为是系统末端
+                node_list[edge_config.0 - 1].is_end();
                 continue;
             }
             // 如果是中间节点，就将彼此连接起来

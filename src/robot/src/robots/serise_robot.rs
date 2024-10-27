@@ -1,18 +1,18 @@
-use message::{get_distance, Pose};
+use message::{get_distance, NodeMessage, Pose};
 use nalgebra as na;
 
 use crate::{DRobot, Robot, SRobot};
 use generate_tools::{get_fn, set_fn};
 use message::{Capsule, CollisionObject};
 
-pub struct SeriseRobot<T>
+pub struct SeriseRobot<V>
 where
-    T: Send + Sync,
+    V: Send + Sync,
 {
     pub name: String,
 
-    pub state: SeriseRobotState<T>,
-    pub params: SeriseRobotParams<T>,
+    pub state: SeriseRobotState<V>,
+    pub params: SeriseRobotParams<V>,
 }
 
 pub type SSeriseRobot<const N: usize> = SeriseRobot<na::SVector<f64, N>>;
@@ -20,72 +20,75 @@ pub type SSeriseRobot<const N: usize> = SeriseRobot<na::SVector<f64, N>>;
 pub type DSeriseRobot = SeriseRobot<na::DVector<f64>>;
 
 // #[derive(Default)]
-pub struct SeriseRobotState<T> {
-    pub q: T,
-    pub q_dot: T,
-    pub q_ddot: T,
-    pub q_jerk: T,
+pub struct SeriseRobotState<V> {
+    pub q: V,
+    pub q_dot: V,
+    pub q_ddot: V,
+    pub q_jerk: V,
     pub base: Pose,
+    pub control_message: NodeMessage<V>,
 }
 
 // #[derive(Default)]
-pub struct SeriseRobotParams<T> {
+pub struct SeriseRobotParams<V> {
     pub nlink: usize,
-    pub q_default: T,
-    pub q_min_bound: T,
-    pub q_max_bound: T,
-    pub q_dot_bound: T,
-    pub q_ddot_bound: T,
-    pub q_jerk_bound: T,
-    pub tau_bound: T,
-    pub tau_dot_bound: T,
+    pub q_default: V,
+    pub q_min_bound: V,
+    pub q_max_bound: V,
+    pub q_dot_bound: V,
+    pub q_ddot_bound: V,
+    pub q_jerk_bound: V,
+    pub tau_bound: V,
+    pub tau_dot_bound: V,
     pub dh: na::DMatrix<f64>,
     pub capsules: Vec<Capsule>,
 }
 
-impl<T> SeriseRobot<T>
+impl<V> SeriseRobot<V>
 where
-    T: Send + Sync,
+    V: Send + Sync,
 {
-    // pub fn from_params(name: String, params: SeriseRobotParams<T>) -> SeriseRobot<T> {
+    // pub fn from_params(name: String, params: SeriseRobotParams<V>) -> SeriseRobot<V> {
     //     SeriseRobot {
     //         name,
-    //         state: SeriseRobotState::<T>::default(),
+    //         state: SeriseRobotState::<V>::default(),
     //         params,
     //     }
     // }
-    pub fn from_file() -> SeriseRobot<T> {
+    pub fn from_file() -> SeriseRobot<V> {
         unimplemented!()
     }
 }
 
-impl<T> Robot<T> for SeriseRobot<T>
+impl<V> Robot<V> for SeriseRobot<V>
 where
-    T: Clone + Send + Sync,
+    V: Clone + Send + Sync,
 {
     get_fn!((name: String));
     get_fn!(
-        (q: T, state),
-        (q_dot: T, state),
-        (q_ddot: T, state),
-        (q_jerk: T, state),
-        (q_default: T, params),
-        (q_min_bound: T, params),
-        (q_max_bound: T, params),
-        (q_dot_bound: T, params),
-        (q_ddot_bound: T, params),
-        (q_jerk_bound: T, params),
-        (tau_bound: T, params),
-        (tau_dot_bound: T, params),
-        (base: Pose, state)
+        (q: V, state),
+        (q_dot: V, state),
+        (q_ddot: V, state),
+        (q_jerk: V, state),
+        (q_default: V, params),
+        (q_min_bound: V, params),
+        (q_max_bound: V, params),
+        (q_dot_bound: V, params),
+        (q_ddot_bound: V, params),
+        (q_jerk_bound: V, params),
+        (tau_bound: V, params),
+        (tau_dot_bound: V, params),
+        (base: Pose, state),
+        (control_message: NodeMessage<V>, state)
     );
 
     set_fn!((set_name, name: String));
     set_fn!(
-        (set_q, q: T, state),
-        (set_q_dot, q_dot: T, state),
-        (set_q_ddot, q_ddot: T, state),
-        (set_q_jerk, q_jerk: T, state)
+        (set_q, q: V, state),
+        (set_q_dot, q_dot: V, state),
+        (set_q_ddot, q_ddot: V, state),
+        (set_q_jerk, q_jerk: V, state),
+        (set_control_message, control_message: NodeMessage<V>, state)
     );
 
     fn dof(&self) -> usize {

@@ -7,7 +7,6 @@ use crate::{DPanda, RobotType};
 pub struct RobotConfig {
     pub name: String,
     pub robot_type: String,
-    pub modes: Vec<String>,
 }
 
 /// 通过配置文件生成机器人实例

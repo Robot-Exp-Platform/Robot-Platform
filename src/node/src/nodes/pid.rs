@@ -40,6 +40,7 @@ pub struct PidState<V> {
     error: V,
     integral: V,
     derivative: V,
+    is_end: bool,
 }
 
 #[derive(Deserialize, Default)]
@@ -64,6 +65,7 @@ impl PidState<na::DVector<f64>> {
             error: na::DVector::zeros(dof),
             integral: na::DVector::zeros(dof),
             derivative: na::DVector::zeros(dof),
+            is_end: false,
         }
     }
 }
@@ -111,6 +113,7 @@ impl<R: SRobot<N>, const N: usize> SPid<R, N> {
                 error: na::SVector::zeros(),
                 integral: na::SVector::zeros(),
                 derivative: na::SVector::zeros(),
+                is_end: false,
             },
             params,
 
@@ -130,6 +133,9 @@ impl Node<na::DVector<f64>> for DPid {
     set_fn!((set_input_queue, input_queue: DNodeMessageQueue, node),
             (set_output_queue, output_queue: DNodeMessageQueue, node));
 
+    fn is_end(&mut self) {
+        self.state.is_end = true;
+    }
     fn set_robot(&mut self, robot: RobotType) {
         if let RobotType::DSeriseRobot(robot) = robot {
             self.state = PidState::new(robot.read().unwrap().dof());
@@ -149,6 +155,7 @@ impl NodeBehavior for DPid {
         // 获取 robot 状态
         let robot_read = self.robot.as_ref().unwrap().read().unwrap();
         let q = robot_read.q();
+        drop(robot_read);
 
         // 更新 Track
         self.state.track = match self.node.input_queue.pop() {
@@ -174,10 +181,19 @@ impl NodeBehavior for DPid {
             recode!(recoder, output);
         }
 
+        let control_message = DNodeMessage::JointWithPeriod(self.params.period, output);
+
         // 发送控制指令
-        self.node
-            .output_queue
-            .push(DNodeMessage::JointWithPeriod(self.params.period, output));
+        if self.state.is_end {
+            self.robot
+                .as_ref()
+                .unwrap()
+                .write()
+                .unwrap()
+                .set_control_message(control_message);
+        } else {
+            self.node.output_queue.push(control_message);
+        }
     }
 
     fn start(&mut self) {
