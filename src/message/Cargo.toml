@@ -1,0 +1,12 @@
+[package]
+name = "message"
+version = "0.1.0"
+edition = "2021"
+repository.workspace = true
+
+[dependencies]
+crossbeam.workspace = true
+nalgebra.workspace = true
+serde = { version = "1.0", features = ["derive"] }
+serde_json.workspace = true
+osqp = "*"

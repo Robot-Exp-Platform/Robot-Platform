@@ -1,9 +1,14 @@
+#![feature(more_float_constants)]
+
 #[cfg(test)]
 mod tests {
     use approx::assert_relative_eq;
     use nalgebra as na;
     use rand::Rng;
-    use std::time::Instant;
+    use std::{
+        f64::consts::{SQRT_2, SQRT_3},
+        time::Instant,
+    };
 
     const N: usize = 10_000;
 
@@ -137,5 +142,24 @@ mod tests {
                 epsilon = 1e-6
             );
         }
+    }
+
+    #[test]
+    fn cul_check() {
+        let n1 = na::Vector3::new(-0.5, -SQRT_3 / 6.0, -SQRT_3 * SQRT_2 / 12.0);
+        let n2 = na::Vector3::new(0.5, -SQRT_3 / 6.0, -SQRT_3 * SQRT_2 / 12.0);
+        let n3 = na::Vector3::new(0.0, -SQRT_3 / 3.0, -SQRT_3 * SQRT_2 / 12.0);
+        let n4 = na::Vector3::new(0.0, 0.0, -SQRT_3 * SQRT_2 / 4.0);
+
+        // assert_eq!(n1.transpose() * n1, na::SVector::<f64, 1>::new(0.375));
+        // assert_eq!(n2.transpose() * n2, na::SVector::<f64, 1>::new(0.375));
+        // assert_eq!(n3.transpose() * n3, na::SVector::<f64, 1>::new(0.375));
+        // assert_eq!(n4.transpose() * n4, na::SVector::<f64, 1>::new(0.375));
+
+        let e =
+            (n1 * n1.transpose() + n2 * n2.transpose() + n3 * n3.transpose() + n4 * n4.transpose())
+                / 0.375;
+
+        println!("{:?}", e);
     }
 }

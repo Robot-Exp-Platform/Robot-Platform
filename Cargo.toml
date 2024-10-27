@@ -1,16 +1,14 @@
 [workspace]
 members = [
-    "./crates/controller",
-    "./crates/planner",
-    "./crates/recoder",
-    "./crates/robot",
-    "./crates/simulator",
-    "./crates/solver",
-    "./crates/task_manager",
-    "./crates/temp",
-    "./crates/message",
-    "./crates/robot_macros_derive",
-    "./crates/sensor",
+    "src/generate_tools",
+    "src/manager",
+    "src/message",
+    "src/node",
+    "src/recoder",
+    "src/robot",
+    "src/sensor",
+    "src/simulator",
+    "src/solver",
 ]
 
 [workspace.package]
@@ -21,7 +19,6 @@ name = "robot_platform"
 version = "0.1.0"
 edition = "2021"
 # edition = "2024"
-build = "build.rs"
 
 [workspace.dependencies]
 serde = { version = '*', features = ["derive"] }
@@ -41,16 +38,16 @@ approx = "*"
 osqp = "*"
 optimization_engine = "0.9.1"
 
-robot = { path = "./crates/robot" }
-controller = { path = "./crates/controller" }
-planner = { path = "./crates/planner" }
-recoder = { path = "./crates/recoder" }
-task_manager = { path = "./crates/task_manager" }
-simulator = { path = "./crates/simulator" }
-message = { path = "./crates/message" }
-robot_macros_derive = { path = "./crates/robot_macros_derive" }
-sensor = { path = "./crates/sensor" }
-solver = { path = "./crates/solver" }
+message = { path = "src/message" }
+robot = { path = "src/robot" }
+generate_tools = { path = "src/generate_tools" }
+manager = { path = "src/manager" }
+recoder = { path = "src/recoder" }
+sensor = { path = "src/sensor" }
+simulator = { path = "src/simulator" }
+solver = { path = "src/solver" }
+node = { path = "src/node" }
+
 
 [dependencies]
 serde = { workspace = true, features = ["derive"] }
@@ -66,33 +63,19 @@ rosrust = { workspace = true, optional = true }
 rosrust_msg = { workspace = true, optional = true }
 osqp.workspace = true
 
-robot.workspace = true
-controller.workspace = true
-planner.workspace = true
-recoder.workspace = true
-task_manager.workspace = true
-simulator.workspace = true
 message.workspace = true
+robot.workspace = true
+generate_tools.workspace = true
+manager.workspace = true
+recoder.workspace = true
 sensor.workspace = true
-
-
-[build-dependencies]
+simulator.workspace = true
+solver.workspace = true
+node.workspace = true
 
 
 [features]
-# default = ["recode"]
-# default = ["rszmq"]
-# default = ["ros"]
-# default = ["ros2"]
-
-recode = ["controller/recode", "planner/recode", "simulator/recode"]
-rszmq = ["zmq", "task_manager/rszmq", "controller/rszmq", "simulator/rszmq"]
-noros = ["task_manager/noros", "controller/noros", "simulator/noros"]
-ros = [
-    "rosrust",
-    "rosrust_msg",
-    "task_manager/ros",
-    "controller/ros",
-    "simulator/ros",
-]
-ros2 = ["task_manager/ros2", "controller/ros2", "simulator/ros2"]
+ros = []
+ros2 = []
+rszmq = []
+recode = []

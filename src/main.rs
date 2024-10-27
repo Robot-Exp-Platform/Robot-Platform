@@ -1,28 +1,20 @@
+#![feature(trait_alias)]
 #![feature(trait_upcasting)]
+#![feature(more_float_constants)]
 
-use task_manager::ros_thread::ROSThread;
+pub mod exp;
 
-mod config;
-mod exp;
-mod msg;
+use std::{thread, time::Duration};
 
+use exp::Exp;
+use node::NodeBehavior;
 fn main() {
-    // ! 启动ros
-    #[cfg(feature = "ros")]
-    {
-        rosrust::init("robot-platform");
-    }
-    // ! 初始化实验，将从 ${CONFIG_PATH}/config.json 中读取配置文件,并生成对应的实验森林，包括机器人树、控制器树、规划器树等
-    let mut exp = exp::Exp::new();
-    exp.init();
-    // ! 主循环家人们，赞美主循环
-    loop {
-        // ! 更新任务，将从 ${TASK_PATH}/task.json 中读取任务文件和参数信息文件，并生成对应的任务树
-        exp.start();
+    let mut exp = Exp::from_json("./config.json", "./task.json");
 
-        while exp.is_running() {
-            exp.update();
-            println!("完成一次任务")
-        }
+    exp.init();
+
+    while exp.is_running() {
+        exp.update();
+        thread::sleep(Duration::from_secs(10));
     }
 }
