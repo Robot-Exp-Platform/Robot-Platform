@@ -11,6 +11,7 @@ serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
 serde_yaml.workspace = true
 osqp.workspace = true
+zmq = { workspace = true, optional = true }
 
 message.workspace = true
 generate_tools.workspace = true
@@ -19,4 +20,7 @@ sensor.workspace = true
 solver.workspace = true
 
 [features]
+default = ["rszmq"]
+rszmq = ["zmq"]
 recode = []
+ros = []

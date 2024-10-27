@@ -1,5 +1,12 @@
 [
   {
+    "id": 0,
+    "rely": [],
+    "target": [],
+    "nodes": [["bullet", ["panda_1,panda_2"], { "period": 0.0 }]],
+    "edges": [[1, 0]]
+  },
+  {
     "id": 1,
     "rely": [],
     "target": [
