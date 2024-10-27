@@ -1,5 +1,6 @@
+use message::DRobotState;
 use nalgebra as na;
-use robot::{DSeriseRobot, RobotType};
+use robot::{DSeriseRobot, Robot, RobotType};
 use serde::Deserialize;
 use serde_json::{from_value, Value};
 // use serde_yaml::Value;
@@ -132,32 +133,50 @@ impl NodeBehavior for DBullet {
 
     fn update(&mut self) {
         // 读取所有机器人中保存的控制信息
+        let mut commands = Vec::new();
+        for robot in self.robot.iter() {
+            let robot_read = robot.read().unwrap();
+            let command = robot_read.control_message();
+            commands.push(command);
+        }
+        // 整理控制指令为字符串
+        let command = serde_json::to_string(&commands).unwrap();
 
         #[cfg(feature = "rszmq")]
         {
-            // // 获取 responder 并接受 RobotState 消息
-            // let responder = self.node.responder.lock().unwrap();
-            // let message = responder
-            //     .recv_string(0)
-            //     .expect("Received a message that is not a valid UTF-8 string.")
-            //     .unwrap();
-            // let robot_state: DRobotState = serde_json::from_str(message.as_str()).unwrap();
+            // 获取 responder 并接受 RobotState 消息
+            let responder = self.node.responder.lock().unwrap();
+            let message = responder
+                .recv_string(0)
+                .expect("Received a message that is not a valid UTF-8 string.")
+                .unwrap();
+            let robot_state: Vec<DRobotState> = serde_json::from_str(message.as_str()).unwrap();
 
-            // // 及时返回控制指令
-            // let reply = serde_json::to_string(&(command)).unwrap();
-            // responder.send(&reply, 0).expect("Failed to send reply");
+            // 及时返回控制指令
+            let reply = serde_json::to_string(&(command)).unwrap();
+            responder.send(&reply, 0).expect("Failed to send reply");
 
-            // // 处理消息，将消息中的状态信息写入到机器人状态中
-            // // let mut robot_write = self.robot.write().unwrap();
-            // match robot_state {
-            //     // DRobotState::Joint(joint) => robot_write.set_q(joint),
-            //     // DRobotState::Velocity(velocity) => robot_write.set_q_dot(velocity),
-            //     // DRobotState::JointVel(joint, velocity) => {
-            //     //     robot_write.set_q(joint);
-            //     //     robot_write.set_q_dot(velocity);
-            //     // }
-            //     _ => {}
-            // }
+            // 处理消息，将消息中的状态信息写入到机器人状态中
+            for (robot, state) in self.robot.iter().zip(robot_state.iter()) {
+                let mut robot_write = robot.write().unwrap();
+                match state {
+                    DRobotState::Joint(joint) => robot_write.set_q(joint.clone()),
+                    DRobotState::Velocity(velocity) => robot_write.set_q_dot(velocity.clone()),
+                    DRobotState::Acceleration(acceleration) => {
+                        robot_write.set_q_ddot(acceleration.clone())
+                    }
+                    DRobotState::JointVel(joint, velocity) => {
+                        robot_write.set_q(joint.clone());
+                        robot_write.set_q_dot(velocity.clone());
+                    }
+                    DRobotState::JointVelAcc(joint, velocity, acceleration) => {
+                        robot_write.set_q(joint.clone());
+                        robot_write.set_q_dot(velocity.clone());
+                        robot_write.set_q_ddot(acceleration.clone());
+                    }
+                    _ => (),
+                }
+            }
         }
     }
 
