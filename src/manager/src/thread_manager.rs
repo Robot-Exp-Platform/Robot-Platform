@@ -52,7 +52,11 @@ impl ThreadManager {
 
                 let period = node.period();
 
-                while node.is_running() {
+                while node.state() != node::NodeState::Finished {
+                    if node::NodeState::RelyRelease == node.state() {
+                        sender.send(TaskState::RelyRelease(name.clone())).unwrap();
+                    }
+
                     let start_time = Instant::now();
 
                     node.update();
@@ -88,7 +92,7 @@ impl ThreadManager {
 
                 let period = node.period();
 
-                while node.is_running() {
+                while node.state() != node::NodeState::Finished {
                     let start_time = Instant::now();
 
                     node.update();
@@ -124,7 +128,7 @@ impl ThreadManager {
 
                 let period = node.period();
 
-                while node.is_running() {
+                while node.state() != node::NodeState::Finished {
                     let start_time = Instant::now();
 
                     node.update();

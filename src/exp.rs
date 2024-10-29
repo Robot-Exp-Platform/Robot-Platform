@@ -1,5 +1,6 @@
 use chrono::Local;
 use crossbeam::queue::SegQueue;
+use message::TaskState;
 use node::create_node;
 use serde_json::from_reader;
 use std::{
@@ -178,6 +179,17 @@ impl NodeBehavior for Exp {
             }
             ExpState::Running => {
                 // 任务执行中，一般来说什么都不做，只是等待线程管理器汇报任务完成情况。
+                let receiver = self.task_manager.receiver.clone().unwrap();
+                let receiver_lock = receiver.lock().unwrap();
+                let task_state = receiver_lock.recv().unwrap();
+                drop(receiver_lock);
+
+                // 接收到任务反馈
+                if let TaskState::RelyRelease(name) = task_state {
+                    println!("{} 释放约束节点", name);
+                    self.task_manager.remove_task(0);
+                }
+                self.state = ExpState::TaskSorting;
             }
             _ => (),
         }

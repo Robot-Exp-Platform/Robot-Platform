@@ -39,6 +39,7 @@ pub enum DRobotState {
 
 #[derive(Debug, Deserialize)]
 pub enum TaskState {
+    RelyRelease(String),
     PlanEnd(String),
     ControlEnd(String),
 }

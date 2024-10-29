@@ -15,9 +15,9 @@ use zmq;
 
 use crate::{DSimulator, Simulator};
 use generate_tools::*;
-use node::NodeBehavior;
 #[cfg(feature = "rszmq")]
 use message::DControlCommand;
+use node::NodeBehavior;
 #[cfg(feature = "recode")]
 use recoder::*;
 use sensor::Sensor;
@@ -159,7 +159,7 @@ impl NodeBehavior for DBullet {
                 .recv_string(0)
                 .expect("Received a message that is not a valid UTF-8 string.")
                 .unwrap();
-            let robot_state: DRobotState = serde_json::from_str(message.as_str()).unwrap();
+            let _robot_state: DRobotState = serde_json::from_str(message.as_str()).unwrap();
 
             // 及时返回控制指令
             let reply = serde_json::to_string(&(command)).unwrap();
@@ -167,15 +167,15 @@ impl NodeBehavior for DBullet {
 
             // 处理消息，将消息中的状态信息写入到机器人状态中
             // let mut robot_write = self.robot.write().unwrap();
-            match robot_state {
-                // DRobotState::Joint(joint) => robot_write.set_q(joint),
-                // DRobotState::Velocity(velocity) => robot_write.set_q_dot(velocity),
-                // DRobotState::JointVel(joint, velocity) => {
-                //     robot_write.set_q(joint);
-                //     robot_write.set_q_dot(velocity);
-                // }
-                _ => {}
-            }
+            // match robot_state {
+            //     // DRobotState::Joint(joint) => robot_write.set_q(joint),
+            //     // DRobotState::Velocity(velocity) => robot_write.set_q_dot(velocity),
+            //     // DRobotState::JointVel(joint, velocity) => {
+            //     //     robot_write.set_q(joint);
+            //     //     robot_write.set_q_dot(velocity);
+            //     // }
+            //     _ => {}
+            // }
         }
     }
 

@@ -1,3 +1,4 @@
+use message::Pose;
 use serde::Deserialize;
 use std::sync::{Arc, RwLock};
 
@@ -7,6 +8,7 @@ use crate::{DPanda, RobotType};
 pub struct RobotConfig {
     pub name: String,
     pub robot_type: String,
+    pub base_pose: Pose,
 }
 
 /// 通过配置文件生成机器人实例
@@ -15,6 +17,7 @@ pub fn from_config(robot_config: &RobotConfig) -> RobotType {
     match robot_config.robot_type.as_str() {
         "panda" => RobotType::DSeriseRobot(Arc::new(RwLock::new(DPanda::new_panda(
             robot_config.name.clone(),
+            robot_config.base_pose,
         )))),
         _ => panic!("Unknown robot type: {}", robot_config.robot_type),
     }

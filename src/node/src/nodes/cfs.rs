@@ -106,22 +106,29 @@ impl NodeBehavior for DCfs {
         let q_min_bound = robot_read.q_min_bound().as_slice().to_vec();
         let q_max_bound = robot_read.q_max_bound().as_slice().to_vec();
 
-        // TODO 检查target是否抵达
+        let currect_state = DNodeMessage::Joint(q.clone());
 
-        // 检查上次任务是否完成, 若完成则获取新的 target
-        // TODO 任务完成的判断条件
-        let target = self
-            .state
-            .target
-            .clone()
-            .unwrap_or(self.node.input_queue.pop().unwrap());
-        self.state.target = Some(target.clone());
-        let target = match target {
+        if let Some(target) = self.state.target.clone() {
+            println!(
+                "{} error: {:?}",
+                self.name,
+                (target.clone() / currect_state.clone()).abs()
+            );
+
+            if (target / currect_state).abs() < 1e-1 {
+                self.state.target = Some(self.node.input_queue.pop().unwrap());
+            }
+        } else {
+            self.state.target = Some(self.node.input_queue.pop().unwrap());
+        }
+
+        // 获取 target，并辨析其内涵
+        let target = match self.state.target.clone().unwrap() {
             // 根据不同的 target 类型，执行不同的任务，也可以将不同的 Target 类型处理为相同的类型
             DNodeMessage::Joint(joint) => joint,
             _ => unimplemented!("CFS planner does not support target of type."),
         };
-        println!("{} get target: {:?}", self.name, target);
+        // println!("{} get target: {:?}", self.name, target);
 
         // 执行CFS逻辑
         let q_ref_list = lerp(&q, &vec![target.clone()], self.params.ninterp);
@@ -202,7 +209,6 @@ impl NodeBehavior for DCfs {
                     .zip(last_result.iter())
                     .map(|(a, b)| (a - b).abs())
                     .sum();
-                println!("diff: {}", diff);
                 if diff.abs() < 1e-1 {
                     break;
                 }

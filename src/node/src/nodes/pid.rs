@@ -157,13 +157,11 @@ impl NodeBehavior for DPid {
         let q = robot_read.q();
         drop(robot_read);
 
-        // 更新 Track
-        self.state.track = match self.node.input_queue.pop() {
-            Some(DNodeMessage::Joint(track)) => track,
-            _ => return,
-        };
+        if let Some(DNodeMessage::Joint(track)) = self.node.input_queue.pop() {
+            self.state.track = track;
+        }
 
-        println!("{} get track: {:?}", self.name, self.state.track);
+        // println!("{} get track: {:?}", self.name, self.state.track);
 
         // 执行 pid 逻辑
         let new_error = &self.state.track - &q;
@@ -181,7 +179,7 @@ impl NodeBehavior for DPid {
             recode!(recoder, output);
         }
 
-        let control_message = DNodeMessage::JointWithPeriod(self.params.period, output);
+        let control_message = DNodeMessage::Tau(output);
 
         // 发送控制指令
         if self.state.is_end {
