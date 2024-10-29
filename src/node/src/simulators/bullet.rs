@@ -176,7 +176,6 @@ impl NodeBehavior for DBullet {
         }
         // 整理控制指令为字符串
         let command = serde_json::to_string(&commands).unwrap();
-
         #[cfg(feature = "rszmq")]
         {
             // 获取 responder 并接受 RobotState 消息

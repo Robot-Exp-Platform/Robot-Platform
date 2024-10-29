@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{ops::Div, sync::Arc};
 
 use crossbeam::queue::SegQueue;
 use nalgebra as na;
@@ -28,3 +28,59 @@ pub type SNodeMessage<const N: usize> = NodeMessage<na::SVector<f64, N>>;
 pub type NodeMessageQueue<V> = Arc<SegQueue<NodeMessage<V>>>;
 pub type DNodeMessageQueue = Arc<SegQueue<DNodeMessage>>;
 pub type SNodeMessageQueue<const N: usize> = Arc<SegQueue<SNodeMessage<N>>>;
+
+impl Div for NodeMessage<na::DVector<f64>> {
+    type Output = f64;
+    fn div(self, rhs: Self) -> Self::Output {
+        match (self, rhs) {
+            (Self::Pose(lhs), Self::Pose(rhs)) => {
+                let diff = lhs / rhs;
+                diff.rotation.norm() + diff.translation.vector.norm()
+            }
+            (Self::Joint(lhs), Self::Joint(rhs)) => {
+                let diff = lhs - rhs;
+                diff.norm() / diff.len() as f64
+            }
+            (Self::JointVel(lhs, lvel), Self::JointVel(rhs, rvel)) => {
+                let diff = lhs - rhs;
+                let vdiff = lvel - rvel;
+                diff.norm() / diff.len() as f64 + vdiff.norm() / vdiff.len() as f64
+            }
+            (Self::JointVelAcc(lhs, lvel, lacc), Self::JointVelAcc(rhs, rvel, racc)) => {
+                let diff = lhs - rhs;
+                let vdiff = lvel - rvel;
+                let adiff = lacc - racc;
+                diff.norm() / diff.len() as f64
+                    + vdiff.norm() / vdiff.len() as f64
+                    + adiff.norm() / adiff.len() as f64
+            }
+            _ => panic!("Divide operation not supported for this type"),
+        }
+    }
+}
+
+impl<const N: usize> Div for NodeMessage<na::SVector<f64, N>> {
+    type Output = f64;
+    fn div(self, rhs: Self) -> Self::Output {
+        match (self, rhs) {
+            (Self::Joint(lhs), Self::Joint(rhs)) => {
+                let diff = lhs - rhs;
+                diff.norm() / diff.len() as f64
+            }
+            (Self::JointVel(lhs, lvel), Self::JointVel(rhs, rvel)) => {
+                let diff = lhs - rhs;
+                let vdiff = lvel - rvel;
+                diff.norm() / diff.len() as f64 + vdiff.norm() / vdiff.len() as f64
+            }
+            (Self::JointVelAcc(lhs, lvel, lacc), Self::JointVelAcc(rhs, rvel, racc)) => {
+                let diff = lhs - rhs;
+                let vdiff = lvel - rvel;
+                let adiff = lacc - racc;
+                diff.norm() / diff.len() as f64
+                    + vdiff.norm() / vdiff.len() as f64
+                    + adiff.norm() / adiff.len() as f64
+            }
+            _ => panic!("Divide operation not supported for this type"),
+        }
+    }
+}

@@ -70,7 +70,7 @@ class Joint:
         """力控方案
 
         Args:
-            torque (f64): _description_
+            torque (float): 力矩值
         """
         p.setJointMotorControl2(
             bodyUniqueId=self.robot_id,
@@ -78,7 +78,6 @@ class Joint:
             controlMode=p.TORQUE_CONTROL,
             force=torque,
         )
-        self.update_state()
 
 
 class Robot:
@@ -135,10 +134,10 @@ class Robot:
             cmd (dict): 命令
         """
         if "Joint" in cmd:
-            self.set_joints_position(cmd["Joint"])
+            self.set_joints_position(cmd["Joint"][0])
         elif "JointWithPeriod" in cmd:
             self.set_joints_position(cmd["JointWithPeriod"][1])
         elif "Tau" in cmd:
-            self.set_joints_torque(cmd["Tau"])
+            self.set_joints_torque(cmd["Tau"][0])
         elif "TauWithPeriod" in cmd:
             self.set_joints_torque(cmd["TauWithPeriod"][1])

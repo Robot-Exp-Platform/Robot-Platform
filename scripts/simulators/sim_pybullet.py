@@ -61,6 +61,8 @@ def main():
     p.setAdditionalSearchPath(pybullet_data.getDataPath())
     p.setGravity(0, 0, -9.8)
 
+    # 加载 Panda 机器人和地面
+    p.loadURDF("plane.urdf")
     robot_config = []
     # 根据参数选择数据来源
     if args.text:
@@ -83,18 +85,18 @@ def main():
             robot_states = []
             for robot in robots:
                 robot_states.append(robot.get_state())
-            print(robot_states)
             req.send_state(robot_states)
 
             # 接收 Rust 发来的命令
-            command = req.receive_command()
-            print(command)
+            command = json.loads(req.receive_command())
+            # print("pybullet: get command", command)
             for robot, cmd in zip(robots, command):
+                # print(f"Executing command for {robot}: {cmd}")
                 robot.execute_command(cmd)
 
             # 更新仿真
             p.stepSimulation()
-            time.sleep(0.5)
+            time.sleep(0.125)
     except KeyboardInterrupt:
         print("Simulation terminated by user.")
     finally:
