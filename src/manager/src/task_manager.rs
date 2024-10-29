@@ -23,7 +23,7 @@ pub struct TaskManager {
     open_tasks: HashSet<TaskId>,
 
     /// 与线程管理器通信的接收器
-    receiver: Option<Arc<Mutex<Receiver<TaskState>>>>,
+    pub receiver: Option<Arc<Mutex<Receiver<TaskState>>>>,
 }
 
 #[derive(Deserialize, Default, Clone)]

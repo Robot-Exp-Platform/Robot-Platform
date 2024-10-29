@@ -1,4 +1,3 @@
-use message::DRobotState;
 use nalgebra as na;
 use robot::{DSeriseRobot, Robot, RobotType};
 use serde::Deserialize;
@@ -7,14 +6,17 @@ use serde_json::{from_value, Value};
 use crossbeam::queue::SegQueue;
 use std::fs;
 use std::io::{BufWriter, Write};
+use std::process::Command;
 #[cfg(feature = "rszmq")]
 use std::sync::Mutex;
 use std::sync::{Arc, RwLock};
+use std::thread;
 #[cfg(feature = "rszmq")]
 use zmq;
 
-use crate::{Node, NodeBehavior};
+use crate::{Node, NodeBehavior, NodeState};
 use generate_tools::*;
+use message::RobotState;
 #[cfg(feature = "recode")]
 use recoder::*;
 use sensor::Sensor;
@@ -41,6 +43,8 @@ pub type SBullet<const N: usize> = Bullet<RobotType>;
 
 struct BulletState {
     is_end: bool,
+    node_state: NodeState,
+    pybullet_thread: Option<thread::JoinHandle<()>>,
 }
 
 #[derive(Deserialize)]
@@ -73,7 +77,11 @@ impl DBullet {
 
         DBullet {
             name,
-            state: BulletState { is_end: false },
+            state: BulletState {
+                is_end: false,
+                node_state: NodeState::RelyRelease,
+                pybullet_thread: None,
+            },
             params,
             node: BulletNode {
                 recoder: None,
@@ -114,6 +122,30 @@ impl NodeBehavior for DBullet {
     fn init(&mut self) {
         println!("{} 向您问好. {} says hello.", self.name, self.name);
         // 使用命令行启动 pybullet， 告知 pybullet 所有的机器人信息
+        // 暂时使用命令行加载的形式，后续也可以使用文件加载
+
+        self.state.pybullet_thread = Some(std::thread::spawn(move || {
+            let output = Command::new("python")
+                .arg("./scripts/simulators/sim_pybullet.py")
+                .arg("-f")
+                .arg("./config.json")
+                .spawn()
+                .expect("Failed to execute command")
+                .wait_with_output()
+                .expect("Failed to wait on child process");
+
+            if !output.status.success() {
+                eprintln!(
+                    "Command failed with error: {}",
+                    String::from_utf8_lossy(&output.stderr)
+                );
+            } else {
+                println!(
+                    "Command executed successfully: {}",
+                    String::from_utf8_lossy(&output.stdout)
+                );
+            }
+        }));
 
         // 建立通讯
         #[cfg(feature = "rszmq")]
@@ -129,6 +161,9 @@ impl NodeBehavior for DBullet {
                 Err(e) => eprintln!("Failed to bind socket: {}", e),
             }
         }
+
+        // 初始化节点状态
+        self.state.node_state = NodeState::Init;
     }
 
     fn update(&mut self) {
@@ -150,7 +185,7 @@ impl NodeBehavior for DBullet {
                 .recv_string(0)
                 .expect("Received a message that is not a valid UTF-8 string.")
                 .unwrap();
-            let robot_state: Vec<DRobotState> = serde_json::from_str(message.as_str()).unwrap();
+            let robot_state: Vec<RobotState> = serde_json::from_str(message.as_str()).unwrap();
 
             // 及时返回控制指令
             let reply = serde_json::to_string(&(command)).unwrap();
@@ -160,23 +195,34 @@ impl NodeBehavior for DBullet {
             for (robot, state) in self.robot.iter().zip(robot_state.iter()) {
                 let mut robot_write = robot.write().unwrap();
                 match state {
-                    DRobotState::Joint(joint) => robot_write.set_q(joint.clone()),
-                    DRobotState::Velocity(velocity) => robot_write.set_q_dot(velocity.clone()),
-                    DRobotState::Acceleration(acceleration) => {
-                        robot_write.set_q_ddot(acceleration.clone())
+                    RobotState::Joint(joint) => {
+                        robot_write.set_q(na::DVector::from_vec(joint.clone()))
                     }
-                    DRobotState::JointVel(joint, velocity) => {
-                        robot_write.set_q(joint.clone());
-                        robot_write.set_q_dot(velocity.clone());
+                    RobotState::Velocity(velocity) => {
+                        robot_write.set_q_dot(na::DVector::from_vec(velocity.clone()))
                     }
-                    DRobotState::JointVelAcc(joint, velocity, acceleration) => {
-                        robot_write.set_q(joint.clone());
-                        robot_write.set_q_dot(velocity.clone());
-                        robot_write.set_q_ddot(acceleration.clone());
+                    RobotState::Acceleration(acceleration) => {
+                        robot_write.set_q_ddot(na::DVector::from_vec(acceleration.clone()))
+                    }
+                    RobotState::JointVel(joint, velocity) => {
+                        robot_write.set_q(na::DVector::from_vec(joint.clone()));
+                        robot_write.set_q_dot(na::DVector::from_vec(velocity.clone()));
+                    }
+                    RobotState::JointVelAcc(joint, velocity, acceleration) => {
+                        robot_write.set_q(na::DVector::from_vec(joint.clone()));
+                        robot_write.set_q_dot(na::DVector::from_vec(velocity.clone()));
+                        robot_write.set_q_ddot(na::DVector::from_vec(acceleration.clone()));
                     }
                     _ => (),
                 }
             }
+        }
+
+        // 修改节点状态
+        if self.state.node_state == NodeState::Init {
+            self.state.node_state = NodeState::RelyRelease;
+        } else {
+            self.state.node_state = NodeState::Running;
         }
     }
 
@@ -212,5 +258,9 @@ impl NodeBehavior for DBullet {
 
     fn period(&self) -> std::time::Duration {
         std::time::Duration::from_secs_f64(self.params.period)
+    }
+
+    fn state(&mut self) -> crate::NodeState {
+        self.state.node_state
     }
 }

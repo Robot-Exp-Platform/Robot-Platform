@@ -4,8 +4,6 @@
 
 pub mod exp;
 
-use std::{thread, time::Duration};
-
 use exp::Exp;
 use node::NodeBehavior;
 fn main() {
@@ -13,8 +11,7 @@ fn main() {
 
     exp.init();
 
-    while exp.is_running() {
+    while exp.state() == node::NodeState::Running {
         exp.update();
-        thread::sleep(Duration::from_secs(10));
     }
 }

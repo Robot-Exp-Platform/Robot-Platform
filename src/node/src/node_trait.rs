@@ -33,8 +33,8 @@ pub trait NodeBehavior: Send + Sync {
     fn start(&mut self) {}
     fn update(&mut self) {}
     fn finalize(&mut self) {}
-    fn is_running(&mut self) -> bool {
-        true
+    fn state(&mut self) -> NodeState {
+        NodeState::Running
     }
     fn period(&self) -> Duration {
         Duration::from_secs(0)
@@ -45,4 +45,12 @@ pub trait NodeBehavior: Send + Sync {
     fn node_type(&self) -> String {
         String::from("unnamed_type")
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum NodeState {
+    Init,
+    Running,
+    RelyRelease,
+    Finished,
 }

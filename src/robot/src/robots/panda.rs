@@ -2,7 +2,7 @@ use nalgebra as na;
 use std::f64::consts::{FRAC_PI_2, FRAC_PI_4};
 
 use crate::{DSeriseRobot, SeriseRobotParams};
-use message::{Capsule, NodeMessage};
+use message::{Capsule, NodeMessage, Pose};
 
 use super::{SeriseRobot, SeriseRobotState};
 
@@ -13,7 +13,7 @@ pub type DPanda = Panda<na::DVector<f64>>;
 pub type SPanda = Panda<na::SVector<f64, PANDA_DOF>>;
 
 impl DPanda {
-    pub fn new_panda(name: String) -> DPanda {
+    pub fn new_panda(name: String, base: Pose) -> DPanda {
         DSeriseRobot {
             name,
             state: SeriseRobotState::<na::DVector<f64>> {
@@ -23,7 +23,7 @@ impl DPanda {
                 q_dot: na::DVector::zeros(PANDA_DOF),
                 q_ddot: na::DVector::zeros(PANDA_DOF),
                 q_jerk: na::DVector::zeros(PANDA_DOF),
-                base: na::Isometry3::identity(),
+                base,
                 control_message: NodeMessage::NoneNodeMessage,
             },
             params: SeriseRobotParams::<na::DVector<f64>> {
