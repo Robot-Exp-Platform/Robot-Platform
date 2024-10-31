@@ -3,8 +3,6 @@ use serde::Deserialize;
 use serde_json::{from_value, Value};
 use tracing::info;
 // use serde_yaml::{from_value, Value};
-use std::fs;
-use std::io::{BufWriter, Write};
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
 
@@ -14,8 +12,7 @@ use message::{
     Constraint, DNodeMessage, DNodeMessageQueue, NodeMessage, NodeMessageQueue,
     QuadraticProgramming,
 };
-#[cfg(feature = "recode")]
-use recoder::*;
+
 use robot::{DRobot, DSeriseRobot, Robot, RobotType};
 use sensor::Sensor;
 use solver::{OsqpSolver, Solver};
@@ -54,7 +51,6 @@ pub struct CfsParams {
 
 #[derive(Default)]
 pub struct CfsNode<V> {
-    recoder: Option<BufWriter<fs::File>>,
     input_queue: NodeMessageQueue<V>,
     output_queue: NodeMessageQueue<V>,
 }
@@ -112,7 +108,7 @@ impl NodeBehavior for DCfs {
         if let Some(target) = self.state.target.clone() {
             info!(node = self.name.as_str(), input = ?target.as_slice());
 
-            if (target / currect_state).abs() < 1e-1 {
+            if (target / currect_state).abs() < 1e-2 {
                 self.state.target = Some(self.node.input_queue.pop().unwrap());
             }
         } else {
@@ -213,6 +209,7 @@ impl NodeBehavior for DCfs {
             }
         }
 
+        // 单步轨迹发送
         // 生成 track
         let mut track_list = Vec::new();
         for i in 1..self.params.ninterp + 2 {
@@ -220,50 +217,25 @@ impl NodeBehavior for DCfs {
                 &solver_result[i * ndof..(i + 1) * ndof],
             )));
         }
-
-        // 记录 track
-        #[cfg(feature = "recode")]
-        if let Some(ref mut recoder) = self.node.recoder {
-            for track in track_list.iter() {
-                recode!(recoder, track);
-            }
-        }
-
         // 发送 track
         while let Some(_) = self.node.output_queue.pop() {}
         for track in track_list {
             self.node.output_queue.push(track);
         }
-    }
 
-    fn start(&mut self) {
-        #[cfg(feature = "recode")]
-        {
-            fs::create_dir_all(format!(
-                "./data/{}/{}/{}",
-                *EXP_NAME,
-                *TASK_NAME.lock().unwrap(),
-                self.robot.read().unwrap().name()
-            ))
-            .unwrap();
-            let file = fs::OpenOptions::new()
-                .append(true)
-                .create(true)
-                .open(format!(
-                    "./data/{}/{}/{}/cfs.txt",
-                    *EXP_NAME,
-                    *TASK_NAME.lock().unwrap(),
-                    self.robot.read().unwrap().name(),
-                ))
-                .unwrap();
-            self.node.recoder = Some(BufWriter::new(file));
-        }
-    }
-
-    fn finalize(&mut self) {
-        if let Some(ref mut recoder) = self.node.recoder {
-            recoder.flush().unwrap();
-        }
+        // // 整体轨迹发送
+        // // 生成 track
+        // let mut track_list = Vec::new();
+        // for i in 1..self.params.ninterp + 2 {
+        //     track_list.push(na::DVector::from_column_slice(
+        //         &solver_result[i * ndof..(i + 1) * ndof],
+        //     ));
+        // }
+        // // 发送 track
+        // while let Some(_) = self.node.output_queue.pop() {}
+        // self.node
+        //     .output_queue
+        //     .push(DNodeMessage::JointList(track_list));
     }
 
     fn period(&self) -> Duration {

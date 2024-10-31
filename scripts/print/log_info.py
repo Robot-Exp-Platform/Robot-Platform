@@ -84,10 +84,10 @@ plotter.parse_logs()
 
 # 输入需要绘制的 (node, key) 组合
 node_key_pairs = [
-    ("cfs:panda_1", "input"),
-    ("interp:panda_1", "input"),
-    ("position:panda_1", "input"),
     ("bullet:panda_1", "input"),
+    ("position:panda_1", "input"),
+    ("interp:panda_1", "input"),
+    ("cfs:panda_1", "input"),
 ]
 
 plotter.plot(node_key_pairs)

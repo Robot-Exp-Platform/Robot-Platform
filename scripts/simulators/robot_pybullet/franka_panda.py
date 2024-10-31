@@ -2,6 +2,7 @@ import math
 import pybullet as p
 from robot_pybullet.robot import Robot, Joint
 
+
 FRAC_PI_4 = math.pi / 4
 FRAC_PI_2 = math.pi / 2
 
@@ -17,7 +18,7 @@ class Panda(Robot):
     def __init__(self, base_pose=None):
         super().__init__(base_pose)
         self.robot_id = p.loadURDF(
-            PANDA_URDF, useFixedBase=True, basePosition=base_pose
+            PANDA_URDF, basePosition=base_pose, useFixedBase=True
         )
         self.njoint = PANDA_DOF
         self.default_q = PANDA_DEFAULT_JOINT

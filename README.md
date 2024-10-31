@@ -168,6 +168,38 @@ cargo run
 
 您就可以看到机械臂在仿真器中运动了。同时命令行中会输出机械臂的状态信息和规划控制信息。
 
+## 不同节点的标准启动配置
+
+```json
+[
+  ["cfs", ["panda_1"], ["obstacle_releaser_1"], { "period": 0.8, "ninterp": 7, "niter": 6, "cost_weight": [0, 10.0, 20.0], "solver": "osqp" }],
+  ["interp", ["panda_1"], ["obstacle_releaser_1"], { "period": 0.1, "interp_fn": "lerp", "ninter": 25 }],
+
+  [
+    "impedence_diag", ["panda_1"], [],
+    {
+      "period": 0.004,
+      "k": [[600.0, 600.0, 600.0, 600.0, 250.0, 150.0, 50.0], 7, null],
+      "b": [[50.0, 50.0, 50.0, 20.0, 20.0, 20.0, 10], 7, null],
+      "m": [[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0], 7, null]
+    }
+  ],
+  [
+    "pid_diag", ["panda_1"], [],
+    {
+      "period": 0.004,
+      "k": [[600.0, 600.0, 600.0, 600.0, 250.0, 150.0, 50.0], 7, null],
+      "b": [[50.0, 50.0, 50.0, 20.0, 20.0, 20.0, 10], 7, null],
+      "m": [[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0], 7, null]
+    }
+  ],
+  ["position", ["panda_1"], [], { "period": 0.05 }],
+  ["force", ["panda_1"], [], { "period": 0.004 }]
+
+  ["bullet", ["panda_1"], ["obstacle_releaser_1"], { "period": 0.0 }]
+]
+```
+
 ## Documentation
 
 暂且还不完备，02 阶段完成后会整理文档

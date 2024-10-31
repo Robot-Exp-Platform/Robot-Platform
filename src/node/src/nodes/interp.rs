@@ -10,7 +10,7 @@ use std::time::Duration;
 
 use crate::{utilities::lerp, Node, NodeBehavior};
 use generate_tools::{get_fn, set_fn};
-use message::{DNodeMessage, DNodeMessageQueue, NodeMessageQueue};
+use message::{DNodeMessage, DNodeMessageQueue, NodeMessage, NodeMessageQueue};
 use robot::{DSeriseRobot, Robot, RobotType};
 use sensor::Sensor;
 
@@ -19,7 +19,7 @@ pub struct Interp<R, V> {
     /// The name of the planner.
     name: String,
     /// The state of the planner.
-    state: InterpState,
+    state: InterpState<V>,
     /// The parameters of the planner.
     params: InterpParams,
     /// The node of the planner.
@@ -34,9 +34,9 @@ pub type DInterp = Interp<DSeriseRobot, na::DVector<f64>>;
 pub type SInterp<R, const N: usize> = Interp<R, na::SVector<f64, N>>;
 
 #[derive(Default)]
-pub struct InterpState {
+pub struct InterpState<V> {
     /// The current target of the planner.
-    _target: Option<DNodeMessage>,
+    target: Option<NodeMessage<V>>,
     is_end: bool,
 }
 
@@ -101,15 +101,27 @@ impl NodeBehavior for DInterp {
         let q = robot_read.q();
         // TODO 需要在此处检查任务是否完成，如果未完成则无需从队列中取出新的目标，而是应当继续执行当前目标
 
+        let interp_fn = match self.params.interp_fn.as_str() {
+            "lerp" => lerp,
+            _ => return,
+        };
+
         // 根据不同的Target生成插值轨迹，每两点之间的插值数量为 ninter
-        let track_list = match self.node.input_queue.pop() {
-            Some(DNodeMessage::Joint(joint)) => match self.params.interp_fn.as_str() {
-                "lerp" => {
-                    info!(node = self.node_name().as_str(), input = ?joint.as_slice());
-                    lerp(&q, &vec![joint], self.params.ninter)
-                }
-                _ => panic!("Unknown interp function."),
-            },
+        if let Some(target) = self.node.input_queue.pop() {
+            self.state.target = Some(target);
+        } else {
+            return;
+        }
+
+        let target = self.state.target.clone().unwrap();
+        info!(node = self.node_name().as_str(), input = ?target.as_slice());
+
+        let track_list = match target {
+            DNodeMessage::Joint(joint) => {
+                info!(node = self.node_name().as_str(), input = ?joint.as_slice());
+                interp_fn(&(0.3 * &q + 0.7 * &joint), &vec![joint], self.params.ninter)
+            }
+            DNodeMessage::JointList(joint_list) => interp_fn(&q, &joint_list, self.params.ninter),
             _ => return,
         };
 

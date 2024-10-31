@@ -16,17 +16,8 @@
       { "Joint": [[0.0592, -0.3941, 0.4692, -1.6001, 0.1456, 2.0968, 1.201], 7, null] }
     ],
     "nodes": [
-      ["cfs", ["panda_1"], ["obstacle_releaser_1"], { "period": 0.4, "ninterp": 7, "niter": 6, "cost_weight": [0.8, 10.0, 20.0], "solver": "osqp" }],
-      [
-        "interp",
-        ["panda_1"],
-        ["obstacle_releaser_1"],
-        {
-          "period": 0.1,
-          "interp_fn": "lerp",
-          "ninter": 25
-        }
-      ],
+      ["cfs", ["panda_1"], ["obstacle_releaser_1"], { "period": 0.95, "ninterp": 7, "niter": 6, "cost_weight": [0, 10.0, 20.0], "solver": "osqp" }],
+      ["interp", ["panda_1"], ["obstacle_releaser_1"], { "period": 0.1, "interp_fn": "lerp", "ninter": 25 }],
       ["position", ["panda_1"], [], { "period": 0.004 }]
     ],
     "edges": [
