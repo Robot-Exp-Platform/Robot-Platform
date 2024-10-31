@@ -12,6 +12,9 @@ serde_json.workspace = true
 serde_yaml.workspace = true
 osqp.workspace = true
 zmq = { workspace = true, optional = true }
+tracing.workspace = true
+tracing-subscriber.workspace = true
+
 
 message.workspace = true
 generate_tools.workspace = true
@@ -20,7 +23,8 @@ sensor.workspace = true
 solver.workspace = true
 
 [features]
-default = ["rszmq"]
+default = ["rszmq", "recode_debug"]
 rszmq = ["zmq"]
 recode = []
+recode_debug = []
 ros = []

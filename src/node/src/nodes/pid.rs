@@ -179,7 +179,7 @@ impl NodeBehavior for DPid {
             recode!(recoder, output);
         }
 
-        let control_message = DNodeMessage::Tau(output);
+        let control_message = DNodeMessage::Joint(output);
 
         // 发送控制指令
         if self.state.is_end {

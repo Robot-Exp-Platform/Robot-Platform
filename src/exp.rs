@@ -8,7 +8,7 @@ use std::{
     sync::{mpsc, Arc, RwLock},
 };
 
-use manager::{Config, PostOffice, Task, TaskManager, ThreadManager};
+use manager::{Config, Task, TaskManager, ThreadManager};
 use node::NodeBehavior;
 use robot::{self, RobotType};
 use sensor::Sensor;
@@ -19,7 +19,6 @@ pub struct Exp {
 
     pub thread_manager: ThreadManager,
     pub task_manager: TaskManager,
-    pub post_office: PostOffice,
 
     pub robot_pool: Vec<RobotType>,
     pub sensor_pool: Vec<Arc<RwLock<Sensor>>>,
@@ -31,7 +30,6 @@ pub enum ExpState {
     Init,
     Running,
     TaskSorting,
-    TaskFinishCallback,
 }
 
 impl Exp {
@@ -51,8 +49,6 @@ impl Exp {
         let thread_manager = ThreadManager::new(sender);
         // 创建任务管理器，任务管理器接受线程管理器的汇报内容
         let task_manager = TaskManager::from_json(receiver, task);
-        // 创建消息邮局，消息邮局负责保管传输信道以及负责统合或分发控制指令
-        let post_office = PostOffice::default();
         // 创建实验状态机，实验状态机负责管理实验的整个过程
         let state = ExpState::Init;
 
@@ -72,7 +68,6 @@ impl Exp {
             state,
             thread_manager,
             task_manager,
-            post_office,
             robot_pool,
             sensor_pool,
         }
@@ -158,6 +153,7 @@ impl NodeBehavior for Exp {
             "现在是 {}，先生，祝您早上、中午、晚上好",
             Local::now().format("%Y-%m-%d %H:%M:%S")
         );
+
         self.state = ExpState::TaskSorting;
     }
 

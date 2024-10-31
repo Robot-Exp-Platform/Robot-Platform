@@ -37,6 +37,10 @@ lazy_static = "*"
 approx = "*"
 osqp = "*"
 optimization_engine = "0.9.1"
+log = "*"
+tracing = "*"
+tracing-subscriber = "*"
+tracing-appender = "*"
 
 message = { path = "src/message" }
 robot = { path = "src/robot" }
@@ -62,6 +66,9 @@ zmq = { workspace = true, optional = true }
 rosrust = { workspace = true, optional = true }
 rosrust_msg = { workspace = true, optional = true }
 osqp.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+tracing-appender.workspace = true
 
 message.workspace = true
 robot.workspace = true

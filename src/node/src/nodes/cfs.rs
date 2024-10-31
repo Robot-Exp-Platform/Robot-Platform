@@ -1,6 +1,7 @@
 use nalgebra as na;
 use serde::Deserialize;
 use serde_json::{from_value, Value};
+use tracing::info;
 // use serde_yaml::{from_value, Value};
 use std::fs;
 use std::io::{BufWriter, Write};
@@ -109,11 +110,7 @@ impl NodeBehavior for DCfs {
         let currect_state = DNodeMessage::Joint(q.clone());
 
         if let Some(target) = self.state.target.clone() {
-            println!(
-                "{} error: {:?}",
-                self.name,
-                (target.clone() / currect_state.clone()).abs()
-            );
+            info!(node = self.name.as_str(), input = ?target.as_slice());
 
             if (target / currect_state).abs() < 1e-1 {
                 self.state.target = Some(self.node.input_queue.pop().unwrap());
@@ -218,7 +215,7 @@ impl NodeBehavior for DCfs {
 
         // 生成 track
         let mut track_list = Vec::new();
-        for i in 0..self.params.ninterp + 1 {
+        for i in 1..self.params.ninterp + 2 {
             track_list.push(DNodeMessage::Joint(na::DVector::from_column_slice(
                 &solver_result[i * ndof..(i + 1) * ndof],
             )));
@@ -233,6 +230,7 @@ impl NodeBehavior for DCfs {
         }
 
         // 发送 track
+        while let Some(_) = self.node.output_queue.pop() {}
         for track in track_list {
             self.node.output_queue.push(track);
         }

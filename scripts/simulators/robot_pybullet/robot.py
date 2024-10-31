@@ -32,7 +32,7 @@ class Joint:
         self.update_state()
         return self.position, self.velocity
 
-    def set_position(self, position, force=500):
+    def set_position(self, position, force=2000):
         """位控方案
 
         Args:
