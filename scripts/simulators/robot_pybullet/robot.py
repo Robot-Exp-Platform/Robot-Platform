@@ -32,7 +32,7 @@ class Joint:
         self.update_state()
         return self.position, self.velocity
 
-    def set_position(self, position, force=500):
+    def set_position(self, position, force=5000):
         """位控方案
 
         Args:
@@ -75,7 +75,7 @@ class Joint:
         p.setJointMotorControl2(
             bodyUniqueId=self.robot_id,
             jointIndex=self.joint_index,
-            controlMode=p.TORQUE_CONTROL,
+            controlMode=p.VELOCITY_CONTROL,
             force=torque,
         )
 

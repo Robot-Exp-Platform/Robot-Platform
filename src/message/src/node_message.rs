@@ -29,13 +29,30 @@ pub type NodeMessageQueue<V> = Arc<SegQueue<NodeMessage<V>>>;
 pub type DNodeMessageQueue = Arc<SegQueue<DNodeMessage>>;
 pub type SNodeMessageQueue<const N: usize> = Arc<SegQueue<SNodeMessage<N>>>;
 
+impl NodeMessage<na::DVector<f64>> {
+    pub fn as_slice(&self) -> &[f64] {
+        match self {
+            Self::Pose(pose) => pose.translation.vector.as_slice(),
+            Self::Joint(joint) => joint.as_slice(),
+            Self::JointWithPeriod(_, joint) => joint.as_slice(),
+            Self::JointVel(joint, _) => joint.as_slice(),
+            Self::JointVelWithPeriod(_, joint, _) => joint.as_slice(),
+            Self::JointVelAcc(joint, _, _) => joint.as_slice(),
+            Self::JointVelAccWithPeriod(_, joint, _, _) => joint.as_slice(),
+            Self::Tau(tau) => tau.as_slice(),
+            Self::TauWithPeriod(_, tau) => tau.as_slice(),
+            _ => panic!("This type does not support as_slice"),
+        }
+    }
+}
+
 impl Div for NodeMessage<na::DVector<f64>> {
     type Output = f64;
     fn div(self, rhs: Self) -> Self::Output {
         match (self, rhs) {
             (Self::Pose(lhs), Self::Pose(rhs)) => {
                 let diff = lhs / rhs;
-                diff.rotation.norm() + diff.translation.vector.norm()
+                diff.rotation.vector().norm()
             }
             (Self::Joint(lhs), Self::Joint(rhs)) => {
                 let diff = lhs - rhs;

@@ -9,38 +9,38 @@ use std::time::Duration;
 use crate::{utilities::*, Node, NodeBehavior};
 use generate_tools::{get_fn, set_fn};
 use message::{
-    Constraint, DNodeMessage, DNodeMessageQueue, NodeMessage, NodeMessageQueue,
+    iso_to_vec, Constraint, DNodeMessage, DNodeMessageQueue, NodeMessage, NodeMessageQueue,
     QuadraticProgramming,
 };
 use robot::{DRobot, DSeriseRobot, Robot, RobotType};
 use sensor::Sensor;
 use solver::{OsqpSolver, Solver};
 
-pub struct Cfs<R, V> {
+pub struct CfsEndPose<R, V> {
     /// The name of the planner.
     name: String,
     /// The state of the planner.
-    state: CfsState<V>,
+    state: CfsEndPoseState<V>,
     /// The parameters of the planner.
-    params: CfsParams,
+    params: CfsEndPoseParams,
     /// The node of the planner.
-    node: CfsNode<V>,
+    node: CfsEndPoseNode<V>,
     /// The robot that the planner is controlling.
     robot: Option<Arc<RwLock<R>>>,
     /// The sensor that the planner is using.
     sensor: Option<Arc<RwLock<Sensor>>>,
 }
 
-pub type DCfs = Cfs<DSeriseRobot, na::DVector<f64>>;
-pub type SCfs<R, const N: usize> = Cfs<R, na::SVector<f64, N>>;
+pub type DCfsEndPose = CfsEndPose<DSeriseRobot, na::DVector<f64>>;
+pub type SCfsEndPose<R, const N: usize> = CfsEndPose<R, na::SVector<f64, N>>;
 
 #[derive(Default)]
-pub struct CfsState<V> {
+pub struct CfsEndPoseState<V> {
     target: Option<NodeMessage<V>>,
 }
 
 #[derive(Deserialize, Default)]
-pub struct CfsParams {
+pub struct CfsEndPoseParams {
     period: f64,
     ninterp: usize,
     niter: usize,
@@ -49,33 +49,35 @@ pub struct CfsParams {
 }
 
 #[derive(Default)]
-pub struct CfsNode<V> {
+pub struct CfsEndPoseNode<V> {
     input_queue: NodeMessageQueue<V>,
     output_queue: NodeMessageQueue<V>,
 }
 
-impl DCfs {
-    pub fn new(name: String) -> DCfs {
-        DCfs::from_params(name, CfsParams::default())
+impl DCfsEndPose {
+    pub fn new(name: String) -> DCfsEndPose {
+        DCfsEndPose::from_params(name, CfsEndPoseParams::default())
     }
 
-    pub fn from_json(name: String, json: Value) -> DCfs {
-        DCfs::from_params(name, from_value(json).unwrap())
+    pub fn from_json(name: String, params: Value) -> DCfsEndPose {
+        DCfsEndPose::from_params(name, from_value(params).unwrap())
     }
 
-    pub fn from_params(name: String, params: CfsParams) -> DCfs {
-        DCfs {
+    pub fn from_params(name: String, params: CfsEndPoseParams) -> DCfsEndPose {
+        let state = CfsEndPoseState::default();
+        let node = CfsEndPoseNode::default();
+        DCfsEndPose {
             name,
-            state: CfsState::default(),
+            state,
             params,
-            node: CfsNode::default(),
+            node,
             robot: None,
             sensor: None,
         }
     }
 }
 
-impl Node<na::DVector<f64>> for DCfs {
+impl Node<na::DVector<f64>> for DCfsEndPose {
     get_fn!((name: String));
     set_fn!((set_input_queue, input_queue: DNodeMessageQueue, node),
             (set_output_queue, output_queue: DNodeMessageQueue, node));
@@ -93,7 +95,7 @@ impl Node<na::DVector<f64>> for DCfs {
     }
 }
 
-impl NodeBehavior for DCfs {
+impl NodeBehavior for DCfsEndPose {
     fn update(&mut self) {
         // 获取 robot 状态
         let robot_read = self.robot.as_ref().unwrap().read().unwrap();
@@ -102,78 +104,79 @@ impl NodeBehavior for DCfs {
         let q_min_bound = robot_read.q_min_bound().as_slice().to_vec();
         let q_max_bound = robot_read.q_max_bound().as_slice().to_vec();
 
-        let currect_state = DNodeMessage::Joint(q.clone());
-        println!("cfs: currect_pose: {:?}", robot_read.end_pose());
+        let currect_state = DNodeMessage::Pose(robot_read.end_pose());
 
         if let Some(target) = self.state.target.clone() {
             info!(node = self.name.as_str(), input = ?target.as_slice());
-
-            if (target / currect_state).abs() < 1e-2 {
+            println!("cfs_end_pose: target: {:?}", target);
+            println!("cfs_end_pose: current: {:?}", currect_state);
+            println!(
+                "cfs_end_pose: diff: {:?}",
+                (target.clone() / currect_state.clone()).abs()
+            );
+            if (target / currect_state).abs() < 1e-1 {
                 self.state.target = Some(self.node.input_queue.pop().unwrap());
             }
         } else {
             self.state.target = Some(self.node.input_queue.pop().unwrap());
         }
 
-        // 获取 target，并辨析其内涵
+        // 获取 target
         let target = match self.state.target.clone().unwrap() {
-            // 根据不同的 target 类型，执行不同的任务，也可以将不同的 Target 类型处理为相同的类型
-            DNodeMessage::Joint(joint) => joint,
-            _ => unimplemented!("CFS planner does not support target of type."),
+            DNodeMessage::Pose(target) => target,
+            _ => panic!("The target is not a EndPose message."),
         };
-        // println!("{} get target: {:?}", self.name, target);
 
         // 执行CFS逻辑
-        let q_ref_list = lerp(&q, &vec![target.clone()], self.params.ninterp);
-        let collision_objects = self.sensor.as_ref().unwrap().read().unwrap().collision();
+        let mut q_end_ref = q.clone();
         let mut solver_result = Vec::new();
-        // TODO 检验参考轨迹是否安全可靠,取不可靠段做重规划
-        // TODO 理论上最新轨迹应该为被重新规划的段落
         let mut last_result = Vec::new();
-
-        // 初始化二次规划的目标函数矩阵
-        // 矩阵待修改，实际上为q1 为对角矩阵，q2 为离散拉普拉斯算子， q3 为
 
         let dim = (self.params.ninterp + 2) * ndof;
 
         let h = get_optimize_function(dim, ndof, self.params.cost_weight.clone());
         let f = na::DVector::<f64>::zeros(dim);
 
-        // f 无所谓
+        for k in 0..self.params.niter {
+            println!("第 i 次迭代 {}", k);
 
-        for _ in 0..self.params.niter {
             // 提前分配空间
             let mut constraints =
                 Constraint::CartesianProduct(0, 0, Vec::with_capacity(self.params.ninterp + 1));
 
-            // 生成约束 包括三部分，起点终点约束、障碍物约束、关节边界约束
-
-            // 起点位置的约束，这是绝对约束
+            // 生成约束 包括三部分，起点约束、末端、关节边界约束
             constraints.push(Constraint::Equared(q.as_slice().to_vec()));
 
-            for q_ref in q_ref_list.iter() {
-                let mut obstacle_constraint =
-                    Constraint::Intersection(0, ndof, Vec::with_capacity(collision_objects.len()));
-
-                for (dis, grad) in collision_objects.iter().map(|collision| {
-                    (
-                        robot_read.cul_dis_to_collision(q_ref, collision),
-                        robot_read.cul_dis_grad_to_collision(q_ref, collision),
-                    )
-                }) {
-                    // 过程中对每个障碍物的碰撞约束与关节角约束
-                    obstacle_constraint.push(
-                        Constraint::Halfspace(
-                            (-&grad).as_slice().to_vec(),
-                            dis - (&grad.transpose() * q_ref)[(0, 0)],
-                        ) + Constraint::Rectangle(q_min_bound.clone(), q_max_bound.clone()),
-                    );
-                }
-                constraints.push(obstacle_constraint);
+            for _ in 0..self.params.ninterp {
+                constraints.push(Constraint::Rectangle(
+                    q_min_bound.clone(),
+                    q_max_bound.clone(),
+                ))
             }
 
-            // 终点位置的约束，这是绝对约束
-            constraints.push(Constraint::Equared(target.as_slice().to_vec()));
+            // let end_pose = iso_to_vec(robot_read.cul_end_pose(&q_end_ref));
+            // let target_pose = iso_to_vec(target);
+            let grad = robot_read.cul_end_pose_grad(&q_end_ref);
+
+            // println!("cfs_end_pose: end_pose: {:?}", end_pose);
+            // println!("cfs_end_pose: target_pose: {:?}", target_pose);
+            // println!("cfs_end_pose: grad: {:?}", grad);
+            println!("cfs_end_pose: q_end_ref: {:?}", q_end_ref);
+
+            let mut end_pose_constraint = Constraint::Intersection(0, ndof, Vec::with_capacity(6));
+            for i in 0..3 {
+                let grad = grad.row(i).clone_owned();
+                end_pose_constraint.push(Constraint::Hyperplane(
+                    grad.as_slice().to_vec(),
+                    iso_to_vec(target / robot_read.cul_end_pose(&q_end_ref))[i]
+                        + (grad * &q_end_ref)[(0, 0)],
+                ));
+            }
+            end_pose_constraint.push(Constraint::Rectangle(
+                q_min_bound.clone(),
+                q_max_bound.clone(),
+            ));
+            constraints.push(end_pose_constraint);
 
             let problem = QuadraticProgramming {
                 h: &h,
@@ -191,7 +194,7 @@ impl NodeBehavior for DCfs {
                 _ => unimplemented!(),
             };
 
-            // 检查是否收敛，更新 q_ref_list
+            q_end_ref.copy_from_slice(&solver_result[solver_result.len() - ndof..]);
 
             if last_result.is_empty() {
                 last_result = solver_result.clone();
@@ -202,6 +205,9 @@ impl NodeBehavior for DCfs {
                     .zip(last_result.iter())
                     .map(|(a, b)| (a - b).abs())
                     .sum();
+                // println!("cfs_end_pose: last_result: {:?}", last_result);
+                // println!("cfs_end_pose: solver_result: {:?}", solver_result);
+                println!("cfs_end_pose: diff: {:?}", diff);
                 if diff.abs() < 1e-1 {
                     break;
                 }
@@ -222,22 +228,7 @@ impl NodeBehavior for DCfs {
         for track in track_list {
             self.node.output_queue.push(track);
         }
-
-        // // 整体轨迹发送
-        // // 生成 track
-        // let mut track_list = Vec::new();
-        // for i in 1..self.params.ninterp + 2 {
-        //     track_list.push(na::DVector::from_column_slice(
-        //         &solver_result[i * ndof..(i + 1) * ndof],
-        //     ));
-        // }
-        // // 发送 track
-        // while let Some(_) = self.node.output_queue.pop() {}
-        // self.node
-        //     .output_queue
-        //     .push(DNodeMessage::JointList(track_list));
     }
-
     fn period(&self) -> Duration {
         Duration::from_secs_f64(self.params.period)
     }

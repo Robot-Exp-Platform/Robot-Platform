@@ -96,7 +96,7 @@ def main():
 
             # 更新仿真
             p.stepSimulation()
-            time.sleep(0.125)
+            time.sleep(0.004)
     except KeyboardInterrupt:
         print("Simulation terminated by user.")
     finally:

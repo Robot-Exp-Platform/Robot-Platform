@@ -11,6 +11,7 @@ use std::process::Command;
 use std::sync::Mutex;
 use std::sync::{Arc, RwLock};
 use std::thread;
+use tracing::info;
 #[cfg(feature = "rszmq")]
 use zmq;
 
@@ -195,6 +196,7 @@ impl NodeBehavior for DBullet {
                 let mut robot_write = robot.write().unwrap();
                 match state {
                     RobotState::Joint(joint) => {
+                        info!(node = self.name.as_str(), input = ?joint.as_slice());
                         robot_write.set_q(na::DVector::from_vec(joint.clone()))
                     }
                     RobotState::Velocity(velocity) => {
@@ -204,6 +206,7 @@ impl NodeBehavior for DBullet {
                         robot_write.set_q_ddot(na::DVector::from_vec(acceleration.clone()))
                     }
                     RobotState::JointVel(joint, velocity) => {
+                        info!(node = self.name.as_str(), input = ?joint.as_slice());
                         robot_write.set_q(na::DVector::from_vec(joint.clone()));
                         robot_write.set_q_dot(na::DVector::from_vec(velocity.clone()));
                     }
@@ -214,6 +217,7 @@ impl NodeBehavior for DBullet {
                     }
                     _ => (),
                 }
+                drop(robot_write);
             }
         }
 
