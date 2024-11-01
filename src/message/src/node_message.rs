@@ -32,6 +32,7 @@ pub type SNodeMessageQueue<const N: usize> = Arc<SegQueue<SNodeMessage<N>>>;
 impl NodeMessage<na::DVector<f64>> {
     pub fn as_slice(&self) -> &[f64] {
         match self {
+            Self::Pose(pose) => pose.translation.vector.as_slice(),
             Self::Joint(joint) => joint.as_slice(),
             Self::JointWithPeriod(_, joint) => joint.as_slice(),
             Self::JointVel(joint, _) => joint.as_slice(),
@@ -51,7 +52,7 @@ impl Div for NodeMessage<na::DVector<f64>> {
         match (self, rhs) {
             (Self::Pose(lhs), Self::Pose(rhs)) => {
                 let diff = lhs / rhs;
-                diff.rotation.norm() + diff.translation.vector.norm()
+                diff.rotation.vector().norm()
             }
             (Self::Joint(lhs), Self::Joint(rhs)) => {
                 let diff = lhs - rhs;

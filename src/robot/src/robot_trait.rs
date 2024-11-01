@@ -32,12 +32,12 @@ pub trait Robot<V>: Send + Sync {
 
 pub trait SRobot<const N: usize>: Robot<na::SVector<f64, N>> {
     // get functions
-    fn end_effector(&self) -> Pose;
+    fn end_pose(&self) -> Pose;
     fn capsules(&self) -> Vec<Capsule>;
     fn dis_to_collision(&self, obj: &CollisionObject) -> f64;
 
     // culculate functions
-    fn cul_end_effector(&self, q: &na::SVector<f64, N>) -> Pose;
+    fn cul_end_pose(&self, q: &na::SVector<f64, N>) -> Pose;
     fn cul_capsules(&self, q: &na::SVector<f64, N>) -> Vec<Capsule>;
     fn cul_dis_to_collision(&self, q: &na::SVector<f64, N>, obj: &CollisionObject) -> f64;
     fn cul_dis_grad_to_collision(
@@ -51,12 +51,13 @@ pub trait SRobot<const N: usize>: Robot<na::SVector<f64, N>> {
 
 pub trait DRobot: Robot<na::DVector<f64>> {
     // get functions
-    fn end_effector(&self) -> Pose;
+    fn end_pose(&self) -> Pose;
     fn capsules(&self) -> Vec<Capsule>;
     fn dis_to_collision(&self, obj: &CollisionObject) -> f64;
 
     // culculate functions
-    fn cul_end_effector(&self, q: &na::DVector<f64>) -> Pose;
+    fn cul_end_pose(&self, q: &na::DVector<f64>) -> Pose;
+    fn cul_end_pose_grad(&self, q: &na::DVector<f64>) -> na::DMatrix<f64>;
     fn cul_capsules(&self, q: &na::DVector<f64>) -> Vec<Capsule>;
     fn cul_dis_to_collision(&self, q: &na::DVector<f64>, obj: &CollisionObject) -> f64;
     fn cul_dis_grad_to_collision(

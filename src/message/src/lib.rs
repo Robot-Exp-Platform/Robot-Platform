@@ -6,6 +6,7 @@ mod problem;
 mod state;
 mod target;
 mod track;
+mod utilities;
 
 pub use collision_object::*;
 pub use constraint::*;
@@ -15,3 +16,4 @@ pub use problem::*;
 pub use state::*;
 pub use target::*;
 pub use track::*;
+pub use utilities::*;

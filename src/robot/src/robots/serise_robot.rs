@@ -1,4 +1,4 @@
-use message::{get_distance, NodeMessage, Pose};
+use message::{get_distance, iso_to_vec, NodeMessage, Pose};
 use nalgebra as na;
 
 use crate::{DRobot, Robot, SRobot};
@@ -97,8 +97,8 @@ where
 }
 
 impl DRobot for DSeriseRobot {
-    fn end_effector(&self) -> Pose {
-        self.cul_end_effector(&self.state.q)
+    fn end_pose(&self) -> Pose {
+        self.cul_end_pose(&self.state.q)
     }
     fn capsules(&self) -> Vec<Capsule> {
         self.cul_capsules(&self.state.q)
@@ -116,7 +116,7 @@ impl DRobot for DSeriseRobot {
     }
 
     /// 给定机器人的广义变量，计算末端执行器位姿
-    fn cul_end_effector(&self, q: &na::DVector<f64>) -> Pose {
+    fn cul_end_pose(&self, q: &na::DVector<f64>) -> Pose {
         let dh = &self.params.dh;
         let mut isometry = self.state.base;
         for i in 0..self.params.nlink {
@@ -135,8 +135,25 @@ impl DRobot for DSeriseRobot {
         isometry
     }
 
+    /// 给定机器人的广义变脸，计算末端执行器位姿转化为六维梯度
+    /// TODO 目前梯度为数值梯度，后续需要改为解析梯度
+    fn cul_end_pose_grad(&self, q: &na::DVector<f64>) -> na::DMatrix<f64> {
+        let mut grad = na::DMatrix::zeros(6, self.params.nlink);
+        let epsilon = 1e-3;
+        for i in 0..self.params.nlink {
+            let mut q_plus = q.clone();
+            q_plus[i] += epsilon;
+            let mut q_minus = q.clone();
+            q_minus[i] -= epsilon;
+            let pose_plus = self.cul_end_pose(&q_plus);
+            let pose_minus = self.cul_end_pose(&q_minus);
+            grad.set_column(i, &(iso_to_vec(pose_plus / pose_minus) / (2.0 * epsilon)));
+        }
+        grad
+    }
+
     /// 给定机器人的广义变量，计算机器人对应的所有胶囊体，这里需要留意的是，此时的胶囊体不包括末端执行器以及所夹取的物体。
-    fn cul_capsules(&self, q: &nalgebra::DVector<f64>) -> Vec<Capsule> {
+    fn cul_capsules(&self, q: &na::DVector<f64>) -> Vec<Capsule> {
         let dh = &self.params.dh;
         let mut capsules = Vec::new();
         let mut isometry = self.state.base;
@@ -204,8 +221,8 @@ impl DRobot for DSeriseRobot {
 }
 
 impl<const N: usize> SRobot<N> for SSeriseRobot<N> {
-    fn end_effector(&self) -> Pose {
-        self.cul_end_effector(&self.state.q)
+    fn end_pose(&self) -> Pose {
+        self.cul_end_pose(&self.state.q)
     }
     fn capsules(&self) -> Vec<Capsule> {
         self.cul_capsules(&self.state.q)
@@ -223,7 +240,7 @@ impl<const N: usize> SRobot<N> for SSeriseRobot<N> {
     }
 
     /// 给定机器人的广义变量，计算末端执行器位姿
-    fn cul_end_effector(&self, q: &na::SVector<f64, N>) -> Pose {
+    fn cul_end_pose(&self, q: &na::SVector<f64, N>) -> Pose {
         let dh = &self.params.dh;
         let mut isometry = self.state.base;
         for i in 0..self.params.nlink {

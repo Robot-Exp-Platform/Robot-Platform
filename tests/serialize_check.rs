@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use std::vec;
+    use std::{f64::consts::FRAC_PI_2, vec};
 
     use nalgebra as na;
     use serde_json;
@@ -170,7 +170,17 @@ mod tests {
     }
 
     #[test]
-    fn task_serialize_check() {}
+    fn task_serialize_check() {
+        let iso = na::Isometry3::new(
+            na::Vector3::new(1.0, 2.0, 3.0),
+            na::Vector3::x() * FRAC_PI_2,
+        );
+
+        println!(
+            "print Isometry3: {:?}",
+            serde_json::to_string(&iso).unwrap()
+        );
+    }
 
     #[test]
     fn option_serialize_check() {

@@ -162,4 +162,20 @@ mod tests {
 
         println!("{:?}", e);
     }
+
+    #[test]
+    fn cul_iso() {
+        let iso1 = na::Isometry3::from_parts(
+            na::Translation3::new(1.0, 2.0, 3.0),
+            na::UnitQuaternion::from_euler_angles(0.1, 0.2, 0.3),
+        );
+        let iso2 = na::Isometry3::from_parts(
+            na::Translation3::new(4.0, 5.0, 6.0),
+            na::UnitQuaternion::from_euler_angles(0.4, 0.5, 0.6),
+        );
+
+        let iso3 = iso1 * iso2;
+
+        println!("{:?}", iso3);
+    }
 }

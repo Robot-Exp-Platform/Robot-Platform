@@ -71,7 +71,7 @@ class LogPlotter:
         plt.xlabel("Time")
         plt.ylabel("Data Values")
         plt.title("Node Data Over Time")
-        # plt.legend()
+        plt.legend()
         plt.xticks(rotation=45)
         plt.tight_layout()
         plt.show()
