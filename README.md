@@ -71,25 +71,29 @@ git clone git@github.com:Robot-Exp-Platform/Robot-Platform.git
     "target": [
       {
         "Pose": {
-          "rotation": [-0.016992076219655927, 0.18016674915645983, 0.8501571377223702, 0.4944532869987269],
-          "translation": [-1.1658602006397158, -0.2112136234008181, 1.5914460324045199]
+          "rotation": [0.44487006025329306, 0.4393172760212505, 0.7429380361257648, 0.23902726822915393],
+          "translation": [-1.1460398810258225, -1.7356547258067199, 0.47595076516399354]
         }
       },
       {
         "Pose": {
-          "rotation": [0.34463325716167814, 0.49755651051320077, 0.6898075873755238, 0.3972794096139628],
-          "translation": [-1.1356641141675496, -0.4732284033894457, 1.2569917154503962]
+          "rotation": [0.5244360455311589, 0.5159014375179632, 0.6527893117189171, 0.18077238566795067],
+          "translation": [-1.0987197235666197, -1.7655184642142963, 0.5580931106558119]
         }
       },
-      { "Pose": { "rotation": [0.7071067811865476, 0.0, 0.0, 0.7071067811865476], "translation": [0.3, 0.7, 0.8] } },
-      { "Pose": { "rotation": [0.0, 0.0, 0.0, 1.0], "translation": [0.4, 0.7, 0.8] } }
+      {
+        "Pose": {
+          "rotation": [0.3537809863733239, 0.50355871562177, 0.6850206492355589, 0.38989016879496174],
+          "translation": [-1.135079786345486, -1.4835708464803388, 1.2395160144702677]
+        }
+      }
     ],
     "nodes": [
       [
         "cfs_end_pose",
         ["panda_1"],
         ["obstacle_releaser_1"],
-        { "period": 0.95, "ninterp": 7, "niter": 6, "cost_weight": [0, 10.0, 20.0], "solver": "osqp" }
+        { "period": 0.95, "ninterp": 7, "niter": 10, "cost_weight": [0, 10.0, 20.0], "solver": "osqp" }
       ],
       ["interp", ["panda_1"], ["obstacle_releaser_1"], { "period": 0.1, "interp_fn": "lerp", "ninter": 25 }],
       ["position", ["panda_1"], [], { "period": 0.004 }]
@@ -123,6 +127,7 @@ git clone git@github.com:Robot-Exp-Platform/Robot-Platform.git
     ]
   }
 ]
+
 ```
 
 最简样例中采用了 Franka Emika Panda 机械臂，使用了 pid 控制器和 linear 规划器，使用 bullet 仿真器进行仿真。您可以根据自己的需求修改这两个文件。
@@ -148,6 +153,10 @@ cargo run
 ```json
 [
   ["cfs", ["panda_1"], ["obstacle_releaser_1"], { "period": 0.8, "ninterp": 7, "niter": 6, "cost_weight": [0, 10.0, 20.0], "solver": "osqp" }],
+  [ 
+    "cfs_end_pose", ["panda_1"], ["obstacle_releaser_1"],
+    { "period": 0.95, "ninterp": 7, "niter": 10, "cost_weight": [0, 10.0, 20.0], "solver": "osqp" }
+  ],
   ["interp", ["panda_1"], ["obstacle_releaser_1"], { "period": 0.1, "interp_fn": "lerp", "ninter": 25 }],
 
   [
