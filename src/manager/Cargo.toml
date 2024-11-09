@@ -11,6 +11,8 @@ serde_yaml.workspace = true
 nalgebra.workspace = true
 crossbeam.workspace = true
 zmq = { workspace = true, optional = true }
+tracing.workspace = true
+tracing-subscriber.workspace = true
 
 message.workspace = true
 robot.workspace = true

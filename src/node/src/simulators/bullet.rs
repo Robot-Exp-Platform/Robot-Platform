@@ -4,8 +4,6 @@ use serde::Deserialize;
 use serde_json::{from_value, Value};
 // use serde_yaml::Value;
 use crossbeam::queue::SegQueue;
-use std::fs;
-use std::io::{BufWriter, Write};
 use std::process::Command;
 #[cfg(feature = "rszmq")]
 use std::sync::Mutex;
@@ -18,8 +16,6 @@ use zmq;
 use crate::{Node, NodeBehavior, NodeState};
 use generate_tools::*;
 use message::RobotState;
-#[cfg(feature = "recode")]
-use recoder::*;
 use sensor::Sensor;
 
 // bullet 结构体声明，包含其名称，路径，消息节点，以及机器人
@@ -55,7 +51,6 @@ pub struct BulletParams {
 
 // 消息节点结构体声明，随条件编译的不同而不同，条件编译将决定其使用什么通讯方式
 struct BulletNode {
-    recoder: Option<BufWriter<fs::File>>,
     #[cfg(feature = "rszmq")]
     responder: Arc<Mutex<zmq::Socket>>,
 }
@@ -85,7 +80,6 @@ impl DBullet {
             },
             params,
             node: BulletNode {
-                recoder: None,
                 #[cfg(feature = "rszmq")]
                 responder: Arc::new(Mutex::new(responder)),
                 #[cfg(feature = "ros")]
@@ -226,36 +220,6 @@ impl NodeBehavior for DBullet {
             self.state.node_state = NodeState::RelyRelease;
         } else {
             self.state.node_state = NodeState::Running;
-        }
-    }
-
-    fn start(&mut self) {
-        #[cfg(feature = "recode")]
-        {
-            fs::create_dir_all(format!(
-                "./data/{}/{}/{}",
-                *EXP_NAME,
-                *TASK_NAME.lock().unwrap(),
-                self.robot.read().unwrap().get_name()
-            ))
-            .unwrap();
-            let file = fs::OpenOptions::new()
-                .append(true)
-                .create(true)
-                .open(format!(
-                    "data/{}/{}/{}/bullet.txt",
-                    *EXP_NAME,
-                    *TASK_NAME.lock().unwrap(),
-                    self.robot.read().unwrap().get_name(),
-                ))
-                .unwrap();
-            self.node.recoder = Some(BufWriter::new(file));
-        }
-    }
-
-    fn finalize(&mut self) {
-        if let Some(ref mut recoder) = self.node.recoder {
-            recoder.flush().unwrap();
         }
     }
 

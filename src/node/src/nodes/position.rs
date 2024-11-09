@@ -3,16 +3,13 @@ use serde::Deserialize;
 use serde_json::{from_value, Value};
 use tracing::info;
 // use serde_yaml::{from_value, Value};
-use std::io::{BufWriter, Write};
+use std::f64;
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
-use std::{f64, fs};
 
 use crate::{Node, NodeBehavior};
 use generate_tools::{get_fn, set_fn};
 use message::{DNodeMessageQueue, NodeMessageQueue};
-#[cfg(feature = "recode")]
-use recoder::*;
 use robot::{DSeriseRobot, Robot, RobotType};
 use sensor::Sensor;
 
@@ -44,7 +41,6 @@ pub struct PositionParams {
 
 #[derive(Default)]
 pub struct PositionNode<V> {
-    recoder: Option<BufWriter<fs::File>>,
     input_queue: NodeMessageQueue<V>,
     output_queue: NodeMessageQueue<V>,
 }
@@ -98,37 +94,6 @@ impl NodeBehavior for DPosition {
             }
         }
     }
-
-    fn start(&mut self) {
-        #[cfg(feature = "recode")]
-        {
-            fs::create_dir_all(format!(
-                "./data/{}/{}/{}",
-                *EXP_NAME,
-                *TASK_NAME.lock().unwrap(),
-                self.robot.read().unwrap().get_name()
-            ))
-            .unwrap();
-            let file = fs::OpenOptions::new()
-                .append(true)
-                .create(true)
-                .open(format!(
-                    "data/{}/{}/{}/pid.txt",
-                    *EXP_NAME,
-                    *TASK_NAME.lock().unwrap(),
-                    self.robot.read().unwrap().get_name(),
-                ))
-                .unwrap();
-            self.node.recoder = Some(BufWriter::new(file));
-        }
-    }
-
-    fn finalize(&mut self) {
-        if let Some(ref mut recoder) = self.node.recoder {
-            recoder.flush().unwrap();
-        }
-    }
-
     fn period(&self) -> Duration {
         Duration::from_secs_f64(self.params.period)
     }

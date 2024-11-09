@@ -2,9 +2,9 @@ use std::sync::mpsc::Sender;
 use std::sync::{Arc, Mutex, RwLock};
 use std::thread;
 use std::time::Instant;
+use tracing::info;
 
 use message::TaskState;
-
 use node::NodeBehavior;
 
 #[derive(Default)]
@@ -53,6 +53,7 @@ impl ThreadManager {
                 let period = node.period();
 
                 while node.state() != node::NodeState::Finished {
+                    info!(node = name.as_str(), begin = name.as_str());
                     if node::NodeState::RelyRelease == node.state() {
                         sender.send(TaskState::RelyRelease(name.clone())).unwrap();
                     }
@@ -61,6 +62,7 @@ impl ThreadManager {
 
                     node.update();
 
+                    info!(node = name.as_str(), end = name.as_str());
                     let elapsed_time = start_time.elapsed();
                     if period > elapsed_time {
                         thread::sleep(period - elapsed_time);
@@ -93,10 +95,12 @@ impl ThreadManager {
                 let period = node.period();
 
                 while node.state() != node::NodeState::Finished {
+                    info!(node = name.as_str(), begin = name.as_str());
                     let start_time = Instant::now();
 
                     node.update();
 
+                    info!(node = name.as_str(), end = name.as_str());
                     let elapsed_time = start_time.elapsed();
                     if period > elapsed_time {
                         thread::sleep(period - elapsed_time);
@@ -129,10 +133,12 @@ impl ThreadManager {
                 let period = node.period();
 
                 while node.state() != node::NodeState::Finished {
+                    info!(node = name.as_str(), begin = name.as_str());
                     let start_time = Instant::now();
 
                     node.update();
 
+                    info!(node = name.as_str(), end = name.as_str());
                     let elapsed_time = start_time.elapsed();
                     if period > elapsed_time {
                         thread::sleep(period - elapsed_time);

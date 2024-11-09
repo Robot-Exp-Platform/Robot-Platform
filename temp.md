@@ -1,8 +1,5 @@
 # temp
 
-E:\yixing\code\Robot-Exp\Robot-Platform\scripts\simulators\sim_pybullet.py
-E:\yixing\code\Robot-Exp\Robot-Platform\scripts\simulators\sim_bullet.py
-
 本 rust 项目主要用于多机器人的仿真、规划与控制。
 
 每个实验被声明为一个结构体，

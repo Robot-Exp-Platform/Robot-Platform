@@ -107,7 +107,6 @@ impl NodeBehavior for DCfsEndPose {
         let currect_state = DNodeMessage::Pose(robot_read.end_pose());
 
         if let Some(target) = self.state.target.clone() {
-            info!(node = self.name.as_str(), input = ?target.as_slice());
             println!("cfs_end_pose: target: {:?}", target);
             println!("cfs_end_pose: current: {:?}", currect_state);
             println!(
@@ -120,6 +119,8 @@ impl NodeBehavior for DCfsEndPose {
         } else {
             self.state.target = Some(self.node.input_queue.pop().unwrap());
         }
+
+        info!(node = self.name.as_str(), input = ?self.state.target.as_slice());
 
         // 获取 target
         let target = match self.state.target.clone().unwrap() {
@@ -223,6 +224,7 @@ impl NodeBehavior for DCfsEndPose {
                 &solver_result[i * ndof..(i + 1) * ndof],
             )));
         }
+        info!(node = self.name.as_str(), output = ?track_list);
         // 发送 track
         while let Some(_) = self.node.output_queue.pop() {}
         for track in track_list {

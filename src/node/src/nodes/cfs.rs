@@ -106,14 +106,13 @@ impl NodeBehavior for DCfs {
         println!("cfs: currect_pose: {:?}", robot_read.end_pose());
 
         if let Some(target) = self.state.target.clone() {
-            info!(node = self.name.as_str(), input = ?target.as_slice());
-
             if (target / currect_state).abs() < 1e-2 {
                 self.state.target = Some(self.node.input_queue.pop().unwrap());
             }
         } else {
             self.state.target = Some(self.node.input_queue.pop().unwrap());
         }
+        info!(node = self.name.as_str(), input = ?self.state.target.as_ref().unwrap().as_slice());
 
         // 获取 target，并辨析其内涵
         let target = match self.state.target.clone().unwrap() {

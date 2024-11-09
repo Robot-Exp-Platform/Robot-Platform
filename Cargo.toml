@@ -39,8 +39,8 @@ osqp = "*"
 optimization_engine = "0.9.1"
 log = "*"
 tracing = "*"
-tracing-subscriber = "*"
-tracing-appender = "*"
+tracing-subscriber = { version = "*", features = ["json"] }
+tracing-appender = { version = "*" }
 
 message = { path = "src/message" }
 robot = { path = "src/robot" }
