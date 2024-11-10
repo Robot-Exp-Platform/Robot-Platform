@@ -53,40 +53,27 @@ impl Capsule {
     }
 }
 
-pub fn get_distance(a: &CollisionObject, b: &CollisionObject) -> f64 {
-    // 计算两个障碍物之间的距离
-    match (a, b) {
-        (CollisionObject::Sphere(a), CollisionObject::Sphere(b)) => {
-            // 计算球体与球体之间的距离
-            sphere_sphere_distance(a, b)
-        }
-        (CollisionObject::Capsule(a), CollisionObject::Capsule(b)) => {
-            // 计算胶囊与胶囊之间的距离
-            capsule_capsule_distance(a, b)
-        }
-        (CollisionObject::Cylinder(a), CollisionObject::Cylinder(b)) => {
-            // 计算圆柱与圆柱之间的距离
-            cylinder_cylinder_distance(a, b)
-        }
+impl CollisionObject {
+    pub fn get_distance(a: &Self, b: &Self) -> f64 {
+        // 计算两个障碍物之间的距离
+        match (a, b) {
+            (Self::Sphere(a), Self::Sphere(b)) => sphere_sphere_distance(a, b),
+            (Self::Capsule(a), Self::Capsule(b)) => capsule_capsule_distance(a, b),
+            (Self::Cylinder(a), Self::Cylinder(b)) => cylinder_cylinder_distance(a, b),
 
-        (CollisionObject::Sphere(a), CollisionObject::Capsule(b))
-        | (CollisionObject::Capsule(b), CollisionObject::Sphere(a)) => {
-            // 计算球体与胶囊之间的距离
-            sphere_capsule_distance(a, b)
-        }
-        (CollisionObject::Sphere(a), CollisionObject::Cylinder(b))
-        | (CollisionObject::Cylinder(b), CollisionObject::Sphere(a)) => {
-            // 计算球体与圆柱之间的距离
-            sphere_cylinder_distance(a, b)
-        }
-        (CollisionObject::Capsule(a), CollisionObject::Cylinder(b))
-        | (CollisionObject::Cylinder(b), CollisionObject::Capsule(a)) => {
-            // 计算胶囊与圆柱之间的距离
-            capsule_cylinder_distance(a, b)
-        }
+            (Self::Sphere(a), Self::Capsule(b)) | (Self::Capsule(b), Self::Sphere(a)) => {
+                sphere_capsule_distance(a, b)
+            }
+            (Self::Sphere(a), Self::Cylinder(b)) | (Self::Cylinder(b), Self::Sphere(a)) => {
+                sphere_cylinder_distance(a, b)
+            }
+            (Self::Capsule(a), Self::Cylinder(b)) | (Self::Cylinder(b), Self::Capsule(a)) => {
+                capsule_cylinder_distance(a, b)
+            }
 
-        // 圆柱的暂未实现
-        _ => 0.0,
+            // 圆柱的暂未实现
+            _ => 0.0,
+        }
     }
 }
 

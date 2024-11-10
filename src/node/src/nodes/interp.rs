@@ -121,7 +121,7 @@ impl NodeBehavior for DInterp {
             _ => return,
         };
         // 将 track_list 中的轨迹放入 track_queue 中
-        while let Some(_) = self.node.output_queue.pop() {}
+        while self.node.output_queue.pop().is_some() {}
         for track in track_list {
             let control_message = DNodeMessage::Joint(track);
 

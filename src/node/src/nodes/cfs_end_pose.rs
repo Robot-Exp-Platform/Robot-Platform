@@ -226,7 +226,7 @@ impl NodeBehavior for DCfsEndPose {
         }
         info!(node = self.name.as_str(), output = ?track_list);
         // 发送 track
-        while let Some(_) = self.node.output_queue.pop() {}
+        while self.node.output_queue.pop().is_some() {}
         for track in track_list {
             self.node.output_queue.push(track);
         }

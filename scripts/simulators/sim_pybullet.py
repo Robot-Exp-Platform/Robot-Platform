@@ -4,7 +4,7 @@ import argparse
 import pybullet as p
 import pybullet_data
 
-from robot_pybullet.load import load_robot
+from robot_pybullet.load import load_robot, load_obstacle
 from utilities.zmq2rust import ZmqReq
 
 
@@ -37,6 +37,12 @@ def load_robots_from_file(file_path):
     ]
 
 
+def load_obstacles_from_file(file_path):
+    with open(file_path, "r", encoding="utf8") as file:
+        data = json.load(file)
+    return [obstacle for obstacle in data.get("obstacles", [])]
+
+
 # 从命令行输入中解析机器人类型和名称
 def parse_text_input(robot_list):
     robots = []
@@ -64,11 +70,13 @@ def main():
     # 加载 Panda 机器人和地面
     p.loadURDF("plane.urdf")
     robot_config = []
+    obstacle_config = []
     # 根据参数选择数据来源
     if args.text:
         robot_config = parse_text_input(args.text)
     elif args.file:
         robot_config = load_robots_from_file(args.file)
+        obstacle_config = load_obstacles_from_file(args.file)
     else:
         print("Please specify either -t for command line input or -f for file input.")
         return
@@ -77,6 +85,11 @@ def main():
     robots = []
     for robot_type, robot_name, position in robot_config:
         robots.append(load_robot(robot_type, robot_name, position))
+
+    # 准备加载障碍物，但是配置文件只包含静态障碍物信息，动态障碍物信息需要等待 Rust 段发送过来或者其他方法获取
+    obstacles = []
+    for config in obstacle_config:
+        obstacles.append(load_obstacle(config))
 
     # 运行仿真主循环
     try:
@@ -88,11 +101,22 @@ def main():
             req.send_state(robot_states)
 
             # 接收 Rust 发来的命令
-            command = json.loads(req.receive_command())
+            receive = req.receive()
             # print("pybullet: get command", command)
-            for robot, cmd in zip(robots, command):
+            for robot, cmd in zip(robots, receive["command"]):
                 # print(f"Executing command for {robot}: {cmd}")
                 robot.execute_command(cmd)
+
+            # TODO 检查指令中的障碍物，如果是新增的障碍物则加载并放入 obstacles 列表， 如果是已有的障碍物则更新位置， 如果是原有的障碍物但是没有传回相关数据则不处理
+            for obstacle in receive["obstacles"]:
+                if obstacle["id"] in obstacles:
+                    # 更新障碍物位置
+                    p.resetBasePositionAndOrientation(
+                        obstacle["id"], obstacle["position"], obstacle["rotation"]
+                    )
+                else:
+                    # 加载新的障碍物
+                    obstacles.append(load_obstacle(obstacle))
 
             # 更新仿真
             p.stepSimulation()

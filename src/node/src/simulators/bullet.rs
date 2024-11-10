@@ -32,7 +32,7 @@ pub struct Bullet<R> {
     /// The robot that the simulator is controlling.
     robot: Vec<Arc<RwLock<R>>>,
     /// The sensor that the simulator is using.
-    sensor: Option<Arc<RwLock<Sensor>>>,
+    sensor: Vec<Arc<RwLock<Sensor>>>,
 }
 
 pub type DBullet = Bullet<DSeriseRobot>;
@@ -86,7 +86,7 @@ impl DBullet {
                 sub_list: Vec::new(),
             },
             robot: Vec::new(),
-            sensor: None,
+            sensor: Vec::new(),
         }
     }
 }
@@ -106,7 +106,7 @@ impl Node<na::DVector<f64>> for DBullet {
         }
     }
     fn set_sensor(&mut self, sensor: Arc<RwLock<Sensor>>) {
-        self.sensor = Some(sensor);
+        self.sensor.push(sensor);
     }
     fn set_params(&mut self, params: Value) {
         self.params = from_value(params).unwrap();
@@ -169,8 +169,20 @@ impl NodeBehavior for DBullet {
             let command = robot_read.control_message();
             commands.push(command);
         }
+
+        let mut collections_info = Vec::new();
+        for sensor in self.sensor.iter() {
+            let sensor_read = sensor.read().unwrap();
+            let mut collection = sensor_read.collision();
+            collections_info.append(&mut collection);
+        }
+
         // 整理控制指令为字符串
-        let command = serde_json::to_string(&commands).unwrap();
+        let reply = format!(
+            "{{command: {}, obstacles: {}}}",
+            serde_json::to_string(&commands).unwrap(),
+            serde_json::to_string(&collections_info).unwrap()
+        );
         #[cfg(feature = "rszmq")]
         {
             // 获取 responder 并接受 RobotState 消息
@@ -182,7 +194,7 @@ impl NodeBehavior for DBullet {
             let robot_state: Vec<RobotState> = serde_json::from_str(message.as_str()).unwrap();
 
             // 及时返回控制指令
-            let reply = serde_json::to_string(&(command)).unwrap();
+
             responder.send(&reply, 0).expect("Failed to send reply");
 
             // 处理消息，将消息中的状态信息写入到机器人状态中

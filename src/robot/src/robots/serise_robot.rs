@@ -1,8 +1,8 @@
-use message::{get_distance, iso_to_vec, NodeMessage, Pose};
 use nalgebra as na;
 
 use crate::{DRobot, Robot, SRobot};
 use generate_tools::{get_fn, set_fn};
+use message::{iso_to_vec, NodeMessage, Pose};
 use message::{Capsule, CollisionObject};
 
 pub struct SeriseRobot<V>
@@ -194,7 +194,7 @@ impl DRobot for DSeriseRobot {
         let capsules = self.cul_capsules(q);
         capsules
             .iter()
-            .map(|&c| get_distance(&CollisionObject::Capsule(c), obj))
+            .map(|&c| CollisionObject::get_distance(&CollisionObject::Capsule(c), obj))
             .min_by(|a, b| a.partial_cmp(b).unwrap())
             .unwrap()
     }
@@ -301,7 +301,7 @@ impl<const N: usize> SRobot<N> for SSeriseRobot<N> {
         let capsules = self.cul_capsules(q);
         capsules
             .iter()
-            .map(|&c| get_distance(&CollisionObject::Capsule(c), obj))
+            .map(|&c| CollisionObject::get_distance(&CollisionObject::Capsule(c), obj))
             .min_by(|a, b| a.partial_cmp(b).unwrap())
             .unwrap()
     }
