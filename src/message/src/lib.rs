@@ -1,6 +1,7 @@
 mod collision_object;
 mod constraint;
 mod control_command;
+mod massage_trait;
 mod node_message;
 mod problem;
 mod state;

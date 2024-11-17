@@ -130,7 +130,6 @@ impl NodeBehavior for DCfsEndPose {
 
         // 执行CFS逻辑
         let mut q_end_ref = q.clone();
-        let mut solver_result = Vec::new();
         let mut last_result = Vec::new();
 
         let dim = (self.params.ninterp + 2) * ndof;
@@ -187,7 +186,7 @@ impl NodeBehavior for DCfsEndPose {
 
             // 获得优化方程及其梯度
             // 求解优化问题
-            solver_result = match self.params.solver.as_str() {
+            let solver_result = match self.params.solver.as_str() {
                 "osqp" => {
                     let mut osqp_solver = OsqpSolver::from_problem(problem);
                     osqp_solver.solve()
@@ -209,10 +208,10 @@ impl NodeBehavior for DCfsEndPose {
                 // println!("cfs_end_pose: last_result: {:?}", last_result);
                 // println!("cfs_end_pose: solver_result: {:?}", solver_result);
                 println!("cfs_end_pose: diff: {:?}", diff);
+                last_result = solver_result.clone();
                 if diff.abs() < 1e-1 {
                     break;
                 }
-                last_result = solver_result.clone();
             }
         }
 
@@ -221,7 +220,7 @@ impl NodeBehavior for DCfsEndPose {
         let mut track_list = Vec::new();
         for i in 1..self.params.ninterp + 2 {
             track_list.push(DNodeMessage::Joint(na::DVector::from_column_slice(
-                &solver_result[i * ndof..(i + 1) * ndof],
+                &last_result[i * ndof..(i + 1) * ndof],
             )));
         }
         info!(node = self.name.as_str(), output = ?track_list);

@@ -6,10 +6,10 @@ use tracing::info;
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
 
-use crate::{utilities::*, Node, NodeBehavior, NodeState};
+use crate::{utilities::*, Node, NodeBehavior};
 use generate_tools::{get_fn, set_fn};
 use message::{
-    iso_to_vec, Constraint, DNodeMessage, DNodeMessageQueue, NodeMessage, NodeMessageQueue,
+    Constraint, DNodeMessage, DNodeMessageQueue, NodeMessage, NodeMessageQueue,
     QuadraticProgramming,
 };
 use robot::{DRobot, DSeriseRobot, Robot, RobotType};
@@ -37,7 +37,6 @@ pub type SCfs<R, const N: usize> = Cfs<R, na::SVector<f64, N>>;
 #[derive(Default)]
 pub struct CfsState<V> {
     target: Option<NodeMessage<V>>,
-    node_state: NodeState,
 }
 
 #[derive(Deserialize, Default)]
@@ -106,48 +105,51 @@ impl NodeBehavior for DCfs {
         let currect_state = DNodeMessage::Joint(q.clone());
         println!("cfs: currect_pose: {:?}", robot_read.end_pose());
 
-        // 检查当前状态是否达到储存的目标状态.
         if let Some(target) = self.state.target.clone() {
             if (target / currect_state).abs() < 1e-2 {
-                self.state.target = None
+                self.state.target = Some(self.node.input_queue.pop().unwrap());
             }
+        } else {
+            self.state.target = Some(self.node.input_queue.pop().unwrap());
         }
+        info!(node = self.name.as_str(), input = ?self.state.target.as_ref().unwrap().as_slice());
 
-        // 获取 target, 如果两侧都没有消息那就说明任务完成了，皆大欢喜
-        // 这里的策略是完成当前任务优先
-        let target = self
-            .state
-            .target
-            .clone()
-            .or_else(|| self.node.input_queue.pop());
-        if target.is_none() {
-            self.state.node_state = NodeState::Finished;
-            return;
-        }
-        let target = target.unwrap();
-        info!(node = self.name.as_str(), input = ?target.as_slice());
-
-        // 准备
-        let q_ref_list = match &target {
-            NodeMessage::Joint(q_target) => lerp(&q, &vec![q_target.clone()], self.params.ninterp),
-            NodeMessage::Pose(_) => lerp(&q, &vec![q.clone()], self.params.ninterp),
-            _ => panic!("Cfs: Unsupported message type"),
+        // 获取 target，并辨析其内涵
+        let target = match self.state.target.clone().unwrap() {
+            // 根据不同的 target 类型，执行不同的任务，也可以将不同的 Target 类型处理为相同的类型
+            DNodeMessage::Joint(joint) => joint,
+            _ => unimplemented!("CFS planner does not support target of type."),
         };
+        // println!("{} get target: {:?}", self.name, target);
+
+        // 执行CFS逻辑
+        let q_ref_list = lerp(&q, &vec![target.clone()], self.params.ninterp);
         let collision_objects = self.sensor.as_ref().unwrap().read().unwrap().collision();
+        let mut solver_result = Vec::new();
+        // TODO 检验参考轨迹是否安全可靠,取不可靠段做重规划
+        // TODO 理论上最新轨迹应该为被重新规划的段落
         let mut last_result = Vec::new();
+
+        // 初始化二次规划的目标函数矩阵
+        // 矩阵待修改，实际上为q1 为对角矩阵，q2 为离散拉普拉斯算子， q3 为
+
         let dim = (self.params.ninterp + 2) * ndof;
 
-        for _ in 0..self.params.niter {
-            // =======  建立约束  =======
+        let h = get_optimize_function(dim, ndof, self.params.cost_weight.clone());
+        let f = na::DVector::<f64>::zeros(dim);
 
+        // f 无所谓
+
+        for _ in 0..self.params.niter {
             // 提前分配空间
             let mut constraints =
                 Constraint::CartesianProduct(0, 0, Vec::with_capacity(self.params.ninterp + 1));
 
+            // 生成约束 包括三部分，起点终点约束、障碍物约束、关节边界约束
+
             // 起点位置的约束，这是绝对约束
             constraints.push(Constraint::Equared(q.as_slice().to_vec()));
 
-            // 中间过程中的约束
             for q_ref in q_ref_list.iter() {
                 let mut obstacle_constraint =
                     Constraint::Intersection(0, ndof, Vec::with_capacity(collision_objects.len()));
@@ -169,49 +171,18 @@ impl NodeBehavior for DCfs {
                 constraints.push(obstacle_constraint);
             }
 
-            // 终点约束
-            match target {
-                NodeMessage::Joint(ref q) => {
-                    constraints.push(Constraint::Equared(q.clone().as_slice().to_vec()));
-                }
-                NodeMessage::Pose(ref_pose) => {
-                    let mut end_pose_constraint =
-                        Constraint::Intersection(0, ndof, Vec::with_capacity(6));
+            // 终点位置的约束，这是绝对约束
+            constraints.push(Constraint::Equared(target.as_slice().to_vec()));
 
-                    let q_end_ref = if last_result.is_empty() {
-                        q.clone()
-                    } else {
-                        na::DVector::from_vec(last_result[last_result.len() - ndof..].to_vec())
-                    };
-
-                    let grad = robot_read.cul_end_pose_grad(&q_end_ref);
-                    for i in 0..3 {
-                        let grad = grad.row(i).clone_owned();
-                        end_pose_constraint.push(Constraint::Hyperplane(
-                            grad.as_slice().to_vec(),
-                            iso_to_vec(ref_pose / robot_read.cul_end_pose(&q_end_ref))[i]
-                                + (grad * &q_end_ref)[(0, 0)],
-                        ));
-                    }
-                    end_pose_constraint.push(Constraint::Rectangle(
-                        q_min_bound.clone(),
-                        q_max_bound.clone(),
-                    ));
-                    constraints.push(end_pose_constraint);
-                }
-                _ => panic!("Cfs: Unsupported message type"),
-            }
-
-            // =======  优化  =======
-            let h = get_optimize_function(dim, ndof, self.params.cost_weight.clone());
-            let f = na::DVector::<f64>::zeros(dim);
             let problem = QuadraticProgramming {
                 h: &h,
                 f: f.as_slice(),
                 constraints,
             };
 
-            let solver_result = match self.params.solver.as_str() {
+            // 获得优化方程及其梯度
+            // 求解优化问题
+            solver_result = match self.params.solver.as_str() {
                 "osqp" => {
                     let mut osqp_solver = OsqpSolver::from_problem(problem);
                     osqp_solver.solve()
@@ -235,21 +206,35 @@ impl NodeBehavior for DCfs {
                 }
                 last_result = solver_result.clone();
             }
-
-            // 单步轨迹发送
-            // 生成 track
-            let mut track_list = Vec::new();
-            for i in 1..self.params.ninterp + 2 {
-                track_list.push(DNodeMessage::Joint(na::DVector::from_column_slice(
-                    &last_result[i * ndof..(i + 1) * ndof],
-                )));
-            }
-            // 发送 track
-            while self.node.output_queue.pop().is_some() {}
-            for track in track_list {
-                self.node.output_queue.push(track);
-            }
         }
+
+        // 单步轨迹发送
+        // 生成 track
+        let mut track_list = Vec::new();
+        for i in 1..self.params.ninterp + 2 {
+            track_list.push(DNodeMessage::Joint(na::DVector::from_column_slice(
+                &solver_result[i * ndof..(i + 1) * ndof],
+            )));
+        }
+        // 发送 track
+        while self.node.output_queue.pop().is_some() {}
+        for track in track_list {
+            self.node.output_queue.push(track);
+        }
+
+        // // 整体轨迹发送
+        // // 生成 track
+        // let mut track_list = Vec::new();
+        // for i in 1..self.params.ninterp + 2 {
+        //     track_list.push(na::DVector::from_column_slice(
+        //         &solver_result[i * ndof..(i + 1) * ndof],
+        //     ));
+        // }
+        // // 发送 track
+        // while let Some(_) = self.node.output_queue.pop() {}
+        // self.node
+        //     .output_queue
+        //     .push(DNodeMessage::JointList(track_list));
     }
 
     fn period(&self) -> Duration {
@@ -258,9 +243,5 @@ impl NodeBehavior for DCfs {
 
     fn node_name(&self) -> String {
         self.name.clone()
-    }
-
-    fn state(&mut self) -> NodeState {
-        self.state.node_state
     }
 }
