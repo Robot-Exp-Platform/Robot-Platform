@@ -52,6 +52,26 @@ impl Capsule {
 }
 
 impl CollisionObject {
+    pub fn id(&self) -> usize {
+        match self {
+            Self::Sphere(s) => s.id,
+            Self::Cylinder(c) => c.id,
+            Self::Capsule(c) => c.id,
+            Self::Cuboid(c) => c.id,
+            Self::Cone(c) => c.id,
+        }
+    }
+
+    pub fn set_pose(&mut self, pose: Pose) {
+        match self {
+            Self::Sphere(s) => s.pose = pose,
+            Self::Cylinder(c) => c.pose = pose,
+            Self::Capsule(c) => c.pose = pose,
+            Self::Cuboid(c) => c.pose = pose,
+            Self::Cone(c) => c.pose = pose,
+        }
+    }
+
     pub fn get_distance(a: &Self, b: &Self) -> f64 {
         // 计算两个障碍物之间的距离
         match (a, b) {

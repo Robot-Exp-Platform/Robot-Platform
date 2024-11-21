@@ -149,8 +149,11 @@ impl NodeBehavior for DCfs {
 
             // 中间过程中的约束
             for q_ref in q_ref_list.iter() {
-                let mut obstacle_constraint =
-                    Constraint::Intersection(0, ndof, Vec::with_capacity(collision_objects.len()));
+                // 边界约束
+                let mut process_constraint =
+                    Constraint::Rectangle(q_min_bound.clone(), q_max_bound.clone());
+
+                // 如果有障碍物的话，增加碰撞约束
 
                 for (dis, grad) in collision_objects.iter().map(|collision| {
                     (
@@ -159,14 +162,13 @@ impl NodeBehavior for DCfs {
                     )
                 }) {
                     // 过程中对每个障碍物的碰撞约束与关节角约束
-                    obstacle_constraint.push(
-                        Constraint::Halfspace(
-                            (-&grad).as_slice().to_vec(),
-                            dis - (&grad.transpose() * q_ref)[(0, 0)],
-                        ) + Constraint::Rectangle(q_min_bound.clone(), q_max_bound.clone()),
+                    process_constraint += Constraint::Halfspace(
+                        (-&grad).as_slice().to_vec(),
+                        dis - (&grad.transpose() * q_ref)[(0, 0)],
                     );
                 }
-                constraints.push(obstacle_constraint);
+
+                constraints.push(process_constraint);
             }
 
             // 终点约束

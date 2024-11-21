@@ -1,66 +1,81 @@
 use crossbeam::queue::SegQueue;
 use nalgebra as na;
-use robot::RobotType;
 use serde_json::{from_value, Value};
 use std::sync::{Arc, RwLock};
 
 use crate::{Node, NodeBehavior, NodeState};
 use generate_tools::*;
+use message::{DNodeMessageQueue, NodeMessageQueue, Pose, Target};
+use robot::RobotType;
 use sensor::Sensor;
 use serde::Deserialize;
 
-pub struct ObstacleReleaser {
+pub struct ObstacleReleaser<V> {
     /// The name of the releaser.
     name: String,
     /// The state of the releaser.
     state: ObstacleReleaserState,
     /// The parameters of the releaser.
     params: ObstacleReleaserParams,
-    // /// The node of the releaser.
-    // node: ObstacleReleaserNode,
+    /// The node of the releaser.
+    node: ObstacleReleaserNode<V>,
     /// The sensor that the releaser is using.
     sensor: Option<Arc<RwLock<Sensor>>>,
 }
 
+pub type DObstacleReleaser = ObstacleReleaser<na::DVector<f64>>;
+
 struct ObstacleReleaserState {
     is_end: bool,
     node_state: NodeState,
+    pose_queue: Vec<(usize, SegQueue<Pose>)>,
 }
 
 #[derive(Deserialize)]
 pub struct ObstacleReleaserParams {
     period: f64,
+    interp: usize,
 }
 
-// struct ObstacleReleaserNode {}
+#[derive(Default)]
+struct ObstacleReleaserNode<V> {
+    input_queue: NodeMessageQueue<V>,
+}
 
-impl ObstacleReleaser {
-    pub fn new(name: String) -> ObstacleReleaser {
-        ObstacleReleaser::from_params(name, ObstacleReleaserParams { period: 0.0 })
+impl DObstacleReleaser {
+    pub fn new(name: String) -> DObstacleReleaser {
+        ObstacleReleaser::from_params(
+            name,
+            ObstacleReleaserParams {
+                period: 0.0,
+                interp: 0,
+            },
+        )
     }
 
-    pub fn from_json(name: String, params: serde_json::Value) -> ObstacleReleaser {
+    pub fn from_json(name: String, params: serde_json::Value) -> DObstacleReleaser {
         ObstacleReleaser::from_params(name, serde_json::from_value(params).unwrap())
     }
 
-    pub fn from_params(name: String, params: ObstacleReleaserParams) -> ObstacleReleaser {
-        ObstacleReleaser {
+    pub fn from_params(name: String, params: ObstacleReleaserParams) -> DObstacleReleaser {
+        DObstacleReleaser {
             name,
             state: ObstacleReleaserState {
                 is_end: false,
                 node_state: NodeState::default(),
+                pose_queue: Vec::new(),
             },
             params,
-            // node: ObstacleReleaserNode {},
+            node: ObstacleReleaserNode::default(),
             sensor: None,
         }
     }
 }
 
-impl Node<na::DVector<f64>> for ObstacleReleaser {
+impl Node<na::DVector<f64>> for DObstacleReleaser {
     get_fn!((name: String));
+    set_fn!((set_input_queue, input_queue: DNodeMessageQueue, node));
 
-    fn set_input_queue(&mut self, _: Arc<SegQueue<message::NodeMessage<na::DVector<f64>>>>) {}
     fn set_output_queue(&mut self, _: Arc<SegQueue<message::NodeMessage<na::DVector<f64>>>>) {}
 
     fn is_end(&mut self) {
@@ -77,7 +92,34 @@ impl Node<na::DVector<f64>> for ObstacleReleaser {
     }
 }
 
-impl NodeBehavior for ObstacleReleaser {
+impl NodeBehavior for DObstacleReleaser {
+    fn update(&mut self) {
+        let interp = self.params.interp;
+
+        // Process target
+        if let Some(Target::Transform(id_t, pose_s, pose_e)) = self.node.input_queue.pop() {
+            if let Some((_, queue)) = self.state.pose_queue.iter_mut().find(|(id, _)| *id == id_t) {
+                for i in 0..interp {
+                    queue.push(pose_s.lerp_slerp(&pose_e, i as f64 / interp as f64));
+                }
+            }
+        }
+
+        // Update all obstacles
+        if let Some(sensor) = &self.sensor {
+            let Sensor::ObstacleList(obstacle_list) = &mut *sensor.write().unwrap();
+            for (id, queue) in &self.state.pose_queue {
+                if let Some(pose) = queue.pop() {
+                    obstacle_list.update_pose(*id, pose);
+                }
+            }
+        }
+    }
+
+    fn node_name(&self) -> String {
+        self.name.clone()
+    }
+
     fn period(&self) -> std::time::Duration {
         std::time::Duration::from_secs_f64(self.params.period)
     }

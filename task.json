@@ -2,7 +2,11 @@
   {
     "id": 0,
     "rely": [],
-    "target": [],
+    "target": [
+      {
+        "Transform": [1, { "rotation": [1, 0, 0, 0], "translation": [-2, -2, -2] }, { "rotation": [1, 0, 0, 0], "translation": [-2, -3, 2] }]
+      }
+    ],
     "nodes": [["bullet", ["panda_1", "panda_2"], ["obstacle_list_1"], { "period": 0.0 }]],
     "edges": [[1, 0]]
   },
@@ -10,7 +14,7 @@
     "id": 1,
     "rely": [],
     "target": [],
-    "nodes": [["obstacle_releaser", [], ["obstacle_releaser_1"], { "period": 0.1 }]],
+    "nodes": [["obstacle_releaser", [], ["obstacle_releaser_1"], { "period": 0.1, "interp": 100 }]],
     "edges": [[0, 1]]
   },
   {
@@ -58,8 +62,8 @@
       { "Joint": [[0.1, -0.8292, 0.7548, -2.3791, 0.1615, 2.2308, 1.4292], 7, null] }
     ],
     "nodes": [
-      ["cfs", ["panda_2"], ["obstacle_releaser_1"], { "period": 0.95, "ninterp": 7, "niter": 10, "cost_weight": [0, 10.0, 20.0], "solver": "osqp" }],
-      ["interp", ["panda_2"], ["obstacle_releaser_1"], { "period": 0.1, "interp_fn": "lerp", "ninter": 25 }],
+      ["cfs", ["panda_2"], ["obstacle_list_1"], { "period": 0.95, "ninterp": 7, "niter": 10, "cost_weight": [0, 10.0, 20.0], "solver": "osqp" }],
+      ["interp", ["panda_2"], ["obstacle_list_1"], { "period": 0.1, "interp_fn": "lerp", "ninter": 25 }],
       ["position", ["panda_2"], [], { "period": 0.004 }]
     ],
     "edges": [

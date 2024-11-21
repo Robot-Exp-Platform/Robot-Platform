@@ -2,7 +2,7 @@ use nalgebra as na;
 use osqp::CscMatrix;
 use std::{
     borrow::Cow,
-    ops::{Add, Mul},
+    ops::{Add, AddAssign, Mul, MulAssign},
 };
 
 #[derive(Debug, Default, Clone)]
@@ -504,6 +504,13 @@ impl Add for Constraint {
     }
 }
 
+impl AddAssign for Constraint {
+    fn add_assign(&mut self, rhs: Constraint) {
+        assert_eq!(self.ncols(), rhs.ncols());
+        *self = self.clone() + rhs;
+    }
+}
+
 impl Mul<Constraint> for Constraint {
     type Output = Constraint;
 
@@ -513,5 +520,11 @@ impl Mul<Constraint> for Constraint {
             self.ncols() + rhs.ncols(),
             vec![self, rhs],
         )
+    }
+}
+
+impl MulAssign for Constraint {
+    fn mul_assign(&mut self, rhs: Constraint) {
+        *self = self.clone() * rhs;
     }
 }
