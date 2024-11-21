@@ -1593,6 +1593,7 @@ dependencies = [
 name = "sensor"
 version = "0.1.0"
 dependencies = [
+ "generate_tools",
  "message",
  "nalgebra",
  "serde",

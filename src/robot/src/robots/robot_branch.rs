@@ -97,7 +97,7 @@ impl Robot<na::DVector<f64>> for DRobotBranch {
     split_fn!(set_q, set_q_dot, set_q_ddot, set_q_jerk);
 
     fn name(&self) -> String {
-        format!("RobotBranch")
+        "RobotBranch".to_string()
     }
     fn dof(&self) -> usize {
         self.indices.last().unwrap() + 1

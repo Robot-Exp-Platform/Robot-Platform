@@ -171,15 +171,10 @@ impl DRobot for DSeriseRobot {
             // Update the cumulative transformation matrix
             isometry *= isometry_increment;
 
-            // Calculate the positions of the capsule's end points in the global frame
-            let capsule_start = isometry * self.params.capsules[i].ball_center1;
-            let capsule_end = isometry * self.params.capsules[i].ball_center2;
-
             // Create a new Capsule object and add it to the vector
             capsules.push(Capsule {
-                ball_center1: capsule_start,
-                ball_center2: capsule_end,
-                radius: self.params.capsules[i].radius,
+                pose: isometry,
+                ..capsules[i]
             });
         }
         capsules
@@ -278,15 +273,10 @@ impl<const N: usize> SRobot<N> for SSeriseRobot<N> {
             // Update the cumulative transformation matrix
             isometry *= isometry_increment;
 
-            // Calculate the positions of the capsule's end points in the global frame
-            let capsule_start = isometry * self.params.capsules[i].ball_center1;
-            let capsule_end = isometry * self.params.capsules[i].ball_center2;
-
             // Create a new Capsule object and add it to the vector
             capsules.push(Capsule {
-                ball_center1: capsule_start,
-                ball_center2: capsule_end,
-                radius: self.params.capsules[i].radius,
+                pose: isometry,
+                ..capsules[i]
             });
         }
         capsules

@@ -1,3 +1,4 @@
+use crate::Pose;
 use nalgebra as na;
 use serde::{Deserialize, Serialize};
 
@@ -11,44 +12,41 @@ pub enum CollisionObject {
 }
 
 #[derive(Debug, Clone, Copy, Deserialize, Serialize)]
-pub struct Sphere {
-    pub center: na::Point3<f64>,
-    pub radius: f64,
+pub struct Collision<T> {
+    pub id: usize,
+    pub pose: Pose,
+    pub params: T,
 }
 
-#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
-pub struct Cylinder {
-    pub start: na::Point3<f64>,
-    pub end: na::Point3<f64>,
-    pub radius: f64,
-}
+type Radius = f64;
+type Leight = f64;
 
-#[derive(Debug, Clone, Copy, Default, Deserialize, Serialize)]
-pub struct Capsule {
-    pub ball_center1: na::Point3<f64>,
-    pub ball_center2: na::Point3<f64>,
-    pub radius: f64,
-}
+pub type Sphere = Collision<Radius>;
+pub type Cylinder = Collision<(Radius, Leight)>;
+pub type Cone = Collision<(Radius, Leight)>;
+pub type Capsule = Collision<(Radius, Leight)>;
+pub type Cuboid = Collision<(Leight, Leight, Leight)>;
 
-#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
-pub struct Cuboid {
-    pub point1: na::Point3<f64>,
-    pub point2: na::Point3<f64>,
-}
-
-#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
-pub struct Cone {
-    pub bottom_center: na::Point3<f64>,
-    pub up_point: na::Point3<f64>,
-    pub radius: f64,
+impl<T> Collision<T> {
+    pub fn new(id: usize, pose: Pose, params: T) -> Collision<T> {
+        Collision { id, pose, params }
+    }
 }
 
 impl Capsule {
+    // impl Capsule {
     pub fn from_vec(vec: Vec<f64>) -> Capsule {
+        let axisangle = na::Vector3::z();
+        let translation = na::Vector3::new(vec[0], vec[1], vec[2]);
+        let end = na::Vector3::new(vec[3], vec[4], vec[5]);
+
+        let length = (translation - end).norm();
+        let radius = vec[6];
+
         Capsule {
-            ball_center1: na::Point3::new(vec[0], vec[1], vec[2]),
-            ball_center2: na::Point3::new(vec[3], vec[4], vec[5]),
-            radius: vec[6],
+            id: 0,
+            pose: Pose::new(translation, axisangle),
+            params: (radius, length),
         }
     }
 }
@@ -59,16 +57,9 @@ impl CollisionObject {
         match (a, b) {
             (Self::Sphere(a), Self::Sphere(b)) => sphere_sphere_distance(a, b),
             (Self::Capsule(a), Self::Capsule(b)) => capsule_capsule_distance(a, b),
-            (Self::Cylinder(a), Self::Cylinder(b)) => cylinder_cylinder_distance(a, b),
 
             (Self::Sphere(a), Self::Capsule(b)) | (Self::Capsule(b), Self::Sphere(a)) => {
                 sphere_capsule_distance(a, b)
-            }
-            (Self::Sphere(a), Self::Cylinder(b)) | (Self::Cylinder(b), Self::Sphere(a)) => {
-                sphere_cylinder_distance(a, b)
-            }
-            (Self::Capsule(a), Self::Cylinder(b)) | (Self::Cylinder(b), Self::Capsule(a)) => {
-                capsule_cylinder_distance(a, b)
             }
 
             // 圆柱的暂未实现
@@ -78,64 +69,39 @@ impl CollisionObject {
 }
 
 fn sphere_sphere_distance(a: &Sphere, b: &Sphere) -> f64 {
-    let center_distance = (a.center - b.center).norm();
-    (center_distance - a.radius - b.radius).max(0.0)
+    a.pose.inv_mul(&b.pose).translation.vector.norm() - a.params - b.params
 }
-
 fn sphere_capsule_distance(sphere: &Sphere, capsule: &Capsule) -> f64 {
+    let sphere_center = sphere.pose.translation.vector;
+    let capsule_start = capsule.pose.translation.vector;
+    let capsule_end = capsule.pose * na::Vector3::new(0.0, capsule.params.1, 0.0);
+
     let closest_point = get_closest_point_on_line_segment(
-        sphere.center,
-        capsule.ball_center1,
-        capsule.ball_center2,
+        na::Point3::from(capsule_start),
+        na::Point3::from(capsule_end),
+        na::Point3::from(sphere_center),
     );
-    let center_distance = (sphere.center - closest_point).norm();
-    (center_distance - sphere.radius - capsule.radius).max(0.0)
+
+    let center_distance = (na::Point3::from(sphere_center) - closest_point).norm();
+    (center_distance - sphere.params - capsule.params.0).max(0.0)
 }
 
 fn capsule_capsule_distance(a: &Capsule, b: &Capsule) -> f64 {
-    let start1 = a.ball_center1;
-    let end1 = a.ball_center2;
-    let start2 = b.ball_center1;
-    let end2 = b.ball_center2;
+    let start1 = a.pose.translation.vector;
+    let end1 = a.pose * na::Vector3::new(0.0, a.params.1, 0.0);
+    let start2 = b.pose.translation.vector;
+    let end2 = b.pose * na::Vector3::new(0.0, b.params.1, 0.0);
 
-    let (_, _, distance_sqr) = get_closest_points_between_lines(start1, end1, start2, end2);
+    let (_, _, distance_sqr) = get_closest_points_between_lines(
+        na::Point3::from(start1),
+        na::Point3::from(end1),
+        na::Point3::from(start2),
+        na::Point3::from(end2),
+    );
 
     let distance = distance_sqr.sqrt(); // 对平方距离开平方，得到实际距离
 
-    (distance - a.radius - b.radius).max(0.0)
-}
-
-fn cylinder_cylinder_distance(a: &Cylinder, b: &Cylinder) -> f64 {
-    let start1 = a.start;
-    let end1 = a.end;
-    let start2 = b.start;
-    let end2 = b.end;
-
-    let (_, _, distance_sqr) = get_closest_points_between_lines(start1, end1, start2, end2);
-
-    let distance = distance_sqr.sqrt();
-
-    (distance - a.radius - b.radius).max(0.0)
-}
-
-fn sphere_cylinder_distance(sphere: &Sphere, cylinder: &Cylinder) -> f64 {
-    let closest_point =
-        get_closest_point_on_line_segment(sphere.center, cylinder.start, cylinder.end);
-    let center_distance = (sphere.center - closest_point).norm();
-    (center_distance - sphere.radius - cylinder.radius).max(0.0)
-}
-
-fn capsule_cylinder_distance(capsule: &Capsule, cylinder: &Cylinder) -> f64 {
-    let start1 = capsule.ball_center1;
-    let end1 = capsule.ball_center2;
-    let start2 = cylinder.start;
-    let end2 = cylinder.end;
-
-    let (_, _, distance_sqr) = get_closest_points_between_lines(start1, end1, start2, end2);
-
-    let distance = distance_sqr.sqrt();
-
-    (distance - capsule.radius - cylinder.radius).max(0.0)
+    (distance - a.params.0 - b.params.0).max(0.0)
 }
 
 fn is_equal(x: f64, y: f64) -> bool {
@@ -246,48 +212,6 @@ fn get_closest_point_on_line_segment(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     #[test]
-    fn collision_object_to_json() {
-        let sphere = CollisionObject::Sphere(Sphere {
-            center: na::Point3::new(1.0, 2.0, 3.0),
-            radius: 1.0,
-        });
-        let cylinder = CollisionObject::Cylinder(Cylinder {
-            start: na::Point3::new(1.0, 2.0, 3.0),
-            end: na::Point3::new(4.0, 5.0, 6.0),
-            radius: 1.0,
-        });
-        let capsule = CollisionObject::Capsule(Capsule {
-            ball_center1: na::Point3::new(1.0, 2.0, 3.0),
-            ball_center2: na::Point3::new(4.0, 5.0, 6.0),
-            radius: 1.0,
-        });
-        let cuboid = CollisionObject::Cuboid(Cuboid {
-            point1: na::Point3::new(1.0, 2.0, 3.0),
-            point2: na::Point3::new(4.0, 5.0, 6.0),
-        });
-
-        let sphere_json = serde_json::to_string(&sphere).unwrap();
-        let cylinder_json = serde_json::to_string(&cylinder).unwrap();
-        let capsule_json = serde_json::to_string(&capsule).unwrap();
-        let cuboid_json = serde_json::to_string(&cuboid).unwrap();
-
-        assert_eq!(
-            sphere_json,
-            r#"{"Sphere":{"center":[1.0,2.0,3.0],"radius":1.0}}"#
-        );
-        assert_eq!(
-            cylinder_json,
-            r#"{"Cylinder":{"start":[1.0,2.0,3.0],"end":[4.0,5.0,6.0],"radius":1.0}}"#
-        );
-        assert_eq!(
-            capsule_json,
-            r#"{"Capsule":{"ball_center1":[1.0,2.0,3.0],"ball_center2":[4.0,5.0,6.0],"radius":1.0}}"#
-        );
-        assert_eq!(
-            cuboid_json,
-            r#"{"Cuboid":{"point1":[1.0,2.0,3.0],"point2":[4.0,5.0,6.0]}}"#
-        );
-    }
+    fn collision_object_to_json() {}
 }

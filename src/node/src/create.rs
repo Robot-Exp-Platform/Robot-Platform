@@ -1,7 +1,10 @@
 use nalgebra as na;
 use serde_json::Value;
 
-use crate::{Cfs, CfsEndPose, DBullet, DImpedence, DImpedenceDiag, DPid, Interp, Node, Position};
+use crate::{
+    Cfs, CfsEndPose, DBullet, DImpedence, DImpedenceDiag, DPid, Interp, Node, ObstacleReleaser,
+    Position,
+};
 
 pub fn create_node(
     node_type: &str,
@@ -20,6 +23,7 @@ pub fn create_node(
         "position" => Box::new(Position::from_json(name, params)),
 
         "bullet" => Box::new(DBullet::from_json(name, params)),
+        "obstacle_releaser" => Box::new(ObstacleReleaser::from_json(name, params)),
         _ => panic!("Unknown node type: {}", node_type),
     }
 }

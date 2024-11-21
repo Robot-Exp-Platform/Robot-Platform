@@ -179,7 +179,7 @@ impl NodeBehavior for DBullet {
 
         // 整理控制指令为字符串
         let reply = format!(
-            "{{command: {}, obstacles: {}}}",
+            "{{\"command\": {}, \"obstacles\": {}}}",
             serde_json::to_string(&commands).unwrap(),
             serde_json::to_string(&collections_info).unwrap()
         );

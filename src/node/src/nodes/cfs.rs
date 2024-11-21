@@ -104,7 +104,7 @@ impl NodeBehavior for DCfs {
         let q_max_bound = robot_read.q_max_bound().as_slice().to_vec();
 
         let currect_state = DNodeMessage::Joint(q.clone());
-        println!("cfs: currect_pose: {:?}", robot_read.end_pose());
+        println!("{}: currect_pose: {:?}", self.name(), robot_read.end_pose());
 
         // 检查当前状态是否达到储存的目标状态.
         if let Some(target) = self.state.target.clone() {

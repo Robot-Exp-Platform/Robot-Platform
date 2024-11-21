@@ -3,11 +3,18 @@
     "id": 0,
     "rely": [],
     "target": [],
-    "nodes": [["bullet", ["panda_1", "panda_2"], ["obstacle_releaser_1"], { "period": 0.0 }]],
+    "nodes": [["bullet", ["panda_1", "panda_2"], ["obstacle_list_1"], { "period": 0.0 }]],
     "edges": [[1, 0]]
   },
   {
     "id": 1,
+    "rely": [],
+    "target": [],
+    "nodes": [["obstacle_releaser", [], ["obstacle_releaser_1"], { "period": 0.1 }]],
+    "edges": [[0, 1]]
+  },
+  {
+    "id": 2,
     "rely": [0],
     "target": [
       {
@@ -30,13 +37,8 @@
       }
     ],
     "nodes": [
-      [
-        "cfs_end_pose",
-        ["panda_1"],
-        ["obstacle_releaser_1"],
-        { "period": 0.95, "ninterp": 7, "niter": 10, "cost_weight": [0, 10.0, 20.0], "solver": "osqp" }
-      ],
-      ["interp", ["panda_1"], ["obstacle_releaser_1"], { "period": 0.1, "interp_fn": "lerp", "ninter": 25 }],
+      ["cfs", ["panda_1"], ["obstacle_list_1"], { "period": 0.95, "ninterp": 7, "niter": 10, "cost_weight": [0, 10.0, 20.0], "solver": "osqp" }],
+      ["interp", ["panda_1"], ["obstacle_list_1"], { "period": 0.1, "interp_fn": "lerp", "ninter": 25 }],
       ["position", ["panda_1"], [], { "period": 0.004 }]
     ],
     "edges": [
@@ -47,7 +49,7 @@
     ]
   },
   {
-    "id": 2,
+    "id": 3,
     "rely": [0],
     "target": [
       { "Joint": [[0.0124, -0.8838, 0.3749, -2.2172, 0.232, 1.7924, 1.3719], 7, null] },
@@ -56,7 +58,7 @@
       { "Joint": [[0.1, -0.8292, 0.7548, -2.3791, 0.1615, 2.2308, 1.4292], 7, null] }
     ],
     "nodes": [
-      ["cfs", ["panda_2"], ["obstacle_releaser_1"], { "period": 0.95, "ninterp": 7, "niter": 6, "cost_weight": [0, 10.0, 20.0], "solver": "osqp" }],
+      ["cfs", ["panda_2"], ["obstacle_releaser_1"], { "period": 0.95, "ninterp": 7, "niter": 10, "cost_weight": [0, 10.0, 20.0], "solver": "osqp" }],
       ["interp", ["panda_2"], ["obstacle_releaser_1"], { "period": 0.1, "interp_fn": "lerp", "ninter": 25 }],
       ["position", ["panda_2"], [], { "period": 0.004 }]
     ],

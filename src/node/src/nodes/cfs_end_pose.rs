@@ -208,10 +208,10 @@ impl NodeBehavior for DCfsEndPose {
                 // println!("cfs_end_pose: last_result: {:?}", last_result);
                 // println!("cfs_end_pose: solver_result: {:?}", solver_result);
                 println!("cfs_end_pose: diff: {:?}", diff);
-                last_result = solver_result.clone();
                 if diff.abs() < 1e-1 {
                     break;
                 }
+                last_result = solver_result.clone();
             }
         }
 
