@@ -86,6 +86,9 @@ def main():
     for robot_type, robot_name, position in robot_config:
         robots.append(load_robot(robot_type, robot_name, position))
 
+    # robot_table 一张映射表，用于输入障碍物 id 获取在 pybullet 中的障碍物对象
+    obstacle_table = {}
+
     # 准备加载障碍物，但是配置文件只包含静态障碍物信息，动态障碍物信息需要等待 Rust 段发送过来或者其他方法获取
     obstacles = []
     for config in obstacle_config:
@@ -102,21 +105,28 @@ def main():
 
             # 接收 Rust 发来的命令
             receive = req.receive()
-            # print("pybullet: get command", command)
+            # print("pybullet: receive: ", receive)
             for robot, cmd in zip(robots, receive["command"]):
                 # print(f"Executing command for {robot}: {cmd}")
                 robot.execute_command(cmd)
 
-            # TODO 检查指令中的障碍物，如果是新增的障碍物则加载并放入 obstacles 列表， 如果是已有的障碍物则更新位置， 如果是原有的障碍物但是没有传回相关数据则不处理
-            for obstacle in receive["obstacles"]:
-                if obstacle["id"] in obstacles:
+            # 检查指令中的障碍物，如果是新增的障碍物则加载并放入 obstacles 列表， 如果是已有的障碍物则更新位置， 如果是原有的障碍物但是没有传回相关数据则不处理
+            for obstacle_data in receive["obstacles"]:
+                for _, obstacle in obstacle_data.items():
+                    obstacle_id = obstacle["id"]
+                    # 如果障碍物不在 obstacle_table 中，则加载新的障碍物
+                    if obstacle_id not in obstacle_table:
+                        # 加载新的障碍物
+                        new_obstacle = load_obstacle(obstacle_data)
+                        obstacles.append(new_obstacle)
+                        obstacle_table[obstacle_id] = new_obstacle
+
                     # 更新障碍物位置
                     p.resetBasePositionAndOrientation(
-                        obstacle["id"], obstacle["position"], obstacle["rotation"]
+                        obstacle_table[obstacle_id],
+                        obstacle["pose"]["translation"],
+                        obstacle["pose"]["rotation"],
                     )
-                else:
-                    # 加载新的障碍物
-                    obstacles.append(load_obstacle(obstacle))
 
             # 更新仿真
             p.stepSimulation()

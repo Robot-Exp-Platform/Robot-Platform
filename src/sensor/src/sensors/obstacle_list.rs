@@ -11,10 +11,10 @@ pub struct ObstacleList {
 
 impl ObstacleList {
     get_fn!((name: String));
-    pub fn new(name: String) -> ObstacleList {
+    pub fn new(name: String, obstacle: Value) -> ObstacleList {
         ObstacleList {
             name,
-            obstacle: Vec::new(),
+            obstacle: serde_json::from_value(obstacle).unwrap(),
         }
     }
 

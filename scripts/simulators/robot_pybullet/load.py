@@ -12,8 +12,8 @@ def load_robot(robot_type, _, position):
 
 def load_obstacle(obstacle_config: dict):
     if "Sphere" in obstacle_config:
-        center = obstacle_config["Sphere"]["center"]
-        radius = obstacle_config["Sphere"]["radius"]
+        center = obstacle_config["Sphere"]["pose"]["translation"]
+        radius = obstacle_config["Sphere"]["params"]
         visual_shape_id = p.createVisualShape(shapeType=p.GEOM_SPHERE, radius=radius)
         collision_shape_id = p.createCollisionShape(
             shapeType=p.GEOM_SPHERE, radius=radius

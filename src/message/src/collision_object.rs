@@ -62,6 +62,16 @@ impl CollisionObject {
         }
     }
 
+    pub fn pose(&self) -> Pose {
+        match self {
+            Self::Sphere(s) => s.pose,
+            Self::Cylinder(c) => c.pose,
+            Self::Capsule(c) => c.pose,
+            Self::Cuboid(c) => c.pose,
+            Self::Cone(c) => c.pose,
+        }
+    }
+
     pub fn set_pose(&mut self, pose: Pose) {
         match self {
             Self::Sphere(s) => s.pose = pose,
@@ -84,6 +94,13 @@ impl CollisionObject {
 
             // 圆柱的暂未实现
             _ => 0.0,
+        }
+    }
+
+    pub fn as_slice(&self) -> &[f64] {
+        match self {
+            Self::Sphere(s) => s.pose.translation.vector.as_slice(),
+            _ => panic!("This type does not support as_slice"),
         }
     }
 }

@@ -174,7 +174,7 @@ impl DRobot for DSeriseRobot {
             // Create a new Capsule object and add it to the vector
             capsules.push(Capsule {
                 pose: isometry,
-                ..capsules[i]
+                ..self.params.capsules[i]
             });
         }
         capsules

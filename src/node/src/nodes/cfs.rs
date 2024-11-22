@@ -177,8 +177,8 @@ impl NodeBehavior for DCfs {
                     constraints.push(Constraint::Equared(q.clone().as_slice().to_vec()));
                 }
                 NodeMessage::Pose(ref_pose) => {
-                    let mut end_pose_constraint =
-                        Constraint::Intersection(0, ndof, Vec::with_capacity(6));
+                    let mut end_constraint =
+                        Constraint::Rectangle(q_min_bound.clone(), q_max_bound.clone());
 
                     let q_end_ref = if last_result.is_empty() {
                         q.clone()
@@ -189,17 +189,13 @@ impl NodeBehavior for DCfs {
                     let grad = robot_read.cul_end_pose_grad(&q_end_ref);
                     for i in 0..3 {
                         let grad = grad.row(i).clone_owned();
-                        end_pose_constraint.push(Constraint::Hyperplane(
+                        end_constraint += Constraint::Hyperplane(
                             grad.as_slice().to_vec(),
                             iso_to_vec(ref_pose / robot_read.cul_end_pose(&q_end_ref))[i]
                                 + (grad * &q_end_ref)[(0, 0)],
-                        ));
+                        );
                     }
-                    end_pose_constraint.push(Constraint::Rectangle(
-                        q_min_bound.clone(),
-                        q_max_bound.clone(),
-                    ));
-                    constraints.push(end_pose_constraint);
+                    constraints.push(end_constraint);
                 }
                 _ => panic!("Cfs: Unsupported message type"),
             }

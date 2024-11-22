@@ -61,7 +61,7 @@ impl Exp {
             robot_pool.push(robot);
         }
         for sensor in config.sensors {
-            sensor_pool.push(sensor::from_config(sensor));
+            sensor_pool.push(sensor::from_config(&sensor));
         }
 
         Exp {

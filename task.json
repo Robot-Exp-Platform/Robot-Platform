@@ -2,19 +2,15 @@
   {
     "id": 0,
     "rely": [],
-    "target": [
-      {
-        "Transform": [1, { "rotation": [1, 0, 0, 0], "translation": [-2, -2, -2] }, { "rotation": [1, 0, 0, 0], "translation": [-2, -3, 2] }]
-      }
-    ],
+    "target": [],
     "nodes": [["bullet", ["panda_1", "panda_2"], ["obstacle_list_1"], { "period": 0.0 }]],
     "edges": [[1, 0]]
   },
   {
     "id": 1,
     "rely": [],
-    "target": [],
-    "nodes": [["obstacle_releaser", [], ["obstacle_releaser_1"], { "period": 0.1, "interp": 100 }]],
+    "target": [{ "Transform": [1, { "rotation": [1, 0, 0, 0], "translation": [-1, 2, 1] }, { "rotation": [1, 0, 0, 0], "translation": [2, 1, 0] }] }],
+    "nodes": [["obstacle_releaser", [], ["obstacle_list_1"], { "period": 0.1, "interp": 100 }]],
     "edges": [[0, 1]]
   },
   {

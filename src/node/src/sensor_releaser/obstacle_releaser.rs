@@ -2,6 +2,7 @@ use crossbeam::queue::SegQueue;
 use nalgebra as na;
 use serde_json::{from_value, Value};
 use std::sync::{Arc, RwLock};
+use tracing::info;
 
 use crate::{Node, NodeBehavior, NodeState};
 use generate_tools::*;
@@ -98,10 +99,19 @@ impl NodeBehavior for DObstacleReleaser {
 
         // Process target
         if let Some(Target::Transform(id_t, pose_s, pose_e)) = self.node.input_queue.pop() {
-            if let Some((_, queue)) = self.state.pose_queue.iter_mut().find(|(id, _)| *id == id_t) {
-                for i in 0..interp {
-                    queue.push(pose_s.lerp_slerp(&pose_e, i as f64 / interp as f64));
+            let queue = {
+                let pose_queue = &mut self.state.pose_queue;
+                if let Some((_, queue)) = pose_queue.iter_mut().find(|(id, _)| *id == id_t) {
+                    queue
+                } else {
+                    println!("Create new queue for id: {}", id_t);
+                    pose_queue.push((id_t, SegQueue::new()));
+                    &mut pose_queue.last_mut().unwrap().1
                 }
+            };
+
+            for i in 0..interp {
+                queue.push(pose_s.lerp_slerp(&pose_e, i as f64 / interp as f64));
             }
         }
 
@@ -112,6 +122,17 @@ impl NodeBehavior for DObstacleReleaser {
                 if let Some(pose) = queue.pop() {
                     obstacle_list.update_pose(*id, pose);
                 }
+            }
+        }
+
+        // 输出当前障碍物列表
+        if let Some(sensor) = &self.sensor {
+            let Sensor::ObstacleList(obstacle_list) = &*sensor.read().unwrap();
+            for obstacle in &obstacle_list.obstacle {
+                info!(
+                    node = format!("{}:{}", self.name, obstacle.id()),
+                    obstacle = ?obstacle.as_slice()
+                );
             }
         }
     }

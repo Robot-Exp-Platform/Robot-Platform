@@ -21,6 +21,8 @@ pub struct TaskManager {
     in_degree: HashMap<TaskId, usize>,
     /// 开放任务列表，正在执行或者可执行的任务
     open_tasks: HashSet<TaskId>,
+    /// 执行任务列表，执行新任务时要从开放任务列表中减去执行中的任务列表
+    running_tasks: HashSet<TaskId>,
 
     /// 与线程管理器通信的接收器
     pub receiver: Option<Arc<Mutex<Receiver<TaskState>>>>,
@@ -75,10 +77,17 @@ impl TaskManager {
     }
 
     /// 获取所有入度为 0 的任务
-    pub fn get_open_tasks(&self) -> Vec<Task> {
+    pub fn get_open_tasks(&mut self) -> Vec<Task> {
         self.open_tasks
             .iter()
-            .filter_map(|id| self.tasks.get(id).cloned())
+            .filter_map(|id| {
+                if self.running_tasks.contains(id) {
+                    None
+                } else {
+                    self.running_tasks.insert(*id);
+                    Some(self.tasks.get(id).unwrap().clone())
+                }
+            })
             .collect()
     }
 
