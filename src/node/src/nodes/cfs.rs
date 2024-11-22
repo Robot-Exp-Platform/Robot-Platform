@@ -187,18 +187,28 @@ impl NodeBehavior for DCfs {
                     };
 
                     let grad = robot_read.cul_end_pose_grad(&q_end_ref);
-                    for i in 0..3 {
+                    for i in 2..5 {
                         let grad = grad.row(i).clone_owned();
+                        println!("{}: ref_pose: {:?}", self.name(), iso_to_vec(ref_pose),);
+                        println!(
+                            "{}: end_pose: {:?}",
+                            self.name(),
+                            iso_to_vec(robot_read.cul_end_pose(&q_end_ref))
+                        );
+                        println!("{}: grad   : {:?}", self.name(), grad);
                         end_constraint += Constraint::Hyperplane(
                             grad.as_slice().to_vec(),
-                            iso_to_vec(ref_pose / robot_read.cul_end_pose(&q_end_ref))[i]
+                            iso_to_vec(ref_pose)[i]
+                                - iso_to_vec(robot_read.cul_end_pose(&q_end_ref))[i]
                                 + (grad * &q_end_ref)[(0, 0)],
                         );
                     }
                     constraints.push(end_constraint);
+                    println!("约束整理完成");
                 }
                 _ => panic!("Cfs: Unsupported message type"),
             }
+            println!("迭代完成");
 
             // =======  优化  =======
             let h = get_optimize_function(dim, ndof, self.params.cost_weight.clone());
@@ -233,20 +243,19 @@ impl NodeBehavior for DCfs {
                 }
                 last_result = solver_result.clone();
             }
-
-            // =======  轨迹发送  =======
-            // 生成 track
-            let mut track_list = Vec::new();
-            for i in 1..self.params.ninterp + 2 {
-                track_list.push(DNodeMessage::Joint(na::DVector::from_column_slice(
-                    &last_result[i * ndof..(i + 1) * ndof],
-                )));
-            }
-            // 发送 track
-            while self.node.output_queue.pop().is_some() {}
-            for track in track_list {
-                self.node.output_queue.push(track);
-            }
+        }
+        // =======  轨迹发送  =======
+        // 生成 track
+        let mut track_list = Vec::new();
+        for i in 1..self.params.ninterp + 2 {
+            track_list.push(DNodeMessage::Joint(na::DVector::from_column_slice(
+                &last_result[i * ndof..(i + 1) * ndof],
+            )));
+        }
+        // 发送 track
+        while self.node.output_queue.pop().is_some() {}
+        for track in track_list {
+            self.node.output_queue.push(track);
         }
     }
 

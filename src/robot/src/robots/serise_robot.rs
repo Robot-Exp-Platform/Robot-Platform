@@ -145,9 +145,9 @@ impl DRobot for DSeriseRobot {
             q_plus[i] += epsilon;
             let mut q_minus = q.clone();
             q_minus[i] -= epsilon;
-            let pose_plus = self.cul_end_pose(&q_plus);
-            let pose_minus = self.cul_end_pose(&q_minus);
-            grad.set_column(i, &(iso_to_vec(pose_plus / pose_minus) / (2.0 * epsilon)));
+            let pose_plus = iso_to_vec(self.cul_end_pose(&q_plus));
+            let pose_minus = iso_to_vec(self.cul_end_pose(&q_minus));
+            grad.set_column(i, &((pose_plus - pose_minus) / (2.0 * epsilon)));
         }
         grad
     }
