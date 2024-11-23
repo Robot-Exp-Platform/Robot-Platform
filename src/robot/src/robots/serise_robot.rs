@@ -178,26 +178,6 @@ impl DRobot for DSeriseRobot {
         na::DVector::from_element(1, dis)
     }
 
-    // /// 给定机器人的广义变量，计算机器人到碰撞体的最小距概的梯度
-    // fn cul_dis_grad_to_collision(
-    //     &self,
-    //     q: &nalgebra::DVector<f64>,
-    //     obj: &message::CollisionObject,
-    // ) -> nalgebra::DVector<f64> {
-    //     let mut dis_grad = na::DVector::zeros(self.params.nlink);
-    //     let epsilon = 1e-3;
-    //     for i in 0..self.params.nlink {
-    //         let mut q_plus = q.clone();
-    //         q_plus[i] += epsilon;
-    //         let mut q_minus = q.clone();
-    //         q_minus[i] -= epsilon;
-    //         let dis_plus = self.cul_dis_to_collision(&q_plus, obj);
-    //         let dis_minus = self.cul_dis_to_collision(&q_minus, obj);
-    //         dis_grad[i] = (dis_plus - dis_minus) / (2.0 * epsilon);
-    //     }
-    //     dis_grad
-    // }
-
     /// 给任意函数的梯度
     fn cul_func(
         &self,

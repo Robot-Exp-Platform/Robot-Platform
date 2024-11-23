@@ -1,6 +1,8 @@
 use nalgebra as na;
+use osqp::CscMatrix;
 use serde::Deserialize;
 use serde_json::{from_value, Value};
+use std::borrow::Cow;
 use tracing::info;
 // use serde_yaml::{from_value, Value};
 use std::sync::{Arc, RwLock};
@@ -9,7 +11,7 @@ use std::time::Duration;
 use crate::{utilities::*, Node, NodeBehavior, NodeState};
 use generate_tools::{get_fn, set_fn};
 use message::{
-    iso_to_vec, Constraint, DNodeMessage, DNodeMessageQueue, NodeMessage, NodeMessageQueue,
+    iso_to_vec, Constraint, DNodeMessage, DNodeMessageQueue, NodeMessage, NodeMessageQueue, Pose,
     QuadraticProgramming,
 };
 use robot::{DRobot, DSeriseRobot, Robot, RobotType};
@@ -105,6 +107,7 @@ impl NodeBehavior for DCfs {
 
         let currect_state = DNodeMessage::Joint(q.clone());
         println!("{}: currect_pose: {:?}", self.name(), robot_read.end_pose());
+        println!("{}: currect_q: {:?}", self.name(), q);
 
         // 检查当前状态是否达到储存的目标状态.
         if let Some(target) = self.state.target.clone() {
@@ -182,6 +185,9 @@ impl NodeBehavior for DCfs {
                     } else {
                         na::DVector::from_vec(last_result[last_result.len() - ndof..].to_vec())
                     };
+
+                    // 在这里写一个测试，用于测试 求解器是否能迭代出一组合理的解
+                    // test_pose_constraint(ref_pose, &q_end_ref, &robot_read);
 
                     let func = |q: &na::DVector<f64>| iso_to_vec(robot_read.cul_end_pose(q));
 
@@ -262,4 +268,60 @@ impl NodeBehavior for DCfs {
     fn state(&mut self) -> NodeState {
         self.state.node_state
     }
+}
+
+fn test_pose_constraint(ref_pose: Pose, start_q: &na::DVector<f64>, robot: &DSeriseRobot) {
+    let mut last = Vec::new();
+    for _ in 0..6 {
+        let func = |q: &na::DVector<f64>| iso_to_vec(robot.cul_end_pose(q));
+
+        let (value, grad) = robot.cul_func(&start_q, &func);
+
+        println!("ref  : {}", iso_to_vec(ref_pose));
+        println!("value: {}", value);
+        println!("grad : {}", grad);
+        println!("start: {}", start_q);
+
+        let b_bar = iso_to_vec(ref_pose) - value + &grad * start_q;
+        let constraint = Constraint::Hyperplane(
+            grad.nrows(),
+            grad.ncols(),
+            grad.as_slice().to_vec(),
+            b_bar.as_slice().to_vec(),
+        );
+
+        let h = CscMatrix {
+            nrows: 7,
+            ncols: 7,
+            indptr: Cow::Owned(vec![0, 1, 2, 3, 4, 5, 6, 7]),
+            indices: Cow::Owned(vec![0, 1, 2, 3, 4, 5, 6]),
+            data: Cow::Owned(vec![1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]),
+        };
+        let diff = -1.0 * start_q;
+        let f = diff.as_slice();
+
+        let problem = QuadraticProgramming {
+            h: &h,
+            f: f,
+            constraints: constraint,
+        };
+
+        let mut osqp_solver = OsqpSolver::from_problem(problem);
+        let result = osqp_solver.solve();
+
+        if last.is_empty() {
+            last = result.clone();
+        } else {
+            let diff: f64 = result
+                .iter()
+                .zip(last.iter())
+                .map(|(a, b)| (a - b).abs())
+                .sum();
+            if diff.abs() < 1e-1 {
+                break;
+            }
+            last = result.clone();
+        }
+    }
+    println!("result: {:?}", last);
 }
