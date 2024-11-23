@@ -125,13 +125,14 @@ impl DRobot for DSeriseRobot {
             let alpha = dh[(i, 3)];
             let theta = q[i] + dh[(i, 0)];
 
+            let rotation = na::UnitQuaternion::from_axis_angle(&na::Vector3::x_axis(), alpha)
+                * na::UnitQuaternion::from_axis_angle(&na::Vector3::z_axis(), theta);
+
             let isometry_increment = na::Isometry3::from_parts(
-                na::Translation3::new(a * theta.cos(), a * theta.sin(), d),
-                na::UnitQuaternion::from_euler_angles(alpha, 0.0, theta),
+                na::Translation3::new(a, -d * alpha.sin(), d * alpha.cos()),
+                rotation,
             );
 
-            // Update the cumulative transformation matrix
-            // assert_eq!(isometry * isometry_increment, isometry_increment * isometry);
             isometry = isometry * isometry_increment;
         }
         isometry

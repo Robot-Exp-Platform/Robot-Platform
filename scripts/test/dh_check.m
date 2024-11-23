@@ -15,11 +15,6 @@ end
 M = diag([1,1,1,1])
 
 for i=1:7
-    disp
-    d = DH(i,2)
-    a = DH(i,3)
-    alpha = DH(i,4)
-    theta = DH(i,1)
 
     R=[cos(DH(i,1))              -sin(DH(i,1))               0;
        sin(DH(i,1))*cos(DH(i,4)) cos(DH(i,1))*cos(DH(i,4))  -sin(DH(i,4));
@@ -29,6 +24,8 @@ for i=1:7
         -DH(i,2)*sin(DH(i,4));
         DH(i,2)*cos(DH(i,4))];
 
-    M=M*[R T; zeros(1,3) 1];
+    Currect_M =[R T; zeros(1,3) 1]
+
+    M=M*Currect_M;
     M
 end

@@ -33,22 +33,19 @@ mod tests {
 
             println!("d: {}, a: {}, alpha: {}, theta: {}", d, a, alpha, theta);
 
-            let rot_z_theta =
-                na::UnitQuaternion::<f64>::from_axis_angle(&na::Vector3::z_axis(), theta);
-            let rot_x_alpha =
-                na::UnitQuaternion::<f64>::from_axis_angle(&na::Vector3::x_axis(), alpha);
-            let rotation = rot_z_theta * rot_x_alpha;
+            let rotation = na::UnitQuaternion::from_axis_angle(&na::Vector3::x_axis(), alpha)
+                * na::UnitQuaternion::from_axis_angle(&na::Vector3::z_axis(), theta);
 
-            // 计算平移向量
-            // 先沿 Z 轴移动 d，再沿 X 轴移动 a
-            let translation =
-                na::Translation3::new(0.0, 0.0, d) * na::Translation3::new(a, 0.0, 0.0);
+            let isometry_increment = na::Isometry3::from_parts(
+                na::Translation3::new(a, -d * alpha.sin(), d * alpha.cos()),
+                rotation,
+            );
 
             // 当前关节的变换
-            let current_transform = na::Isometry3::from_parts(translation, rotation);
-
-            transform *= current_transform;
-            println!("{}", transform.to_homogeneous());
+            let current_transform = isometry_increment;
+            println!("current_transform: {}", current_transform.to_homogeneous());
+            transform = current_transform * transform;
+            println!("transform: {}", transform.to_homogeneous());
         }
     }
 }
