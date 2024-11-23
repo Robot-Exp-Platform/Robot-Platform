@@ -200,7 +200,6 @@ impl NodeBehavior for DCfs {
                     );
 
                     constraints.push(end_constraint);
-                    println!("约束整理完成");
                 }
                 _ => panic!("Cfs: Unsupported message type"),
             }

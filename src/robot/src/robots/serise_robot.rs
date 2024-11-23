@@ -120,17 +120,19 @@ impl DRobot for DSeriseRobot {
         let dh = &self.params.dh;
         let mut isometry = self.state.base;
         for i in 0..self.params.nlink {
-            let isometry_increment = na::Isometry::from_parts(
-                na::Translation3::new(
-                    dh[(i, 2)],
-                    -dh[(i, 1)] * dh[(i, 3)].sin(),
-                    dh[(i, 1)] * dh[(i, 3)].cos(),
-                ),
-                na::UnitQuaternion::from_euler_angles(q[i], 0.0, dh[(i, 3)]),
+            let d = dh[(i, 1)];
+            let a = dh[(i, 2)];
+            let alpha = dh[(i, 3)];
+            let theta = q[i] + dh[(i, 0)];
+
+            let isometry_increment = na::Isometry3::from_parts(
+                na::Translation3::new(a * theta.cos(), a * theta.sin(), d),
+                na::UnitQuaternion::from_euler_angles(alpha, 0.0, theta),
             );
 
             // Update the cumulative transformation matrix
-            isometry *= isometry_increment;
+            // assert_eq!(isometry * isometry_increment, isometry_increment * isometry);
+            isometry = isometry * isometry_increment;
         }
         isometry
     }
@@ -142,13 +144,14 @@ impl DRobot for DSeriseRobot {
         let mut isometry = self.state.base;
 
         for i in 0..self.params.nlink {
-            let isometry_increment = na::Isometry::from_parts(
-                na::Translation3::new(
-                    dh[(i, 2)],
-                    -dh[(i, 1)] * dh[(i, 3)].sin(),
-                    dh[(i, 1)] * dh[(i, 3)].cos(),
-                ),
-                na::UnitQuaternion::from_euler_angles(q[i], 0.0, dh[(i, 3)]),
+            let d = dh[(i, 1)];
+            let a = dh[(i, 2)];
+            let alpha = dh[(i, 3)];
+            let theta = q[i] + dh[(i, 0)];
+
+            let isometry_increment = na::Isometry3::from_parts(
+                na::Translation3::new(a * theta.cos(), a * theta.sin(), d),
+                na::UnitQuaternion::from_euler_angles(alpha, 0.0, theta),
             );
 
             // Update the cumulative transformation matrix
@@ -223,19 +226,19 @@ impl<const N: usize> SRobot<N> for SSeriseRobot<N> {
     fn cul_end_pose(&self, q: &na::SVector<f64, N>) -> Pose {
         let dh = &self.params.dh;
         let mut isometry = self.state.base;
-        for i in 0..self.params.nlink {
-            let isometry_increment = na::Isometry::from_parts(
-                na::Translation3::new(
-                    dh[(i, 2)],
-                    -dh[(i, 1)] * dh[(i, 3)].sin(),
-                    dh[(i, 1)] * dh[(i, 3)].cos(),
-                ),
-                na::UnitQuaternion::from_euler_angles(q[i], 0.0, dh[(i, 3)]),
-            );
 
-            // Update the cumulative transformation matrix
+        for i in 0..self.params.nlink {
+            let translation = na::Translation3::new(
+                dh[(i, 2)],
+                -dh[(i, 1)] * dh[(i, 3)].sin(),
+                dh[(i, 1)] * dh[(i, 3)].cos(),
+            );
+            let rotation = na::UnitQuaternion::from_euler_angles(q[i], 0.0, dh[(i, 3)]);
+            let isometry_increment = na::Isometry::from_parts(translation, rotation);
+
             isometry *= isometry_increment;
         }
+
         isometry
     }
 

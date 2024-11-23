@@ -238,8 +238,8 @@ impl Constraint {
                 *nrows,
                 *ncols,
                 CscMatrix::from_column_iter_dense(*nrows, *ncols, t.clone()),
-                b.iter().map(|x| x - 0.1).collect(),
-                b.iter().map(|x| x + 0.1).collect(),
+                b.clone(),
+                b.clone(),
             ),
             Constraint::Rectangle(a, b) => {
                 let n = a.len();
@@ -419,8 +419,8 @@ impl Constraint {
                 *nrows,
                 *ncols,
                 na::DMatrix::from_column_slice(*nrows, *ncols, t.as_slice()),
-                na::DVector::from_vec(b.clone()) - na::DVector::from_element(*nrows, 0.1),
-                na::DVector::from_vec(b.clone()) + na::DVector::from_element(*nrows, 0.1),
+                na::DVector::from_vec(b.clone()) - na::DVector::from_element(*nrows, 0.01),
+                na::DVector::from_vec(b.clone()) + na::DVector::from_element(*nrows, 0.01),
             ),
             Constraint::Rectangle(a, b) => {
                 let n = a.len();
