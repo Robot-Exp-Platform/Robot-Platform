@@ -2,8 +2,7 @@ use nalgebra as na;
 use serde_json::Value;
 
 use crate::{
-    Cfs, CfsEndPose, DBullet, DImpedence, DImpedenceDiag, DPid, Interp, Node, ObstacleReleaser,
-    Position,
+    Cfs, DBullet, DImpedence, DImpedenceDiag, DPid, Interp, Node, ObstacleReleaser, Position,
 };
 
 pub fn create_node(
@@ -15,7 +14,6 @@ pub fn create_node(
     match node_type {
         "interp" => Box::new(Interp::from_json(name, params)),
         "cfs" => Box::new(Cfs::from_json(name, params)),
-        "cfs_end_pose" => Box::new(CfsEndPose::from_json(name, params)),
 
         "impedence" => Box::new(DImpedence::from_json(name, params)),
         "impedence_diag" => Box::new(DImpedenceDiag::from_json(name, params)),

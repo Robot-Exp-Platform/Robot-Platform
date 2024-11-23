@@ -155,16 +155,13 @@ impl NodeBehavior for DCfs {
 
                 // 如果有障碍物的话，增加碰撞约束
 
-                for (dis, grad) in collision_objects.iter().map(|collision| {
-                    (
-                        robot_read.cul_dis_to_collision(q_ref, collision),
-                        robot_read.cul_dis_grad_to_collision(q_ref, collision),
-                    )
-                }) {
+                for collision in &collision_objects {
+                    let func = |q: &na::DVector<f64>| robot_read.cul_dis_to_collision(q, collision);
+                    let (dis, grad) = robot_read.cul_func(q_ref, &func);
                     // 过程中对每个障碍物的碰撞约束与关节角约束
                     process_constraint += Constraint::Halfspace(
                         (-&grad).as_slice().to_vec(),
-                        dis - (&grad.transpose() * q_ref)[(0, 0)],
+                        (dis - (&grad * q_ref))[(0, 0)],
                     );
                 }
 
@@ -186,23 +183,18 @@ impl NodeBehavior for DCfs {
                         na::DVector::from_vec(last_result[last_result.len() - ndof..].to_vec())
                     };
 
-                    let grad = robot_read.cul_end_pose_grad(&q_end_ref);
-                    for i in 2..5 {
-                        let grad = grad.row(i).clone_owned();
-                        println!("{}: ref_pose: {:?}", self.name(), iso_to_vec(ref_pose),);
-                        println!(
-                            "{}: end_pose: {:?}",
-                            self.name(),
-                            iso_to_vec(robot_read.cul_end_pose(&q_end_ref))
-                        );
-                        println!("{}: grad   : {:?}", self.name(), grad);
-                        end_constraint += Constraint::Hyperplane(
-                            grad.as_slice().to_vec(),
-                            iso_to_vec(ref_pose)[i]
-                                - iso_to_vec(robot_read.cul_end_pose(&q_end_ref))[i]
-                                + (grad * &q_end_ref)[(0, 0)],
-                        );
-                    }
+                    let func = |q: &na::DVector<f64>| iso_to_vec(robot_read.cul_end_pose(q));
+
+                    let (value, grad) = robot_read.cul_func(&q_end_ref, &func);
+                    // let grad = robot_read.cul_end_pose_grad(&q_end_ref);
+                    let b_bar = iso_to_vec(ref_pose) - value + &grad * q_end_ref;
+                    end_constraint += Constraint::Hyperplane(
+                        grad.nrows(),
+                        grad.ncols(),
+                        grad.as_slice().to_vec(),
+                        b_bar.as_slice().to_vec(),
+                    );
+
                     constraints.push(end_constraint);
                     println!("约束整理完成");
                 }

@@ -57,14 +57,15 @@ pub trait DRobot: Robot<na::DVector<f64>> {
 
     // culculate functions
     fn cul_end_pose(&self, q: &na::DVector<f64>) -> Pose;
-    fn cul_end_pose_grad(&self, q: &na::DVector<f64>) -> na::DMatrix<f64>;
     fn cul_capsules(&self, q: &na::DVector<f64>) -> Vec<Capsule>;
-    fn cul_dis_to_collision(&self, q: &na::DVector<f64>, obj: &CollisionObject) -> f64;
-    fn cul_dis_grad_to_collision(
+    fn cul_dis_to_collision(&self, q: &na::DVector<f64>, obj: &CollisionObject)
+        -> na::DVector<f64>;
+
+    fn cul_func(
         &self,
         q: &na::DVector<f64>,
-        obj: &CollisionObject,
-    ) -> na::DVector<f64>;
+        func: &dyn Fn(&na::DVector<f64>) -> na::DVector<f64>,
+    ) -> (na::DVector<f64>, na::DMatrix<f64>);
 
     fn reset(&mut self);
 }
