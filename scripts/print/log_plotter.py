@@ -32,7 +32,6 @@ class LogPlotter:
 
         ax.set_xlabel("Time")
         ax.set_ylabel("Values")
-        ax.set_title("Node Data Over Time")
         ax.get_legend()
         # ax.set_xticks(rotation=45)
 
@@ -81,5 +80,4 @@ class LogPlotter:
         ax.set_ylabel("Node Usage")
         # ax.set_xticks(rotation=45)
         ax.set_yticks(range(len(nodes)), nodes)
-        ax.set_title("Node Usage Over Time")
         ax.set_ylim(-0.2, None)
