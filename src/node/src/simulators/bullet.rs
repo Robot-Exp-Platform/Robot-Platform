@@ -4,8 +4,6 @@ use serde::Deserialize;
 use serde_json::{from_value, Value};
 // use serde_yaml::Value;
 use crossbeam::queue::SegQueue;
-use std::fs;
-use std::io::{BufWriter, Write};
 use std::process::Command;
 #[cfg(feature = "rszmq")]
 use std::sync::Mutex;
@@ -18,8 +16,6 @@ use zmq;
 use crate::{Node, NodeBehavior, NodeState};
 use generate_tools::*;
 use message::RobotState;
-#[cfg(feature = "recode")]
-use recoder::*;
 use sensor::Sensor;
 
 // bullet 结构体声明，包含其名称，路径，消息节点，以及机器人
@@ -36,7 +32,7 @@ pub struct Bullet<R> {
     /// The robot that the simulator is controlling.
     robot: Vec<Arc<RwLock<R>>>,
     /// The sensor that the simulator is using.
-    sensor: Option<Arc<RwLock<Sensor>>>,
+    sensor: Vec<Arc<RwLock<Sensor>>>,
 }
 
 pub type DBullet = Bullet<DSeriseRobot>;
@@ -55,7 +51,6 @@ pub struct BulletParams {
 
 // 消息节点结构体声明，随条件编译的不同而不同，条件编译将决定其使用什么通讯方式
 struct BulletNode {
-    recoder: Option<BufWriter<fs::File>>,
     #[cfg(feature = "rszmq")]
     responder: Arc<Mutex<zmq::Socket>>,
 }
@@ -85,14 +80,13 @@ impl DBullet {
             },
             params,
             node: BulletNode {
-                recoder: None,
                 #[cfg(feature = "rszmq")]
                 responder: Arc::new(Mutex::new(responder)),
                 #[cfg(feature = "ros")]
                 sub_list: Vec::new(),
             },
             robot: Vec::new(),
-            sensor: None,
+            sensor: Vec::new(),
         }
     }
 }
@@ -112,7 +106,7 @@ impl Node<na::DVector<f64>> for DBullet {
         }
     }
     fn set_sensor(&mut self, sensor: Arc<RwLock<Sensor>>) {
-        self.sensor = Some(sensor);
+        self.sensor.push(sensor);
     }
     fn set_params(&mut self, params: Value) {
         self.params = from_value(params).unwrap();
@@ -175,8 +169,20 @@ impl NodeBehavior for DBullet {
             let command = robot_read.control_message();
             commands.push(command);
         }
+
+        let mut collections_info = Vec::new();
+        for sensor in self.sensor.iter() {
+            let sensor_read = sensor.read().unwrap();
+            let mut collection = sensor_read.collision();
+            collections_info.append(&mut collection);
+        }
+
         // 整理控制指令为字符串
-        let command = serde_json::to_string(&commands).unwrap();
+        let reply = format!(
+            "{{\"command\": {}, \"obstacles\": {}}}",
+            serde_json::to_string(&commands).unwrap(),
+            serde_json::to_string(&collections_info).unwrap()
+        );
         #[cfg(feature = "rszmq")]
         {
             // 获取 responder 并接受 RobotState 消息
@@ -188,7 +194,7 @@ impl NodeBehavior for DBullet {
             let robot_state: Vec<RobotState> = serde_json::from_str(message.as_str()).unwrap();
 
             // 及时返回控制指令
-            let reply = serde_json::to_string(&(command)).unwrap();
+
             responder.send(&reply, 0).expect("Failed to send reply");
 
             // 处理消息，将消息中的状态信息写入到机器人状态中
@@ -226,36 +232,6 @@ impl NodeBehavior for DBullet {
             self.state.node_state = NodeState::RelyRelease;
         } else {
             self.state.node_state = NodeState::Running;
-        }
-    }
-
-    fn start(&mut self) {
-        #[cfg(feature = "recode")]
-        {
-            fs::create_dir_all(format!(
-                "./data/{}/{}/{}",
-                *EXP_NAME,
-                *TASK_NAME.lock().unwrap(),
-                self.robot.read().unwrap().get_name()
-            ))
-            .unwrap();
-            let file = fs::OpenOptions::new()
-                .append(true)
-                .create(true)
-                .open(format!(
-                    "data/{}/{}/{}/bullet.txt",
-                    *EXP_NAME,
-                    *TASK_NAME.lock().unwrap(),
-                    self.robot.read().unwrap().get_name(),
-                ))
-                .unwrap();
-            self.node.recoder = Some(BufWriter::new(file));
-        }
-    }
-
-    fn finalize(&mut self) {
-        if let Some(ref mut recoder) = self.node.recoder {
-            recoder.flush().unwrap();
         }
     }
 

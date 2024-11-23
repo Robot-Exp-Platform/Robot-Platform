@@ -1,4 +1,0 @@
-{
-  "robot_config": { "name": "panda_1", "robot_type": "panda", "controller": "pid", "planner": "cfs", "simulator": "bullet" },
-  "sensor_config": [{ "name": "obstacle_releaser_1", "sensor_type": "obstacle_releaser" }]
-}

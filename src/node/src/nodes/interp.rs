@@ -3,8 +3,6 @@ use serde::Deserialize;
 use serde_json::{from_value, Value};
 use tracing::info;
 // use serde_yaml::{from_value, Value};
-use std::fs;
-use std::io::{BufWriter, Write};
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
 
@@ -49,7 +47,6 @@ pub struct InterpParams {
 
 #[derive(Default)]
 pub struct InterpNode<V> {
-    recoder: Option<BufWriter<fs::File>>,
     input_queue: DNodeMessageQueue,
     output_queue: NodeMessageQueue<V>,
 }
@@ -118,57 +115,17 @@ impl NodeBehavior for DInterp {
 
         let track_list = match target {
             DNodeMessage::Joint(joint) => {
-                info!(node = self.node_name().as_str(), input = ?joint.as_slice());
                 interp_fn(&(0.3 * &q + 0.7 * &joint), &vec![joint], self.params.ninter)
             }
             DNodeMessage::JointList(joint_list) => interp_fn(&q, &joint_list, self.params.ninter),
             _ => return,
         };
-
-        // 记录 track
-        #[cfg(feature = "recode")]
-        if let Some(ref mut recoder) = self.node.recoder {
-            for track in track_list.iter() {
-                recode!(recoder, track);
-            }
-        }
-
         // 将 track_list 中的轨迹放入 track_queue 中
-        while let Some(_) = self.node.output_queue.pop() {}
+        while self.node.output_queue.pop().is_some() {}
         for track in track_list {
             let control_message = DNodeMessage::Joint(track);
 
             self.node.output_queue.push(control_message);
-        }
-    }
-
-    fn start(&mut self) {
-        #[cfg(feature = "recode")]
-        {
-            fs::create_dir_all(format!(
-                "./data/{}/{}/{}",
-                *EXP_NAME,
-                *TASK_NAME.lock().unwrap(),
-                self.robot.read().unwrap().get_name()
-            ))
-            .unwrap();
-            let file = fs::OpenOptions::new()
-                .append(true)
-                .create(true)
-                .open(format!(
-                    "./data/{}/{}/{}/linear.txt",
-                    *EXP_NAME,
-                    *TASK_NAME.lock().unwrap(),
-                    self.robot.read().unwrap().get_name(),
-                ))
-                .unwrap();
-            self.node.recoder = Some(BufWriter::new(file));
-        }
-    }
-
-    fn finalize(&mut self) {
-        if let Some(ref mut recoder) = self.node.recoder {
-            recoder.flush().unwrap();
         }
     }
 

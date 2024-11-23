@@ -2,7 +2,7 @@ use nalgebra as na;
 use osqp::CscMatrix;
 use std::{
     borrow::Cow,
-    ops::{Add, Mul},
+    ops::{Add, AddAssign, Mul, MulAssign},
 };
 
 #[derive(Debug, Default, Clone)]
@@ -11,15 +11,15 @@ pub enum Constraint {
     NoConstraint, // 无约束
     Zero, // 零约束：x = 0
 
-    Equared(Vec<f64>),             // 等式约束：x = b
-    AffineSpace,                   // 仿射空间约束：Ax = b
-    EpigraphSquaredNorm(f64),      // 二次范数上确界约束：||x||^2 <= b
-    FiniteSet(Vec<Vec<f64>>),      // 有限集约束：x in {x1, x2, ..., xn}
-    Halfspace(Vec<f64>, f64),      // 半空间约束：ax <= b
-    Hyperplane(Vec<f64>, f64),     // 超平面约束：ax = b
-    Rectangle(Vec<f64>, Vec<f64>), // 矩形约束：a <= x <= b
-    Simplex,                       // 单纯形约束：x in Δ
-    SecondOrderCone,               // 二阶锥约束
+    Equared(Vec<f64>),                            // 等式约束：x = b
+    AffineSpace,                                  // 仿射空间约束：Ax = b
+    EpigraphSquaredNorm(f64),                     // 二次范数上确界约束：||x||^2 <= b
+    FiniteSet(Vec<Vec<f64>>),                     // 有限集约束：x in {x1, x2, ..., xn}
+    Halfspace(Vec<f64>, f64),                     // 半空间约束：ax <= b
+    Hyperplane(usize, usize, Vec<f64>, Vec<f64>), // 超平面约束：ax = b
+    Rectangle(Vec<f64>, Vec<f64>),                // 矩形约束：a <= x <= b
+    Simplex,                                      // 单纯形约束：x in Δ
+    SecondOrderCone,                              // 二阶锥约束
 
     Intersection(usize, usize, Vec<Constraint>), // 交集约束
     Union(usize, usize, Vec<Constraint>),        // 并集约束
@@ -33,7 +33,7 @@ impl Constraint {
             Constraint::Zero => 1,
             Constraint::Equared(b) => b.len(),
             Constraint::Halfspace(_, _) => 1,
-            Constraint::Hyperplane(_, _) => 1,
+            Constraint::Hyperplane(nrows, _, _, _) => *nrows,
             Constraint::Rectangle(a, _) => a.len(),
 
             Constraint::CartesianProduct(nrows, _, _) => *nrows,
@@ -49,7 +49,7 @@ impl Constraint {
             Constraint::Zero => 1,
             Constraint::Equared(b) => b.len(),
             Constraint::Halfspace(a, _) => a.len(),
-            Constraint::Hyperplane(a, _) => a.len(),
+            Constraint::Hyperplane(_, ncols, _, _) => *ncols,
             Constraint::Rectangle(a, _) => a.len(),
 
             Constraint::CartesianProduct(_, ncols, _) => *ncols,
@@ -93,7 +93,9 @@ impl Constraint {
             Constraint::Halfspace(a, b) => {
                 (1, a.len(), a.clone(), vec![f64::NEG_INFINITY], vec![*b])
             }
-            Constraint::Hyperplane(a, b) => (1, a.len(), a.clone(), vec![*b], vec![*b]),
+            Constraint::Hyperplane(nrows, ncols, t, b) => {
+                (*nrows, *ncols, t.clone(), b.clone(), b.clone())
+            }
             Constraint::Rectangle(a, b) => {
                 let n = a.len();
                 let mut t = vec![0.0; n * n];
@@ -232,22 +234,13 @@ impl Constraint {
                     vec![*b],
                 )
             }
-            Constraint::Hyperplane(a, b) => {
-                let n = a.len();
-                (
-                    1,
-                    n,
-                    CscMatrix {
-                        nrows: 1,
-                        ncols: n,
-                        indptr: Cow::Owned((0..=n).collect()),
-                        indices: Cow::Owned(vec![0; n]),
-                        data: Cow::Owned(a.clone()),
-                    },
-                    vec![*b],
-                    vec![*b],
-                )
-            }
+            Constraint::Hyperplane(nrows, ncols, t, b) => (
+                *nrows,
+                *ncols,
+                CscMatrix::from_column_iter_dense(*nrows, *ncols, t.clone()),
+                b.clone(),
+                b.clone(),
+            ),
             Constraint::Rectangle(a, b) => {
                 let n = a.len();
                 let mut indptr = Vec::with_capacity(n + 1);
@@ -374,6 +367,7 @@ impl Constraint {
             _ => unimplemented!(),
         }
     }
+
     pub fn to_namatrix(
         &self,
     ) -> (
@@ -421,12 +415,12 @@ impl Constraint {
                 na::DVector::from_element(1, f64::NEG_INFINITY),
                 na::DVector::from_element(1, *b),
             ),
-            Constraint::Hyperplane(a, b) => (
-                1,
-                a.len(),
-                na::DMatrix::from_row_slice(1, a.len(), a),
-                na::DVector::from_element(1, *b),
-                na::DVector::from_element(1, *b),
+            Constraint::Hyperplane(nrows, ncols, t, b) => (
+                *nrows,
+                *ncols,
+                na::DMatrix::from_column_slice(*nrows, *ncols, t.as_slice()),
+                na::DVector::from_vec(b.clone()) - na::DVector::from_element(*nrows, 0.01),
+                na::DVector::from_vec(b.clone()) + na::DVector::from_element(*nrows, 0.01),
             ),
             Constraint::Rectangle(a, b) => {
                 let n = a.len();
@@ -504,6 +498,13 @@ impl Add for Constraint {
     }
 }
 
+impl AddAssign for Constraint {
+    fn add_assign(&mut self, rhs: Constraint) {
+        assert_eq!(self.ncols(), rhs.ncols());
+        *self = self.clone() + rhs;
+    }
+}
+
 impl Mul<Constraint> for Constraint {
     type Output = Constraint;
 
@@ -513,5 +514,11 @@ impl Mul<Constraint> for Constraint {
             self.ncols() + rhs.ncols(),
             vec![self, rhs],
         )
+    }
+}
+
+impl MulAssign for Constraint {
+    fn mul_assign(&mut self, rhs: Constraint) {
+        *self = self.clone() * rhs;
     }
 }

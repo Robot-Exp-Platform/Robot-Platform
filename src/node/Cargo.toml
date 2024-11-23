@@ -23,8 +23,6 @@ sensor.workspace = true
 solver.workspace = true
 
 [features]
-default = ["rszmq", "recode_debug"]
+default = ["rszmq"]
 rszmq = ["zmq"]
-recode = []
-recode_debug = []
 ros = []

@@ -12,3 +12,4 @@ nalgebra.workspace = true
 
 
 message.workspace = true
+generate_tools.workspace = true

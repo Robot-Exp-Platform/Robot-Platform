@@ -1,9 +1,9 @@
-use message::{get_distance, iso_to_vec, NodeMessage, Pose};
 use nalgebra as na;
 
 use crate::{DRobot, Robot, SRobot};
 use generate_tools::{get_fn, set_fn};
 use message::{Capsule, CollisionObject};
+use message::{NodeMessage, Pose};
 
 pub struct SeriseRobot<V>
 where
@@ -104,7 +104,7 @@ impl DRobot for DSeriseRobot {
         self.cul_capsules(&self.state.q)
     }
     fn dis_to_collision(&self, obj: &CollisionObject) -> f64 {
-        self.cul_dis_to_collision(&self.state.q, obj)
+        self.cul_dis_to_collision(&self.state.q, obj)[0]
     }
 
     /// 重置机器人状态，包括将位置设置为默认值以及将运动归零
@@ -120,36 +120,22 @@ impl DRobot for DSeriseRobot {
         let dh = &self.params.dh;
         let mut isometry = self.state.base;
         for i in 0..self.params.nlink {
-            let isometry_increment = na::Isometry::from_parts(
-                na::Translation3::new(
-                    dh[(i, 2)],
-                    -dh[(i, 1)] * dh[(i, 3)].sin(),
-                    dh[(i, 1)] * dh[(i, 3)].cos(),
-                ),
-                na::UnitQuaternion::from_euler_angles(q[i], 0.0, dh[(i, 3)]),
+            let d = dh[(i, 1)];
+            let a = dh[(i, 2)];
+            let alpha = dh[(i, 3)];
+            let theta = q[i] + dh[(i, 0)];
+
+            let rotation = na::UnitQuaternion::from_axis_angle(&na::Vector3::x_axis(), alpha)
+                * na::UnitQuaternion::from_axis_angle(&na::Vector3::z_axis(), theta);
+
+            let isometry_increment = na::Isometry3::from_parts(
+                na::Translation3::new(a, -d * alpha.sin(), d * alpha.cos()),
+                rotation,
             );
 
-            // Update the cumulative transformation matrix
-            isometry *= isometry_increment;
+            isometry = isometry * isometry_increment;
         }
         isometry
-    }
-
-    /// 给定机器人的广义变脸，计算末端执行器位姿转化为六维梯度
-    /// TODO 目前梯度为数值梯度，后续需要改为解析梯度
-    fn cul_end_pose_grad(&self, q: &na::DVector<f64>) -> na::DMatrix<f64> {
-        let mut grad = na::DMatrix::zeros(6, self.params.nlink);
-        let epsilon = 1e-3;
-        for i in 0..self.params.nlink {
-            let mut q_plus = q.clone();
-            q_plus[i] += epsilon;
-            let mut q_minus = q.clone();
-            q_minus[i] -= epsilon;
-            let pose_plus = self.cul_end_pose(&q_plus);
-            let pose_minus = self.cul_end_pose(&q_minus);
-            grad.set_column(i, &(iso_to_vec(pose_plus / pose_minus) / (2.0 * epsilon)));
-        }
-        grad
     }
 
     /// 给定机器人的广义变量，计算机器人对应的所有胶囊体，这里需要留意的是，此时的胶囊体不包括末端执行器以及所夹取的物体。
@@ -159,27 +145,23 @@ impl DRobot for DSeriseRobot {
         let mut isometry = self.state.base;
 
         for i in 0..self.params.nlink {
-            let isometry_increment = na::Isometry::from_parts(
-                na::Translation3::new(
-                    dh[(i, 2)],
-                    -dh[(i, 1)] * dh[(i, 3)].sin(),
-                    dh[(i, 1)] * dh[(i, 3)].cos(),
-                ),
-                na::UnitQuaternion::from_euler_angles(q[i], 0.0, dh[(i, 3)]),
+            let d = dh[(i, 1)];
+            let a = dh[(i, 2)];
+            let alpha = dh[(i, 3)];
+            let theta = q[i] + dh[(i, 0)];
+
+            let isometry_increment = na::Isometry3::from_parts(
+                na::Translation3::new(a * theta.cos(), a * theta.sin(), d),
+                na::UnitQuaternion::from_euler_angles(alpha, 0.0, theta),
             );
 
             // Update the cumulative transformation matrix
             isometry *= isometry_increment;
 
-            // Calculate the positions of the capsule's end points in the global frame
-            let capsule_start = isometry * self.params.capsules[i].ball_center1;
-            let capsule_end = isometry * self.params.capsules[i].ball_center2;
-
             // Create a new Capsule object and add it to the vector
             capsules.push(Capsule {
-                ball_center1: capsule_start,
-                ball_center2: capsule_end,
-                radius: self.params.capsules[i].radius,
+                pose: isometry,
+                ..self.params.capsules[i]
             });
         }
         capsules
@@ -190,33 +172,35 @@ impl DRobot for DSeriseRobot {
         &self,
         q: &nalgebra::DVector<f64>,
         obj: &message::CollisionObject,
-    ) -> f64 {
+    ) -> na::DVector<f64> {
         let capsules = self.cul_capsules(q);
-        capsules
+        let dis = capsules
             .iter()
-            .map(|&c| get_distance(&CollisionObject::Capsule(c), obj))
+            .map(|&c| CollisionObject::get_distance(&CollisionObject::Capsule(c), obj))
             .min_by(|a, b| a.partial_cmp(b).unwrap())
-            .unwrap()
+            .unwrap();
+        na::DVector::from_element(1, dis)
     }
 
-    /// 给定机器人的广义变量，计算机器人到碰撞体的最小距概的梯度
-    fn cul_dis_grad_to_collision(
+    /// 给任意函数的梯度
+    fn cul_func(
         &self,
-        q: &nalgebra::DVector<f64>,
-        obj: &message::CollisionObject,
-    ) -> nalgebra::DVector<f64> {
-        let mut dis_grad = na::DVector::zeros(self.params.nlink);
+        q: &na::DVector<f64>,
+        func: &dyn Fn(&na::DVector<f64>) -> nalgebra::DVector<f64>,
+    ) -> (na::DVector<f64>, na::DMatrix<f64>) {
+        let value = func(q);
+        let mut grad = na::DMatrix::zeros(value.len(), q.len());
         let epsilon = 1e-3;
-        for i in 0..self.params.nlink {
+        for i in 0..q.len() {
             let mut q_plus = q.clone();
             q_plus[i] += epsilon;
             let mut q_minus = q.clone();
             q_minus[i] -= epsilon;
-            let dis_plus = self.cul_dis_to_collision(&q_plus, obj);
-            let dis_minus = self.cul_dis_to_collision(&q_minus, obj);
-            dis_grad[i] = (dis_plus - dis_minus) / (2.0 * epsilon);
+            let value_plus = func(&q_plus);
+            let value_minus = func(&q_minus);
+            grad.set_column(i, &((value_plus - value_minus) / (2.0 * epsilon)));
         }
-        dis_grad
+        (value, grad)
     }
 }
 
@@ -243,19 +227,19 @@ impl<const N: usize> SRobot<N> for SSeriseRobot<N> {
     fn cul_end_pose(&self, q: &na::SVector<f64, N>) -> Pose {
         let dh = &self.params.dh;
         let mut isometry = self.state.base;
-        for i in 0..self.params.nlink {
-            let isometry_increment = na::Isometry::from_parts(
-                na::Translation3::new(
-                    dh[(i, 2)],
-                    -dh[(i, 1)] * dh[(i, 3)].sin(),
-                    dh[(i, 1)] * dh[(i, 3)].cos(),
-                ),
-                na::UnitQuaternion::from_euler_angles(q[i], 0.0, dh[(i, 3)]),
-            );
 
-            // Update the cumulative transformation matrix
+        for i in 0..self.params.nlink {
+            let translation = na::Translation3::new(
+                dh[(i, 2)],
+                -dh[(i, 1)] * dh[(i, 3)].sin(),
+                dh[(i, 1)] * dh[(i, 3)].cos(),
+            );
+            let rotation = na::UnitQuaternion::from_euler_angles(q[i], 0.0, dh[(i, 3)]);
+            let isometry_increment = na::Isometry::from_parts(translation, rotation);
+
             isometry *= isometry_increment;
         }
+
         isometry
     }
 
@@ -278,15 +262,10 @@ impl<const N: usize> SRobot<N> for SSeriseRobot<N> {
             // Update the cumulative transformation matrix
             isometry *= isometry_increment;
 
-            // Calculate the positions of the capsule's end points in the global frame
-            let capsule_start = isometry * self.params.capsules[i].ball_center1;
-            let capsule_end = isometry * self.params.capsules[i].ball_center2;
-
             // Create a new Capsule object and add it to the vector
             capsules.push(Capsule {
-                ball_center1: capsule_start,
-                ball_center2: capsule_end,
-                radius: self.params.capsules[i].radius,
+                pose: isometry,
+                ..capsules[i]
             });
         }
         capsules
@@ -301,7 +280,7 @@ impl<const N: usize> SRobot<N> for SSeriseRobot<N> {
         let capsules = self.cul_capsules(q);
         capsules
             .iter()
-            .map(|&c| get_distance(&CollisionObject::Capsule(c), obj))
+            .map(|&c| CollisionObject::get_distance(&CollisionObject::Capsule(c), obj))
             .min_by(|a, b| a.partial_cmp(b).unwrap())
             .unwrap()
     }

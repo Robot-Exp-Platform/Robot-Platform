@@ -1,3 +1,3 @@
-mod obstacle_releaser;
+mod obstacle_list;
 
-pub use obstacle_releaser::ObstacleReleaser;
+pub use obstacle_list::ObstacleList;

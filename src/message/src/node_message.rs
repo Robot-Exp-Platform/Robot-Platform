@@ -11,6 +11,7 @@ pub enum NodeMessage<V> {
     #[default]
     NoneNodeMessage,
     Pose(Pose),
+    Transform(usize, Pose, Pose),
     Joint(V),
     JointList(Vec<V>),
     JointWithPeriod(f64, V),

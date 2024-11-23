@@ -1,7 +1,13 @@
 {
   "robots": [
-    { "name": "panda_1", "robot_type": "panda", "base_pose": { "rotation": [0.0, 0.0, 0.0, 1.0], "translation": [0.0, 0.0, 0.0] } },
-    { "name": "panda_2", "robot_type": "panda", "base_pose": { "rotation": [0.0, 0.0, 0.0, 1.0], "translation": [0.0, 1.0, 0.0] } }
+    { "name": "panda_1", "robot_type": "panda", "base_pose": { "rotation": [1.0, 0.0, 0.0, 0.0], "translation": [0.0, 0.0, 0.0] } },
+    { "name": "panda_2", "robot_type": "panda", "base_pose": { "rotation": [1.0, 0.0, 0.0, 0.0], "translation": [0.0, 1.0, 0.0] } }
   ],
-  "sensors": [{ "name": "obstacle_releaser_1", "sensor_type": "obstacle_releaser" }]
+  "sensors": [
+    {
+      "name": "obstacle_list_1",
+      "sensor_type": "obstacle_list",
+      "params": [{ "Sphere": { "id": 1, "pose": { "rotation": [1, 0, 0, 0], "translation": [0, 0, 0] }, "params": 0.1 } }]
+    }
+  ]
 }

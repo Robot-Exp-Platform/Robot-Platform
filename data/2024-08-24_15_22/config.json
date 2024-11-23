@@ -1,4 +1,0 @@
-{
-  "robot_config": { "name": "panda_1", "robot_type": "panda", "controller": "pid", "planner": "linear", "simulator": "bullet" },
-  "sensor_config": []
-}

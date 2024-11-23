@@ -1,29 +1,29 @@
 use serde_json::Value;
 
-use crate::ObstacleReleaser;
+use crate::ObstacleList;
 use message::CollisionObject;
 
 pub enum Sensor {
-    ObstacleReleaser(ObstacleReleaser),
+    ObstacleList(ObstacleList),
 }
 
 impl Sensor {
     pub fn name(&self) -> &String {
         match self {
-            Sensor::ObstacleReleaser(obstacle_releaser) => &obstacle_releaser.name,
+            Sensor::ObstacleList(obstacle_list) => &obstacle_list.name,
         }
     }
 
     pub fn collision(&self) -> Vec<CollisionObject> {
         match self {
-            Sensor::ObstacleReleaser(obstacle_releaser) => obstacle_releaser.get_collision(),
+            Sensor::ObstacleList(obstacle_list) => obstacle_list.obstacle.clone(),
         }
     }
 
     pub fn params(&mut self, params: Value) {
         match self {
-            Sensor::ObstacleReleaser(obstacle_releaser) => {
-                obstacle_releaser.set_params(params);
+            Sensor::ObstacleList(obstacle_list) => {
+                obstacle_list.set_params(params);
             }
         }
     }

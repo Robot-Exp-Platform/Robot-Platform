@@ -47,9 +47,10 @@ pub trait NodeBehavior: Send + Sync {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub enum NodeState {
     Init,
+    #[default]
     Running,
     RelyRelease,
     Finished,

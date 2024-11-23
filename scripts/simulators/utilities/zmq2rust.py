@@ -20,7 +20,7 @@ class ZmqReq:
         message = json.dumps(state)
         self.socket.send_string(message)
 
-    def receive_command(self):
+    def receive(self):
         # 等待接收回复
         message = self.socket.recv_string()
         # 反序列化为 Python 字典

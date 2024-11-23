@@ -6,10 +6,10 @@ use tracing::info;
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
 
-use crate::{utilities::*, Node, NodeBehavior};
+use crate::{utilities::*, Node, NodeBehavior, NodeState};
 use generate_tools::{get_fn, set_fn};
 use message::{
-    Constraint, DNodeMessage, DNodeMessageQueue, NodeMessage, NodeMessageQueue,
+    iso_to_vec, Constraint, DNodeMessage, DNodeMessageQueue, NodeMessage, NodeMessageQueue,
     QuadraticProgramming,
 };
 use robot::{DRobot, DSeriseRobot, Robot, RobotType};
@@ -37,6 +37,7 @@ pub type SCfs<R, const N: usize> = Cfs<R, na::SVector<f64, N>>;
 #[derive(Default)]
 pub struct CfsState<V> {
     target: Option<NodeMessage<V>>,
+    node_state: NodeState,
 }
 
 #[derive(Deserialize, Default)]
@@ -103,87 +104,117 @@ impl NodeBehavior for DCfs {
         let q_max_bound = robot_read.q_max_bound().as_slice().to_vec();
 
         let currect_state = DNodeMessage::Joint(q.clone());
-        println!("cfs: currect_pose: {:?}", robot_read.end_pose());
+        println!("{}: currect_pose: {:?}", self.name(), robot_read.end_pose());
+        println!("{}: currect_q: {:?}", self.name(), q);
 
+        // 检查当前状态是否达到储存的目标状态.
         if let Some(target) = self.state.target.clone() {
-            info!(node = self.name.as_str(), input = ?target.as_slice());
-
             if (target / currect_state).abs() < 1e-2 {
-                self.state.target = Some(self.node.input_queue.pop().unwrap());
+                self.state.target = None
             }
-        } else {
-            self.state.target = Some(self.node.input_queue.pop().unwrap());
         }
 
-        // 获取 target，并辨析其内涵
-        let target = match self.state.target.clone().unwrap() {
-            // 根据不同的 target 类型，执行不同的任务，也可以将不同的 Target 类型处理为相同的类型
-            DNodeMessage::Joint(joint) => joint,
-            _ => unimplemented!("CFS planner does not support target of type."),
+        // 获取 target, 如果两侧都没有消息那就说明任务完成了，皆大欢喜
+        // 这里的策略是完成当前任务优先
+        let target = self
+            .state
+            .target
+            .clone()
+            .or_else(|| self.node.input_queue.pop());
+        if target.is_none() {
+            self.state.node_state = NodeState::Finished;
+            return;
+        }
+        let target = target.unwrap();
+        info!(node = self.name.as_str(), input = ?target.as_slice());
+
+        // 准备
+        let q_ref_list = match &target {
+            NodeMessage::Joint(q_target) => lerp(&q, &vec![q_target.clone()], self.params.ninterp),
+            NodeMessage::Pose(_) => lerp(&q, &vec![q.clone()], self.params.ninterp),
+            _ => panic!("Cfs: Unsupported message type"),
         };
-        // println!("{} get target: {:?}", self.name, target);
-
-        // 执行CFS逻辑
-        let q_ref_list = lerp(&q, &vec![target.clone()], self.params.ninterp);
         let collision_objects = self.sensor.as_ref().unwrap().read().unwrap().collision();
-        let mut solver_result = Vec::new();
-        // TODO 检验参考轨迹是否安全可靠,取不可靠段做重规划
-        // TODO 理论上最新轨迹应该为被重新规划的段落
         let mut last_result = Vec::new();
-
-        // 初始化二次规划的目标函数矩阵
-        // 矩阵待修改，实际上为q1 为对角矩阵，q2 为离散拉普拉斯算子， q3 为
-
         let dim = (self.params.ninterp + 2) * ndof;
 
-        let h = get_optimize_function(dim, ndof, self.params.cost_weight.clone());
-        let f = na::DVector::<f64>::zeros(dim);
-
-        // f 无所谓
-
         for _ in 0..self.params.niter {
+            // =======  建立约束  =======
+
             // 提前分配空间
             let mut constraints =
                 Constraint::CartesianProduct(0, 0, Vec::with_capacity(self.params.ninterp + 1));
 
-            // 生成约束 包括三部分，起点终点约束、障碍物约束、关节边界约束
-
             // 起点位置的约束，这是绝对约束
             constraints.push(Constraint::Equared(q.as_slice().to_vec()));
 
+            // 中间过程中的约束
             for q_ref in q_ref_list.iter() {
-                let mut obstacle_constraint =
-                    Constraint::Intersection(0, ndof, Vec::with_capacity(collision_objects.len()));
+                // 边界约束
+                let mut process_constraint =
+                    Constraint::Rectangle(q_min_bound.clone(), q_max_bound.clone());
 
-                for (dis, grad) in collision_objects.iter().map(|collision| {
-                    (
-                        robot_read.cul_dis_to_collision(q_ref, collision),
-                        robot_read.cul_dis_grad_to_collision(q_ref, collision),
-                    )
-                }) {
+                // 如果有障碍物的话，增加碰撞约束
+
+                for collision in &collision_objects {
+                    let func = |q: &na::DVector<f64>| robot_read.cul_dis_to_collision(q, collision);
+                    let (dis, grad) = robot_read.cul_func(q_ref, &func);
                     // 过程中对每个障碍物的碰撞约束与关节角约束
-                    obstacle_constraint.push(
-                        Constraint::Halfspace(
-                            (-&grad).as_slice().to_vec(),
-                            dis - (&grad.transpose() * q_ref)[(0, 0)],
-                        ) + Constraint::Rectangle(q_min_bound.clone(), q_max_bound.clone()),
+                    process_constraint += Constraint::Halfspace(
+                        (-&grad).as_slice().to_vec(),
+                        (dis - (&grad * q_ref))[(0, 0)],
                     );
                 }
-                constraints.push(obstacle_constraint);
+
+                constraints.push(process_constraint);
             }
 
-            // 终点位置的约束，这是绝对约束
-            constraints.push(Constraint::Equared(target.as_slice().to_vec()));
+            // 终点约束
+            match target {
+                NodeMessage::Joint(ref q) => {
+                    constraints.push(Constraint::Equared(q.clone().as_slice().to_vec()));
+                }
+                NodeMessage::Pose(ref_pose) => {
+                    let mut end_constraint =
+                        Constraint::Rectangle(q_min_bound.clone(), q_max_bound.clone());
 
+                    let q_end_ref = if last_result.is_empty() {
+                        q.clone()
+                    } else {
+                        na::DVector::from_vec(last_result[last_result.len() - ndof..].to_vec())
+                    };
+
+                    // 在这里写一个测试，用于测试 求解器是否能迭代出一组合理的解
+                    // test_pose_constraint(ref_pose, &q_end_ref, &robot_read);
+
+                    let func = |q: &na::DVector<f64>| iso_to_vec(robot_read.cul_end_pose(q));
+
+                    let (value, grad) = robot_read.cul_func(&q_end_ref, &func);
+                    // let grad = robot_read.cul_end_pose_grad(&q_end_ref);
+                    let b_bar = iso_to_vec(ref_pose) - value + &grad * q_end_ref;
+                    end_constraint += Constraint::Hyperplane(
+                        grad.nrows(),
+                        grad.ncols(),
+                        grad.as_slice().to_vec(),
+                        b_bar.as_slice().to_vec(),
+                    );
+
+                    constraints.push(end_constraint);
+                }
+                _ => panic!("Cfs: Unsupported message type"),
+            }
+            println!("迭代完成");
+
+            // =======  优化  =======
+            let h = get_optimize_function(dim, ndof, self.params.cost_weight.clone());
+            let f = na::DVector::<f64>::zeros(dim);
             let problem = QuadraticProgramming {
                 h: &h,
                 f: f.as_slice(),
                 constraints,
             };
 
-            // 获得优化方程及其梯度
-            // 求解优化问题
-            solver_result = match self.params.solver.as_str() {
+            let solver_result = match self.params.solver.as_str() {
                 "osqp" => {
                     let mut osqp_solver = OsqpSolver::from_problem(problem);
                     osqp_solver.solve()
@@ -208,34 +239,19 @@ impl NodeBehavior for DCfs {
                 last_result = solver_result.clone();
             }
         }
-
-        // 单步轨迹发送
+        // =======  轨迹发送  =======
         // 生成 track
         let mut track_list = Vec::new();
         for i in 1..self.params.ninterp + 2 {
             track_list.push(DNodeMessage::Joint(na::DVector::from_column_slice(
-                &solver_result[i * ndof..(i + 1) * ndof],
+                &last_result[i * ndof..(i + 1) * ndof],
             )));
         }
         // 发送 track
-        while let Some(_) = self.node.output_queue.pop() {}
+        while self.node.output_queue.pop().is_some() {}
         for track in track_list {
             self.node.output_queue.push(track);
         }
-
-        // // 整体轨迹发送
-        // // 生成 track
-        // let mut track_list = Vec::new();
-        // for i in 1..self.params.ninterp + 2 {
-        //     track_list.push(na::DVector::from_column_slice(
-        //         &solver_result[i * ndof..(i + 1) * ndof],
-        //     ));
-        // }
-        // // 发送 track
-        // while let Some(_) = self.node.output_queue.pop() {}
-        // self.node
-        //     .output_queue
-        //     .push(DNodeMessage::JointList(track_list));
     }
 
     fn period(&self) -> Duration {
@@ -245,4 +261,64 @@ impl NodeBehavior for DCfs {
     fn node_name(&self) -> String {
         self.name.clone()
     }
+
+    fn state(&mut self) -> NodeState {
+        self.state.node_state
+    }
 }
+
+// fn test_pose_constraint(ref_pose: Pose, start_q: &na::DVector<f64>, robot: &DSeriseRobot) {
+//     let mut last = Vec::new();
+//     for _ in 0..6 {
+//         let func = |q: &na::DVector<f64>| iso_to_vec(robot.cul_end_pose(q));
+
+//         let (value, grad) = robot.cul_func(&start_q, &func);
+
+//         println!("ref  : {}", iso_to_vec(ref_pose));
+//         println!("value: {}", value);
+//         println!("grad : {}", grad);
+//         println!("start: {}", start_q);
+
+//         let b_bar = iso_to_vec(ref_pose) - value + &grad * start_q;
+//         let constraint = Constraint::Hyperplane(
+//             grad.nrows(),
+//             grad.ncols(),
+//             grad.as_slice().to_vec(),
+//             b_bar.as_slice().to_vec(),
+//         );
+
+//         let h = CscMatrix {
+//             nrows: 7,
+//             ncols: 7,
+//             indptr: Cow::Owned(vec![0, 1, 2, 3, 4, 5, 6, 7]),
+//             indices: Cow::Owned(vec![0, 1, 2, 3, 4, 5, 6]),
+//             data: Cow::Owned(vec![1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]),
+//         };
+//         let diff = -1.0 * start_q;
+//         let f = diff.as_slice();
+
+//         let problem = QuadraticProgramming {
+//             h: &h,
+//             f: f,
+//             constraints: constraint,
+//         };
+
+//         let mut osqp_solver = OsqpSolver::from_problem(problem);
+//         let result = osqp_solver.solve();
+
+//         if last.is_empty() {
+//             last = result.clone();
+//         } else {
+//             let diff: f64 = result
+//                 .iter()
+//                 .zip(last.iter())
+//                 .map(|(a, b)| (a - b).abs())
+//                 .sum();
+//             if diff.abs() < 1e-1 {
+//                 break;
+//             }
+//             last = result.clone();
+//         }
+//     }
+//     println!("result: {:?}", last);
+// }
