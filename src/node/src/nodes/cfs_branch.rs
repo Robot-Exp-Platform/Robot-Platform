@@ -51,7 +51,7 @@ pub struct CfsBranchParams {
 #[derive(Default)]
 pub struct CfsBranchNode<V> {
     input_queue: NodeMessageQueue<V>,
-    output_queue: NodeMessageQueue<V>,
+    output_queue: Vec<NodeMessageQueue<V>>,
 }
 
 impl DCfsBranch {
@@ -80,8 +80,14 @@ impl DCfsBranch {
 
 impl Node<na::DVector<f64>> for DCfsBranch {
     get_fn!((name: String));
-    set_fn!((set_input_queue, input_queue: DNodeMessageQueue, node),
-            (set_output_queue, output_queue: DNodeMessageQueue, node));
+    set_fn!((set_input_queue, input_queue: DNodeMessageQueue, node));
+
+    fn set_output_queue(
+        &mut self,
+        output_queue: Arc<crossbeam::queue::SegQueue<NodeMessage<na::DVector<f64>>>>,
+    ) {
+        self.node.output_queue.push(output_queue);
+    }
 
     fn set_robot(&mut self, robot: RobotType) {
         if let RobotType::DSeriseRobot(robot) = robot {
@@ -148,17 +154,16 @@ impl NodeBehavior for DCfsBranch {
             let mut constraints =
                 Constraint::CartesianProduct(0, 0, Vec::with_capacity(self.params.ninterp + 1));
 
-            // 起点位置的约束，这是绝对约束
+            // 起点位置的约束，一般来说就是当前位置，这是绝对约束
             constraints.push(Constraint::Equared(q.as_slice().to_vec()));
 
             // 中间过程的约束
             // TODO 根据约束方程和避障不等式建立约束
-            for q_ref in q_ref_list.iter() {
+            for _q_ref in q_ref_list.iter() {
                 constraints.push(Constraint::Rectangle(
                     q_min_bound.clone(),
                     q_max_bound.clone(),
                 ));
-                constraints.push(Constraint::Equared(q_ref.as_slice().to_vec()));
             }
 
             // 终点位置的约束
@@ -202,19 +207,27 @@ impl NodeBehavior for DCfsBranch {
                 }
                 last_result = solver_result.clone();
             }
+        }
+        // =======  轨迹发送  =======
+        // 生成 track
+        let mut track_list = Vec::new();
+        for i in 1..self.params.ninterp + 2 {
+            track_list.push(na::DVector::from_column_slice(
+                &last_result[i * ndof..(i + 1) * ndof],
+            ));
+        }
+        // 根据分割 发送 track
 
-            // =======  轨迹发送  =======
-            // 生成 track
-            let mut track_list = Vec::new();
-            for i in 1..self.params.ninterp + 2 {
-                track_list.push(DNodeMessage::Joint(na::DVector::from_column_slice(
-                    &last_result[i * ndof..(i + 1) * ndof],
-                )));
-            }
-            // 发送 track
-            while self.node.output_queue.pop().is_some() {}
-            for track in track_list {
-                self.node.output_queue.push(track);
+        // 清空输出队列
+        for output_queue in self.node.output_queue.iter() {
+            while output_queue.pop().is_some() {}
+        }
+
+        // 发送轨迹
+        for track in track_list {
+            let tracks = self.robot.split(track);
+            for (track, output_queue) in tracks.iter().zip(self.node.output_queue.iter()) {
+                output_queue.push(NodeMessage::Joint(track.clone()));
             }
         }
     }

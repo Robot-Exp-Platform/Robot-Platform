@@ -127,13 +127,11 @@ impl DRobot for DSeriseRobot {
 
             let rotation = na::UnitQuaternion::from_axis_angle(&na::Vector3::x_axis(), alpha)
                 * na::UnitQuaternion::from_axis_angle(&na::Vector3::z_axis(), theta);
+            let transform = na::Translation3::new(a, -d * alpha.sin(), d * alpha.cos());
 
-            let isometry_increment = na::Isometry3::from_parts(
-                na::Translation3::new(a, -d * alpha.sin(), d * alpha.cos()),
-                rotation,
-            );
+            let isometry_increment = na::Isometry3::from_parts(transform, rotation);
 
-            isometry = isometry * isometry_increment;
+            isometry *= isometry_increment;
         }
         isometry
     }
@@ -150,10 +148,11 @@ impl DRobot for DSeriseRobot {
             let alpha = dh[(i, 3)];
             let theta = q[i] + dh[(i, 0)];
 
-            let isometry_increment = na::Isometry3::from_parts(
-                na::Translation3::new(a * theta.cos(), a * theta.sin(), d),
-                na::UnitQuaternion::from_euler_angles(alpha, 0.0, theta),
-            );
+            let rotation = na::UnitQuaternion::from_axis_angle(&na::Vector3::x_axis(), alpha)
+                * na::UnitQuaternion::from_axis_angle(&na::Vector3::z_axis(), theta);
+            let transform = na::Translation3::new(a, -d * alpha.sin(), d * alpha.cos());
+
+            let isometry_increment = na::Isometry3::from_parts(transform, rotation);
 
             // Update the cumulative transformation matrix
             isometry *= isometry_increment;
@@ -186,7 +185,7 @@ impl DRobot for DSeriseRobot {
     fn cul_func(
         &self,
         q: &na::DVector<f64>,
-        func: &dyn Fn(&na::DVector<f64>) -> nalgebra::DVector<f64>,
+        func: &dyn Fn(&na::DVector<f64>) -> na::DVector<f64>,
     ) -> (na::DVector<f64>, na::DMatrix<f64>) {
         let value = func(q);
         let mut grad = na::DMatrix::zeros(value.len(), q.len());

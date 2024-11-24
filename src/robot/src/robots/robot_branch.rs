@@ -36,6 +36,10 @@ pub struct RobotBranch<R> {
 type DRobotBranch = RobotBranch<DSeriseRobot>;
 
 impl DRobotBranch {
+    pub fn indices(&self) -> &Vec<usize> {
+        &self.indices
+    }
+
     pub fn new() -> DRobotBranch {
         DRobotBranch {
             robots: Vec::new(),

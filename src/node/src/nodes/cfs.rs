@@ -104,8 +104,8 @@ impl NodeBehavior for DCfs {
         let q_max_bound = robot_read.q_max_bound().as_slice().to_vec();
 
         let currect_state = DNodeMessage::Joint(q.clone());
-        println!("{}: currect_pose: {:?}", self.name(), robot_read.end_pose());
-        println!("{}: currect_q: {:?}", self.name(), q);
+        // println!("{}: currect_pose: {:?}", self.name(), robot_read.end_pose());
+        // println!("{}: currect_q: {:?}", self.name(), q);
 
         // 检查当前状态是否达到储存的目标状态.
         if let Some(target) = self.state.target.clone() {
@@ -203,7 +203,6 @@ impl NodeBehavior for DCfs {
                 }
                 _ => panic!("Cfs: Unsupported message type"),
             }
-            println!("迭代完成");
 
             // =======  优化  =======
             let h = get_optimize_function(dim, ndof, self.params.cost_weight.clone());
@@ -266,59 +265,3 @@ impl NodeBehavior for DCfs {
         self.state.node_state
     }
 }
-
-// fn test_pose_constraint(ref_pose: Pose, start_q: &na::DVector<f64>, robot: &DSeriseRobot) {
-//     let mut last = Vec::new();
-//     for _ in 0..6 {
-//         let func = |q: &na::DVector<f64>| iso_to_vec(robot.cul_end_pose(q));
-
-//         let (value, grad) = robot.cul_func(&start_q, &func);
-
-//         println!("ref  : {}", iso_to_vec(ref_pose));
-//         println!("value: {}", value);
-//         println!("grad : {}", grad);
-//         println!("start: {}", start_q);
-
-//         let b_bar = iso_to_vec(ref_pose) - value + &grad * start_q;
-//         let constraint = Constraint::Hyperplane(
-//             grad.nrows(),
-//             grad.ncols(),
-//             grad.as_slice().to_vec(),
-//             b_bar.as_slice().to_vec(),
-//         );
-
-//         let h = CscMatrix {
-//             nrows: 7,
-//             ncols: 7,
-//             indptr: Cow::Owned(vec![0, 1, 2, 3, 4, 5, 6, 7]),
-//             indices: Cow::Owned(vec![0, 1, 2, 3, 4, 5, 6]),
-//             data: Cow::Owned(vec![1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]),
-//         };
-//         let diff = -1.0 * start_q;
-//         let f = diff.as_slice();
-
-//         let problem = QuadraticProgramming {
-//             h: &h,
-//             f: f,
-//             constraints: constraint,
-//         };
-
-//         let mut osqp_solver = OsqpSolver::from_problem(problem);
-//         let result = osqp_solver.solve();
-
-//         if last.is_empty() {
-//             last = result.clone();
-//         } else {
-//             let diff: f64 = result
-//                 .iter()
-//                 .zip(last.iter())
-//                 .map(|(a, b)| (a - b).abs())
-//                 .sum();
-//             if diff.abs() < 1e-1 {
-//                 break;
-//             }
-//             last = result.clone();
-//         }
-//     }
-//     println!("result: {:?}", last);
-// }
