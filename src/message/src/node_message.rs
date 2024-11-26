@@ -10,6 +10,10 @@ use crate::Pose;
 pub enum NodeMessage<V> {
     #[default]
     NoneNodeMessage,
+    KillNode,
+    NodeMessages(Vec<NodeMessage<V>>),
+    Process(Box<NodeMessage<V>>, Box<NodeMessage<V>>),
+    Relative(usize, usize, Pose),
     Pose(Pose),
     Transform(usize, Pose, Pose),
     Joint(V),

@@ -5,10 +5,7 @@ use generate_tools::{get_fn, set_fn};
 use message::{Capsule, CollisionObject};
 use message::{NodeMessage, Pose};
 
-pub struct SeriseRobot<V>
-where
-    V: Send + Sync,
-{
+pub struct SeriseRobot<V> {
     pub name: String,
 
     pub state: SeriseRobotState<V>,
@@ -44,10 +41,7 @@ pub struct SeriseRobotParams<V> {
     pub capsules: Vec<Capsule>,
 }
 
-impl<V> SeriseRobot<V>
-where
-    V: Send + Sync,
-{
+impl<V> SeriseRobot<V> {
     // pub fn from_params(name: String, params: SeriseRobotParams<V>) -> SeriseRobot<V> {
     //     SeriseRobot {
     //         name,
@@ -62,7 +56,7 @@ where
 
 impl<V> Robot<V> for SeriseRobot<V>
 where
-    V: Clone + Send + Sync,
+    V: Clone,
 {
     get_fn!((name: String));
     get_fn!(

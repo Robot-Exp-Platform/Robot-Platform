@@ -9,10 +9,10 @@ use std::time::Duration;
 use crate::{utilities::*, Node, NodeBehavior, NodeState};
 use generate_tools::{get_fn, set_fn};
 use message::{
-    Constraint, DNodeMessage, DNodeMessageQueue, NodeMessage, NodeMessageQueue,
+    iso_to_vec, Constraint, DNodeMessage, DNodeMessageQueue, NodeMessage, NodeMessageQueue, Pose,
     QuadraticProgramming,
 };
-use robot::{DSeriseRobot, Robot, RobotBranch, RobotType};
+use robot::{DRobot, DSeriseRobot, Robot, RobotBranch, RobotType};
 use sensor::Sensor;
 use solver::{OsqpSolver, Solver};
 
@@ -27,6 +27,7 @@ pub struct CfsBranch<R, V> {
     node: CfsBranchNode<V>,
     /// The robot that the planner is controlling.
     robot: RobotBranch<R>,
+    // fake_robot: RobotBranch<FaekPoseRobot>,
     /// The sensor that the planner is using.
     sensor: Option<Arc<RwLock<Sensor>>>,
 }
@@ -67,12 +68,14 @@ impl DCfsBranch {
         let node = CfsBranchNode::default();
         let state = CfsBranchState::default();
         let robot = RobotBranch::new();
+        // let fake_robot = RobotBranch::new();
         DCfsBranch {
             name,
             state,
             params,
             node,
             robot,
+            // fake_robot,
             sensor: None,
         }
     }
@@ -138,12 +141,12 @@ impl NodeBehavior for DCfsBranch {
         let target = target.unwrap();
         info!(node = self.name.as_str(), input = ?target.as_slice());
 
-        // 准备
+        // 初始化轨迹，一般来说用插值或者逆解，优秀的初始化轨迹应当是验证安全性之后就是最优的的轨迹，但是这似乎很难做到
         let q_ref_list = match &target {
             NodeMessage::Joint(q_target) => lerp(&q, &vec![q_target.clone()], self.params.ninterp),
-            NodeMessage::Pose(_) => lerp(&q, &vec![q.clone()], self.params.ninterp),
-            _ => panic!("Cfs: Unsupported message type"),
+            _ => lerp(&q, &vec![q.clone()], self.params.ninterp),
         };
+        let collision_objects = self.sensor.as_ref().unwrap().read().unwrap().collision();
         let mut last_result = Vec::new();
         let dim = (self.params.ninterp + 2) * ndof;
 
@@ -158,12 +161,45 @@ impl NodeBehavior for DCfsBranch {
             constraints.push(Constraint::Equared(q.as_slice().to_vec()));
 
             // 中间过程的约束
-            // TODO 根据约束方程和避障不等式建立约束
-            for _q_ref in q_ref_list.iter() {
-                constraints.push(Constraint::Rectangle(
-                    q_min_bound.clone(),
-                    q_max_bound.clone(),
-                ));
+            for q_ref in q_ref_list.iter() {
+                // 边界约束，最最基础的约束
+                let mut process_constraint =
+                    Constraint::Rectangle(q_min_bound.clone(), q_max_bound.clone());
+
+                // 如果有障碍物的话，增加碰撞约束
+                for collision in &collision_objects {
+                    let func = |q: &na::DVector<f64>| self.robot.cul_dis_to_collision(q, collision);
+                    let (dis, grad) = self.robot.cul_func(q_ref, &func);
+                    // 过程中对每个障碍物的碰撞约束与关节角约束
+                    process_constraint += Constraint::Halfspace(
+                        (-&grad).as_slice().to_vec(),
+                        (dis - (&grad * q_ref))[(0, 0)],
+                    );
+                    // TODO 实际上虚构机器人也应该有碰撞检测，这代表约束实体的碰撞空间
+                    // TODO 机器人之间的碰撞检测
+                }
+
+                // 过程中的任务约束
+                match target {
+                    NodeMessage::Process(
+                        box NodeMessage::Relative(id_1, id_2, relative_pose),
+                        _,
+                    ) => {
+                        let func = |pose_1: Pose, pose_2: Pose| iso_to_vec(pose_1.inv_mul(&pose_2));
+                        let (velue, grad) =
+                            self.robot.cul_relative_func((id_1, id_2), q_ref, &func);
+                        let b_bar = iso_to_vec(relative_pose) - velue + &grad * q_ref;
+                        process_constraint += Constraint::Hyperplane(
+                            grad.nrows(),
+                            grad.ncols(),
+                            grad.as_slice().to_vec(),
+                            b_bar.as_slice().to_vec(),
+                        );
+                    }
+                    _ => (),
+                }
+
+                constraints.push(process_constraint);
             }
 
             // 终点位置的约束

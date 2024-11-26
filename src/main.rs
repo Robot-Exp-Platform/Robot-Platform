@@ -1,12 +1,13 @@
 #![feature(trait_alias)]
 #![feature(trait_upcasting)]
 #![feature(more_float_constants)]
+#![feature(box_patterns)]
 
 mod config;
 mod exp;
 
 use tracing_appender::{non_blocking, rolling};
-use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, Registry};
+use tracing_subscriber::{Registry, fmt, layer::SubscriberExt, util::SubscriberInitExt};
 
 use exp::Exp;
 use node::NodeBehavior;
