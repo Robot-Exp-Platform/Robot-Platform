@@ -1,11 +1,12 @@
 use generate_tools::{get_fn, set_fn};
 use message::{DNodeMessageQueue, NodeMessage, Pose};
 use nalgebra as na;
+use rand::Rng;
 use serde::Deserialize;
 use serde_json::{from_value, Value};
 use std::sync::{Arc, RwLock};
 
-use crate::{Node, NodeBehavior, NodeState};
+use crate::{lerp, Node, NodeBehavior, NodeState};
 use robot::{DSeriseRobot, Robot, RobotType};
 
 pub struct ExPlanner {
@@ -18,7 +19,6 @@ pub struct ExPlanner {
 
 #[derive(Default)]
 struct ExPlannerState {
-    target: Option<NodeMessage<na::DVector<f64>>>,
     node_state: NodeState,
     // Add state variables begin
 
@@ -83,7 +83,7 @@ impl NodeBehavior for ExPlanner {
         // Demo begin
         {
             // set target from joint
-            let joint = na::DVector::from_vec(vec![0.0, 0.0, 0.0, 0.0, 0.0, 0.0]);
+            let joint = na::DVector::from_vec(vec![0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]);
             let target = NodeMessage::Joint(joint);
             self.node.output_queue.push(target);
 
@@ -105,12 +105,28 @@ impl NodeBehavior for ExPlanner {
         {
             // get robot state
             let robot_read = self.robot.as_ref().unwrap().read().unwrap();
-            let mut q = robot_read.q();
+            let q = robot_read.q();
+            let q_min_bound = robot_read.q_min_bound();
+            let q_max_bound = robot_read.q_max_bound();
             drop(robot_read);
 
-            q[0] += 0.01;
+            // Generate a random q_target within the bounds
+            let mut rng = rand::thread_rng();
+            let len = q_min_bound.len();
 
-            self.state.target = Some(NodeMessage::Joint(q.clone()));
+            let q_target = na::DVector::from_iterator(
+                len,
+                (0..len).map(|i| rng.gen_range(q_min_bound[i]..=q_max_bound[i])),
+            );
+
+            // Interpolate between current q and q_target using lerp
+            let trace = lerp(&q, &vec![q_target], 10);
+
+            // Set target from trace
+            for q in trace {
+                let target = NodeMessage::Joint(q);
+                self.node.output_queue.push(target);
+            }
         }
         // Demo end
 

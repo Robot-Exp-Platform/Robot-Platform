@@ -12,6 +12,14 @@ use tracing_subscriber::{Registry, fmt, layer::SubscriberExt, util::SubscriberIn
 use exp::Exp;
 use node::NodeBehavior;
 
+// 正式运行时使用
+// const CONFIG_PATH: &str = "./config/config.json";
+// const TASK_PATH: &str = "./config/task.json";
+
+// 样例运行时使用
+const CONFIG_PATH: &str = "./example/explanner_interp_bullet_config.json";
+const TASK_PATH: &str = "./example/explanner_interp_bullet_task.json";
+
 fn main() {
     // 删除已有的日志文件
     std::fs::remove_file("./logs/info.log").unwrap_or_default();
@@ -37,7 +45,7 @@ fn main() {
         .with(file_layer_json)
         .init();
 
-    let mut exp = Exp::from_json("./config.json", "./task.json");
+    let mut exp = Exp::from_json(CONFIG_PATH, TASK_PATH);
 
     exp.init();
 

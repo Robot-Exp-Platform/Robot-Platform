@@ -47,6 +47,7 @@ struct BulletState {
 #[derive(Deserialize)]
 pub struct BulletParams {
     period: f64,
+    config_path: String,
 }
 
 // 消息节点结构体声明，随条件编译的不同而不同，条件编译将决定其使用什么通讯方式
@@ -58,7 +59,13 @@ struct BulletNode {
 // 为结构体 Bullet 实现方法，这里主要是初始化方法
 impl DBullet {
     pub fn new(name: String) -> DBullet {
-        DBullet::from_params(name, BulletParams { period: 0.0 })
+        DBullet::from_params(
+            name,
+            BulletParams {
+                period: 0.0,
+                config_path: String::new(),
+            },
+        )
     }
 
     pub fn from_json(name: String, params: Value) -> DBullet {
@@ -119,11 +126,13 @@ impl NodeBehavior for DBullet {
         // 使用命令行启动 pybullet， 告知 pybullet 所有的机器人信息
         // 暂时使用命令行加载的形式，后续也可以使用文件加载
 
+        let config_path = self.params.config_path.clone();
+
         self.state.pybullet_thread = Some(std::thread::spawn(move || {
             let output = Command::new("python")
                 .arg("./scripts/simulators/sim_pybullet.py")
                 .arg("-f")
-                .arg("./config.json")
+                .arg(config_path)
                 .spawn()
                 .expect("Failed to execute command")
                 .wait_with_output()

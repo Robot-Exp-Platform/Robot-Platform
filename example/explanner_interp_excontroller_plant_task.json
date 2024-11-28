@@ -1,0 +1,25 @@
+[
+  {
+    "id": 0,
+    "rely": [],
+    "target": [],
+    "nodes": [["plant_panda", ["panda_1"], [], { "period": 0.0, "config_path": "./example/explanner_interp_bullet_config.json" }]],
+    "edges": [[1, 0]]
+  },
+  {
+    "id": 2,
+    "rely": [0],
+    "target": [],
+    "nodes": [
+      ["example_planner", ["panda_1"], [], { "period": 0.95 }],
+      ["interp", ["panda_1"], ["obstacle_list_1"], { "period": 0.1, "interp_fn": "lerp", "ninter": 25 }],
+      ["example_controller", ["panda_1"], [], { "period": 0.004 }]
+    ],
+    "edges": [
+      [0, 1],
+      [1, 2],
+      [2, 3],
+      [3, 0]
+    ]
+  }
+]

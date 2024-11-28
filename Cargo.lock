@@ -992,6 +992,7 @@ dependencies = [
  "message",
  "nalgebra",
  "osqp",
+ "rand",
  "robot",
  "sensor",
  "serde",

@@ -3,7 +3,7 @@
     "id": 0,
     "rely": [],
     "target": [],
-    "nodes": [["bullet", ["panda_1", "panda_2"], ["obstacle_list_1"], { "period": 0.0 }]],
+    "nodes": [["bullet", ["panda_1", "panda_2"], ["obstacle_list_1"], { "period": 0.0, "config_path": "./config/config.json" }]],
     "edges": [[1, 0]]
   },
   {
