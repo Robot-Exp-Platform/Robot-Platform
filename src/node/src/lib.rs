@@ -1,6 +1,7 @@
 #![feature(box_patterns)]
 
 mod create;
+mod example;
 mod node_trait;
 mod nodes;
 mod sensor_releaser;

@@ -243,14 +243,13 @@ impl<const N: usize> SRobot<N> for SSeriseRobot<N> {
         let mut isometry = self.state.base;
 
         for i in 0..self.params.nlink {
-            let isometry_increment = na::Isometry::from_parts(
-                na::Translation3::new(
-                    dh[(i, 2)],
-                    -dh[(i, 1)] * dh[(i, 3)].sin(),
-                    dh[(i, 1)] * dh[(i, 3)].cos(),
-                ),
-                na::UnitQuaternion::from_euler_angles(q[i], 0.0, dh[(i, 3)]),
+            let translation = na::Translation3::new(
+                dh[(i, 2)],
+                -dh[(i, 1)] * dh[(i, 3)].sin(),
+                dh[(i, 1)] * dh[(i, 3)].cos(),
             );
+            let rotation = na::UnitQuaternion::from_euler_angles(q[i], 0.0, dh[(i, 3)]);
+            let isometry_increment = na::Isometry::from_parts(translation, rotation);
 
             // Update the cumulative transformation matrix
             isometry *= isometry_increment;
