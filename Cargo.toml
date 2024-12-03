@@ -1,5 +1,3 @@
-cargo-features = ["edition2024"]
-
 [workspace]
 members = [
     "src/generate_tools",
@@ -42,7 +40,6 @@ log = "*"
 tracing = "*"
 tracing-subscriber = { version = "*", features = ["json"] }
 tracing-appender = { version = "*" }
-libfranka-rs = "0.9.0"
 
 message = { path = "src/message" }
 robot = { path = "src/robot" }
@@ -53,6 +50,7 @@ sensor = { path = "src/sensor" }
 simulator = { path = "src/simulator" }
 solver = { path = "src/solver" }
 node = { path = "src/node" }
+libfranka-rs = { path = "crates/libfranka-rs" }
 
 
 [dependencies]

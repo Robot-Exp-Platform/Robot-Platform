@@ -80,11 +80,11 @@ impl NodeBehavior for DPandaPlant {
             .clone();
         let q_goal: [f64; 7] = q_initial.as_slice().try_into().unwrap();
 
-        let result = robot.joint_motion(0.5, &q_goal);
+        robot.joint_motion(0.5, &q_goal).unwrap();
 
         let callback_joint = |state: &franka::RobotState, _: &Duration| -> franka::JointPositions {
             let out_q: [f64; 7] =
-                if let DNodeMessage::Joint(joint) = self.node.input_queue.pop().unwrap() {
+                if let Some(DNodeMessage::Joint(joint)) = self.node.input_queue.pop() {
                     joint.as_slice().try_into().unwrap()
                 } else {
                     state.q
