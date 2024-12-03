@@ -42,6 +42,7 @@ log = "*"
 tracing = "*"
 tracing-subscriber = { version = "*", features = ["json"] }
 tracing-appender = { version = "*" }
+libfranka-rs = "0.9.0"
 
 message = { path = "src/message" }
 robot = { path = "src/robot" }
