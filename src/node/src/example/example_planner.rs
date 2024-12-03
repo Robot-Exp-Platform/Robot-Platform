@@ -6,7 +6,7 @@ use serde::Deserialize;
 use serde_json::{from_value, Value};
 use std::sync::{Arc, RwLock};
 
-use crate::{lerp, Node, NodeBehavior, NodeState};
+use crate::{Node, NodeBehavior, NodeState};
 use robot::{DSeriseRobot, Robot, RobotType};
 
 pub struct ExPlanner {
@@ -83,7 +83,9 @@ impl NodeBehavior for ExPlanner {
         // Demo begin
         {
             // set target from joint
-            let joint = na::DVector::from_vec(vec![0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]);
+            let joint = na::DVector::from_vec(vec![
+                0.0124, -0.8838, 0.3749, -2.2172, 0.232, 1.7924, 1.3719,
+            ]);
             let target = NodeMessage::Joint(joint);
             self.node.output_queue.push(target);
 
@@ -111,16 +113,25 @@ impl NodeBehavior for ExPlanner {
             drop(robot_read);
 
             // Generate a random q_target within the bounds
+
             let mut rng = rand::thread_rng();
             let len = q_min_bound.len();
 
             let q_target = na::DVector::from_iterator(
                 len,
-                (0..len).map(|i| rng.gen_range(q_min_bound[i]..=q_max_bound[i])),
+                (0..len).map(|i| {
+                    let center = (q_min_bound[i] + q_max_bound[i]) / 2.0;
+                    let half_range = (q_max_bound[i] - q_min_bound[i]) / 4.0;
+                    rng.gen_range((center - half_range)..=(center + half_range))
+                }),
             );
 
-            // Interpolate between current q and q_target using lerp
-            let trace = lerp(&q, &vec![q_target], 10);
+            println!("q: {}", q);
+            println!("target: {}", q_target);
+
+            // // Interpolate between current q and q_target using lerp
+            // let trace = lerp(&q, &vec![q_target], 50);
+            let trace = vec![q_target];
 
             // Set target from trace
             for q in trace {

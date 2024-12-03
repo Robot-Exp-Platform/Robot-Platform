@@ -5,8 +5,13 @@
     "MD033": false,
     "MD024": false
   },
-  "pylint.args": ["--disable=C0116,C0114,I1101,W0621", "--max-line-length=120"],
-  "flake8.args": ["--max-line-length=120"],
+  "pylint.args": [
+    "--disable=C0116,C0114,I1101,W0621",
+    "--max-line-length=120"
+  ],
+  "flake8.args": [
+    "--max-line-length=120"
+  ],
   "C_Cpp_Runner.cCompilerPath": "gcc",
   "C_Cpp_Runner.cppCompilerPath": "g++",
   "C_Cpp_Runner.debuggerPath": "gdb",
@@ -46,12 +51,32 @@
   "C_Cpp_Runner.compilerArgs": [],
   "C_Cpp_Runner.linkerArgs": [],
   "C_Cpp_Runner.includePaths": [],
-  "C_Cpp_Runner.includeSearch": ["*", "**/*"],
-  "C_Cpp_Runner.excludeSearch": ["**/build", "**/build/**", "**/.*", "**/.*/**", "**/.vscode", "**/.vscode/**"],
+  "C_Cpp_Runner.includeSearch": [
+    "*",
+    "**/*"
+  ],
+  "C_Cpp_Runner.excludeSearch": [
+    "**/build",
+    "**/build/**",
+    "**/.*",
+    "**/.*/**",
+    "**/.vscode",
+    "**/.vscode/**"
+  ],
   "C_Cpp_Runner.useAddressSanitizer": false,
   "C_Cpp_Runner.useUndefinedSanitizer": false,
   "C_Cpp_Runner.useLeakSanitizer": false,
   "C_Cpp_Runner.showCompilationTime": false,
   "C_Cpp_Runner.useLinkTimeOptimization": false,
-  "C_Cpp_Runner.msvcSecureNoWarnings": false
+  "C_Cpp_Runner.msvcSecureNoWarnings": false,
+  "python.autoComplete.extraPaths": [
+    "/home/robot-lab-user/catkin_ws_wy/devel/lib/python3/dist-packages",
+    "/home/robot-lab-user/ws_ros/src/dualarm_gazebo_simulation/devel/lib/python3/dist-packages",
+    "/opt/ros/noetic/lib/python3/dist-packages"
+  ],
+  "python.analysis.extraPaths": [
+    "/home/robot-lab-user/catkin_ws_wy/devel/lib/python3/dist-packages",
+    "/home/robot-lab-user/ws_ros/src/dualarm_gazebo_simulation/devel/lib/python3/dist-packages",
+    "/opt/ros/noetic/lib/python3/dist-packages"
+  ]
 }

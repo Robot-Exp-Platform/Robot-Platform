@@ -1,0 +1,15 @@
+[
+  {
+    "id": 2,
+    "rely": [],
+    "target": [],
+    "nodes": [
+      ["example_planner", ["panda_1"], [], { "period": 5.0 }],
+      ["panda_plant", ["panda_1"], [], { "ip":"172.16.0.2", "control_mode": "joint", "is_realtime": false }]
+    ],
+    "edges": [
+      [0, 1],
+      [1, 2]
+    ]
+  }
+]

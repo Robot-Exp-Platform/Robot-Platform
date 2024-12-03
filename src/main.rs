@@ -17,8 +17,8 @@ use node::NodeBehavior;
 // const TASK_PATH: &str = "./config/task.json";
 
 // 样例运行时使用
-const CONFIG_PATH: &str = "./example/explanner_interp_plant_config.json";
-const TASK_PATH: &str = "./example/explanner_interp_plant_task.json";
+const CONFIG_PATH: &str = "./example/explanner_plant_config.json";
+const TASK_PATH: &str = "./example/explanner_plant_task.json";
 
 fn main() {
     // 删除已有的日志文件

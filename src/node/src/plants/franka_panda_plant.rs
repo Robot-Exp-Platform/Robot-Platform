@@ -15,6 +15,7 @@ use robot::{DPanda, RobotType};
 
 pub struct PandaPlant<R, V> {
     name: String,
+    state: PandaPlantState,
     params: PandaPlantParams,
     node: PandaPlantNode<V>,
     robot: Option<Arc<RwLock<R>>>,
@@ -22,10 +23,16 @@ pub struct PandaPlant<R, V> {
 
 pub type DPandaPlant = PandaPlant<DPanda, na::DVector<f64>>;
 
+#[derive(Default)]
+pub struct PandaPlantState {
+    robot: Option<franka::Robot>,
+}
+
 #[derive(Deserialize, Default)]
 pub struct PandaPlantParams {
     ip: String,
     control_mode: String,
+    is_realtime: bool,
 }
 
 #[derive(Default)]
@@ -41,6 +48,7 @@ impl DPandaPlant {
     pub fn from_params(name: String, params: PandaPlantParams) -> DPandaPlant {
         DPandaPlant {
             name,
+            state: PandaPlantState::default(),
             params,
             node: PandaPlantNode::default(),
             robot: None,
@@ -82,36 +90,59 @@ impl NodeBehavior for DPandaPlant {
 
         robot.joint_motion(0.5, &q_goal).unwrap();
 
-        let callback_joint = |state: &franka::RobotState, _: &Duration| -> franka::JointPositions {
+        if self.params.is_realtime {
+            let callback_joint =
+                |state: &franka::RobotState, _: &Duration| -> franka::JointPositions {
+                    let out_q: [f64; 7] =
+                        if let Some(DNodeMessage::Joint(joint)) = self.node.input_queue.pop() {
+                            joint.as_slice().try_into().unwrap()
+                        } else {
+                            state.q_d
+                        };
+                    franka::JointPositions::new(out_q)
+                };
+            let callback_torque = |state: &franka::RobotState, _: &Duration| -> franka::Torques {
+                let coriolis: franka::Vector7 = model.coriolis_from_state(state).into();
+                let out_tau = if let DNodeMessage::Tau(tau) = self.node.input_queue.pop().unwrap() {
+                    tau
+                } else {
+                    na::DVector::zeros(7)
+                };
+
+                let out_tau = franka::Vector7::from_row_slice(out_tau.as_slice());
+                (out_tau + coriolis).into()
+            };
+
+            match self.params.control_mode.as_str() {
+                "joint" => robot.control_joint_positions(callback_joint, None, None, None),
+                "torque" => robot.control_torques(callback_torque, None, None),
+                _ => panic!("Unsupported control mode"),
+            }
+            .unwrap();
+        }
+
+        self.state.robot = Some(robot);
+    }
+
+    fn update(&mut self) {
+        let panda = self.state.robot.as_mut().unwrap();
+        let state = panda.read_once().unwrap();
+        let mut robot_write = self.robot.as_ref().unwrap().write().unwrap();
+        robot_write.state.q = na::DVector::from_row_slice(state.q.as_slice());
+        robot_write.state.q_dot = na::DVector::from_row_slice(state.dq.as_slice());
+
+        if !self.params.is_realtime {
             let out_q: [f64; 7] =
                 if let Some(DNodeMessage::Joint(joint)) = self.node.input_queue.pop() {
                     joint.as_slice().try_into().unwrap()
                 } else {
-                    state.q
+                    state.q_d
                 };
-            franka::JointPositions::new(out_q)
-        };
-        let callback_torque = |state: &franka::RobotState, _: &Duration| -> franka::Torques {
-            let coriolis: franka::Vector7 = model.coriolis_from_state(state).into();
-            let out_tau = if let DNodeMessage::Tau(tau) = self.node.input_queue.pop().unwrap() {
-                tau
-            } else {
-                na::DVector::zeros(7)
-            };
-
-            let out_tau = franka::Vector7::from_row_slice(out_tau.as_slice());
-            (out_tau + coriolis).into()
-        };
-
-        match self.params.control_mode.as_str() {
-            "joint" => robot.control_joint_positions(callback_joint, None, None, None),
-            "torque" => robot.control_torques(callback_torque, None, None),
-            _ => panic!("Unsupported control mode"),
+            panda.joint_motion(0.5, &out_q).unwrap();
         }
-        .unwrap();
     }
     fn period(&self) -> std::time::Duration {
-        std::time::Duration::from_secs_f64(0.)
+        std::time::Duration::from_secs_f64(0.2)
     }
     fn node_name(&self) -> String {
         self.name.clone()
