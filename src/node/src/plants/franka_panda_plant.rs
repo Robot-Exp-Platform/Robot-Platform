@@ -30,6 +30,7 @@ pub struct PandaPlantState {
 
 #[derive(Deserialize, Default)]
 pub struct PandaPlantParams {
+    period: f64,
     ip: String,
     control_mode: String,
     is_realtime: bool,
@@ -132,17 +133,14 @@ impl NodeBehavior for DPandaPlant {
         robot_write.state.q_dot = na::DVector::from_row_slice(state.dq.as_slice());
 
         if !self.params.is_realtime {
-            let out_q: [f64; 7] =
-                if let Some(DNodeMessage::Joint(joint)) = self.node.input_queue.pop() {
-                    joint.as_slice().try_into().unwrap()
-                } else {
-                    state.q_d
-                };
-            panda.joint_motion(0.5, &out_q).unwrap();
+            if let Some(DNodeMessage::Joint(joint)) = self.node.input_queue.pop() {
+                let out_q = joint.as_slice().try_into().unwrap();
+                panda.joint_motion(0.5, &out_q).unwrap();
+            }
         }
     }
     fn period(&self) -> std::time::Duration {
-        std::time::Duration::from_secs_f64(0.2)
+        std::time::Duration::from_secs_f64(self.params.period)
     }
     fn node_name(&self) -> String {
         self.name.clone()
