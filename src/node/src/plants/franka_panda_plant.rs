@@ -6,6 +6,7 @@ use serde_json::{from_value, Value};
 use std::{
     f64::consts::{FRAC_PI_2, FRAC_PI_4},
     sync::{Arc, RwLock},
+    thread,
     time::Duration,
 };
 
@@ -94,6 +95,8 @@ impl NodeBehavior for DPandaPlant {
             if state.dq.iter().copied().sum::<f64>() < 0.01_f64 {
                 break;
             }
+            thread::sleep(Duration::from_millis(1));
+            println!("we are waiting for the robot to stop");
         }
 
         if self.params.is_realtime {
