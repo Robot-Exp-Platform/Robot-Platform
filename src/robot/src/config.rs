@@ -2,7 +2,7 @@ use message::Pose;
 use serde::Deserialize;
 use std::sync::{Arc, RwLock};
 
-use crate::{DPanda, RobotType};
+use crate::{DPanda, Gripper, RobotType};
 
 #[derive(Debug, Deserialize)]
 pub struct RobotConfig {
@@ -19,6 +19,9 @@ pub fn from_config(robot_config: &RobotConfig) -> RobotType {
             robot_config.name.clone(),
             robot_config.base_pose,
         )))),
+        "franka_gripper" => {
+            RobotType::FrankaGripper(Arc::new(RwLock::new(Gripper::new(&robot_config.name))))
+        }
         _ => panic!("Unknown robot type: {}", robot_config.robot_type),
     }
 }

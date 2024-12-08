@@ -16,6 +16,9 @@ pub enum RobotType {
 
     // 特殊的静态机器人，可以被静态表示
     Panda(Arc<RwLock<SPanda>>),
+
+    // 其他的辅助件
+    FrankaGripper(Arc<RwLock<Gripper>>),
 }
 
 impl RobotType {
@@ -23,6 +26,7 @@ impl RobotType {
         match self {
             RobotType::DSeriseRobot(robot) => robot.read().unwrap().name(),
             RobotType::Panda(robot) => robot.read().unwrap().name(),
+            RobotType::FrankaGripper(gripper) => gripper.read().unwrap().name(),
         }
     }
 }
