@@ -82,6 +82,19 @@ impl NodeBehavior for DPandaPlant {
         let model = robot.load_model(true).unwrap();
         robot.set_default_behavior().unwrap();
         robot.automatic_error_recovery().unwrap();
+        // 设置碰撞行为和阻抗参数
+        robot
+            .set_collision_behavior(
+                [100.; 7], [100.; 7], [100.; 7], [100.; 7], [100.; 6], [100.; 6], [100.; 6],
+                [100.; 6],
+            )
+            .unwrap();
+        robot
+            .set_joint_impedance([3000., 3000., 3000., 2500., 2500., 2000., 2000.])
+            .unwrap();
+        robot
+            .set_cartesian_impedance([3000., 3000., 3000., 300., 300., 300.])
+            .unwrap();
 
         // 初始化机器人位置
         let q_initial =
@@ -96,8 +109,9 @@ impl NodeBehavior for DPandaPlant {
                 break;
             }
             thread::sleep(Duration::from_millis(1));
-            println!("we are waiting for the robot to stop");
         }
+
+        println!("初始化机器人位置成功");
 
         if self.params.is_realtime {
             // 四种运动生成器
@@ -145,17 +159,25 @@ impl NodeBehavior for DPandaPlant {
             let callback_torque = |state: &franka::RobotState, _: &Duration| -> franka::Torques {
                 update_state(self.robot.as_ref().unwrap(), state);
                 let coriolis: franka::Vector7 = model.coriolis_from_state(state).into();
-                let out_tau = if let DNodeMessage::Tau(tau) = self.node.input_queue.pop().unwrap() {
+                let gravity: franka::Vector7 = model.gravity_from_state(state, None).into();
+
+                let currect_command = self.node.input_queue.pop();
+                let out_tau = if let Some(DNodeMessage::Tau(tau)) = currect_command {
                     tau
                 } else {
+                    println!("No tau command, use zero tau");
                     na::DVector::zeros(7)
-                };
-
+                } / 6.;
                 let out_tau = franka::Vector7::from_row_slice(out_tau.as_slice());
-                (out_tau + coriolis).into()
+
+                println!("out_tau: {:?}", out_tau);
+                println!("coriolis: {:?}", coriolis);
+                println!("gravity: {:?}", gravity);
+
+                (coriolis).into()
             };
 
-            match self.params.control_mode.as_str() {
+            let result = match self.params.control_mode.as_str() {
                 "joint" => robot.control_joint_positions(callback_joint, None, None, None),
                 "joint_vel" => robot.control_joint_velocities(callback_joint_vel, None, None, None),
                 "cartesian" => robot.control_cartesian_pose(callback_cartesian, None, None, None),
@@ -164,23 +186,34 @@ impl NodeBehavior for DPandaPlant {
                 }
                 "torque" => robot.control_torques(callback_torque, None, None),
                 _ => panic!("Unsupported control mode"),
+            };
+
+            if let Err(e) = result {
+                println!("Error: {}", e);
             }
-            .unwrap();
         }
 
         self.state.robot = Some(robot);
     }
 
     fn update(&mut self) {
+        // 更新机器人状态
         let panda = self.state.robot.as_mut().unwrap();
         let state = panda.read_once().unwrap();
         update_state(self.robot.as_ref().unwrap(), &state);
 
+        // 如果存在非实时指令，则等待机器人静态后执行
         if !self.params.is_realtime {
+            // 机器人静态检查，不静态的机器人不许工作
+            if state.dq.iter().copied().sum::<f64>() < 0.01_f64 {
+                return;
+            }
+
             if let Some(DNodeMessage::Joint(joint)) = self.node.input_queue.pop() {
                 let out_q = joint.as_slice().try_into().unwrap();
                 panda.joint_motion(0.5, &out_q).unwrap();
             }
+            // 实体机器人在输入非事实指令之后需要等待直到非实时指令完成，否则会出现错误
         }
     }
     fn period(&self) -> std::time::Duration {

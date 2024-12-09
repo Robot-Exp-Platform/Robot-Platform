@@ -107,7 +107,7 @@ impl NodeBehavior for ExPlanner {
         {
             // get robot state
             let robot_read = self.robot.as_ref().unwrap().read().unwrap();
-            let q = robot_read.q();
+            let _q = robot_read.q();
             let q_min_bound = robot_read.q_min_bound();
             let q_max_bound = robot_read.q_max_bound();
             drop(robot_read);
@@ -125,9 +125,6 @@ impl NodeBehavior for ExPlanner {
                     rng.gen_range((center - half_range)..=(center + half_range))
                 }),
             );
-
-            println!("q: {}", q);
-            println!("target: {}", q_target);
 
             // // Interpolate between current q and q_target using lerp
             // let trace = lerp(&q, &vec![q_target], 50);

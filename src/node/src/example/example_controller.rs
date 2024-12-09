@@ -32,7 +32,6 @@ pub struct ExControllerParams {
     period: f64,
     k: na::DVector<f64>,
     b: na::DVector<f64>,
-    m: na::DVector<f64>,
 }
 
 #[derive(Default)]
@@ -95,9 +94,6 @@ impl NodeBehavior for ExController {
             let robot_read = self.robot.as_ref().unwrap().read().unwrap();
             let q = robot_read.q();
             let q_dot = robot_read.q_dot();
-            let q_ddot = robot_read.q_ddot();
-
-            // TODO 检查任务是否完成
 
             match self.node.input_queue.pop() {
                 Some(DNodeMessage::Joint(ref_q)) => {
@@ -117,12 +113,9 @@ impl NodeBehavior for ExController {
 
             let k = na::DMatrix::from_diagonal(&self.params.k);
             let b = na::DMatrix::from_diagonal(&self.params.b);
-            let m = na::DMatrix::from_diagonal(&self.params.m);
 
             // 执行 impedance 逻辑
-            let output = &k * (&self.state.ref_q - q)
-                + &b * (&self.state.ref_q_dot - &q_dot)
-                + &m * (&self.state.ref_q_ddot - &q_ddot);
+            let output = &k * (&self.state.ref_q - q) + &b * (-&q_dot);
 
             let control_message = DNodeMessage::Tau(output);
 
