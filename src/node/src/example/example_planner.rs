@@ -1,8 +1,8 @@
-use franka::Gripper;
 use generate_tools::{get_fn, set_fn};
 use message::{DNodeMessageQueue, NodeMessage, Pose};
 use nalgebra as na;
 use rand::Rng;
+use robot::Gripper;
 use serde::Deserialize;
 use serde_json::{from_value, Value};
 use std::sync::{Arc, RwLock};
@@ -135,6 +135,13 @@ impl NodeBehavior for ExPlanner {
                     rng.gen_range((center - half_range)..=(center + half_range))
                 }),
             );
+
+            let mut gripper_write = self.robot.1.as_mut().unwrap().write().unwrap();
+            if gripper_write.width() > 0.01 {
+                gripper_write.grasp(0.01);
+            } else {
+                gripper_write.home();
+            }
 
             // // Interpolate between current q and q_target using lerp
             // let trace = lerp(&q, &vec![q_target], 50);

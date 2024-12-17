@@ -5,7 +5,7 @@ use node::create_node;
 use serde_json::from_reader;
 use std::{
     fs,
-    sync::{mpsc, Arc, RwLock},
+    sync::{Arc, RwLock, mpsc},
 };
 
 use manager::{Config, Task, TaskManager, ThreadManager};
@@ -37,11 +37,6 @@ impl Exp {
         // 加载配置文件
         let config_file = fs::File::open(config).expect("Failed to open config file");
         let config: Config = from_reader(config_file).expect("Failed to parse config file");
-        #[cfg(feature = "recode")]
-        {
-            fs::create_dir(format!("./data/{}", *EXP_NAME)).unwrap();
-            fs::copy(CONFIG_PATH, format!("./data/{}/config.json", *EXP_NAME)).unwrap();
-        }
         // 根据配置开始初始化，关键在于搭建通讯
         let (sender, receiver) = mpsc::channel();
 
@@ -103,9 +98,8 @@ impl Exp {
             let mut node = create_node(&node_config.0, node_config.1.join("+"), node_config.3);
             // 为新创建的节点赋予机器人
             for robot_name in node_config.1 {
-                if let Some(RobotType::DSeriseRobot(robot)) = self.get_robot_from_name(&robot_name)
-                {
-                    node.set_robot(RobotType::DSeriseRobot(robot));
+                if let Some(robot) = self.get_robot_from_name(&robot_name) {
+                    node.set_robot(robot);
                 }
             }
             // 为新创建的节点赋予传感器

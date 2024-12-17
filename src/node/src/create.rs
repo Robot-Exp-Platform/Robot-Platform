@@ -3,8 +3,8 @@ use serde_json::Value;
 
 use crate::{
     example::{ExController, ExPlanner},
-    Cfs, DBullet, DImpedence, DImpedenceDiag, DPandaPlant, DPid, Interp, Node, ObstacleReleaser,
-    Position,
+    Cfs, DBullet, DImpedence, DImpedenceDiag, DPandaPlant, DPid, GripperPlant, Interp, Node,
+    ObstacleReleaser, Position,
 };
 
 pub fn create_node(
@@ -28,6 +28,7 @@ pub fn create_node(
         "obstacle_releaser" => Box::new(ObstacleReleaser::from_json(name, params)),
 
         "panda_plant" => Box::new(DPandaPlant::from_json(name, params)),
+        "gripper_plant" => Box::new(GripperPlant::from_json(name, params)),
         _ => panic!("Unknown node type: {}", node_type),
     }
 }

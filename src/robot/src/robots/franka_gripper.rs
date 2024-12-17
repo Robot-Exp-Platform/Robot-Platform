@@ -21,4 +21,8 @@ impl Gripper {
     pub fn grasp(&mut self, width: f64) {
         self.wide = width;
     }
+
+    pub fn home(&mut self) {
+        self.wide = 0.08;
+    }
 }
