@@ -1,3 +1,4 @@
+use franka::Gripper;
 use generate_tools::{get_fn, set_fn};
 use message::{DNodeMessageQueue, NodeMessage, Pose};
 use nalgebra as na;
@@ -14,7 +15,10 @@ pub struct ExPlanner {
     state: ExPlannerState,
     params: ExPlannerParams,
     node: ExPlannerNode,
-    robot: Option<Arc<RwLock<DSeriseRobot>>>,
+    robot: (
+        Option<Arc<RwLock<DSeriseRobot>>>,
+        Option<Arc<RwLock<Gripper>>>,
+    ),
 }
 
 #[derive(Default)]
@@ -53,7 +57,7 @@ impl ExPlanner {
             state: ExPlannerState::default(),
             params,
             node: ExPlannerNode::default(),
-            robot: None,
+            robot: (None, None),
         }
     }
 }
@@ -64,8 +68,14 @@ impl Node<na::DVector<f64>> for ExPlanner {
             (set_output_queue, output_queue: DNodeMessageQueue, node));
 
     fn set_robot(&mut self, robot: RobotType) {
-        if let RobotType::DSeriseRobot(robot) = robot {
-            self.robot = Some(robot);
+        match robot {
+            RobotType::FrankaGripper(gripper) => {
+                self.robot.1 = Some(gripper);
+            }
+            RobotType::DSeriseRobot(robot) => {
+                self.robot.0 = Some(robot);
+            }
+            _ => {}
         }
     }
     fn set_sensor(&mut self, _: Arc<RwLock<sensor::Sensor>>) {}
@@ -106,7 +116,7 @@ impl NodeBehavior for ExPlanner {
         // Demo begin
         {
             // get robot state
-            let robot_read = self.robot.as_ref().unwrap().read().unwrap();
+            let robot_read = self.robot.0.as_ref().unwrap().read().unwrap();
             let _q = robot_read.q();
             let q_min_bound = robot_read.q_min_bound();
             let q_max_bound = robot_read.q_max_bound();

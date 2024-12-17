@@ -1898,15 +1898,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "recoder"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "lazy_static",
- "message",
-]
-
-[[package]]
 name = "redox_syscall"
 version = "0.5.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1992,7 +1983,6 @@ dependencies = [
  "node",
  "osqp",
  "rand 0.8.5",
- "recoder",
  "robot",
  "rosrust",
  "rosrust_msg",
@@ -2000,7 +1990,6 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_yaml",
- "simulator",
  "solver",
  "tracing",
  "tracing-appender",
@@ -2300,26 +2289,6 @@ dependencies = [
  "num-traits",
  "paste",
  "wide",
-]
-
-[[package]]
-name = "simulator"
-version = "0.1.0"
-dependencies = [
- "crossbeam",
- "generate_tools",
- "manager",
- "message",
- "nalgebra 0.33.2",
- "node",
- "recoder",
- "robot",
- "sensor",
- "serde",
- "serde_json",
- "serde_yaml",
- "typenum",
- "zmq",
 ]
 
 [[package]]
