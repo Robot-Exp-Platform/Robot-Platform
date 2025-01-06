@@ -15,14 +15,15 @@ zmq = { workspace = true, optional = true }
 tracing.workspace = true
 tracing-subscriber.workspace = true
 rand.workspace = true
-libfranka-rs.workspace = true
-
-
 message.workspace = true
 generate_tools.workspace = true
 robot.workspace = true
 sensor.workspace = true
 solver.workspace = true
+
+[target.'cfg(unix)'.dependencies]
+libfranka-rs.workspace = true
+
 
 [features]
 default = ["rszmq"]

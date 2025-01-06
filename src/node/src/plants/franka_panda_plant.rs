@@ -1,20 +1,26 @@
-use franka;
 use nalgebra as na;
 use sensor::Sensor;
 use serde::Deserialize;
 use serde_json::{from_value, Value};
+use std::sync::{Arc, RwLock};
+
+use crate::{Node, NodeBehavior};
+use generate_tools::{get_fn, set_fn};
+use message::{DNodeMessageQueue, NodeMessageQueue};
+use robot::{Panda, RobotType};
+
+#[cfg(unix)]
+use message::DNodeMessage;
+#[cfg(unix)]
+use robot::DPanda;
+#[cfg(unix)]
 use std::{
     f64::consts::{FRAC_PI_2, FRAC_PI_4},
-    sync::{Arc, RwLock},
     thread,
     time::Duration,
 };
 
-use crate::{Node, NodeBehavior};
-use generate_tools::{get_fn, set_fn};
-use message::{DNodeMessage, DNodeMessageQueue, NodeMessageQueue};
-use robot::{DPanda, Panda, RobotType};
-
+#[allow(dead_code)]
 pub struct PandaPlant<V> {
     name: String,
     state: PandaPlantState,
@@ -27,9 +33,11 @@ pub type DPandaPlant = PandaPlant<na::DVector<f64>>;
 
 #[derive(Default)]
 pub struct PandaPlantState {
+    #[cfg(unix)]
     robot: Option<franka::Robot>,
 }
 
+#[allow(dead_code)]
 #[derive(Deserialize, Default)]
 pub struct PandaPlantParams {
     period: f64,
@@ -76,6 +84,7 @@ impl Node<na::DVector<f64>> for DPandaPlant {
 }
 
 impl NodeBehavior for DPandaPlant {
+    #[cfg(unix)]
     fn start(&mut self) {
         // 连接机器人及机械爪，清空错误
         let mut robot = franka::Robot::new(&self.params.ip, None, None).unwrap();
@@ -195,7 +204,7 @@ impl NodeBehavior for DPandaPlant {
 
         self.state.robot = Some(robot);
     }
-
+    #[cfg(unix)]
     fn update(&mut self) {
         // 更新机器人状态
         let panda = self.state.robot.as_mut().unwrap();
@@ -223,7 +232,7 @@ impl NodeBehavior for DPandaPlant {
         self.name.clone()
     }
 }
-
+#[cfg(unix)]
 fn update_state(robot: &Arc<RwLock<DPanda>>, state: &franka::RobotState) {
     let mut robot = robot.write().unwrap();
     robot.state.q = na::DVector::from_row_slice(state.q.as_slice());

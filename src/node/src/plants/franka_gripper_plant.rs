@@ -9,6 +9,7 @@ use message::DNodeMessageQueue;
 use robot::{Gripper, RobotType};
 use sensor::Sensor;
 
+#[allow(dead_code)]
 pub struct GripperPlant {
     name: String,
     state: GripperPlantState,
@@ -16,12 +17,15 @@ pub struct GripperPlant {
     gripper: Option<Arc<RwLock<Gripper>>>,
 }
 
+#[allow(dead_code)]
 pub struct GripperPlantState {
     width: f64,
+    #[cfg(unix)]
     gripper: Option<franka::Gripper>,
 }
 
 #[derive(Deserialize)]
+#[allow(dead_code)]
 pub struct GripperPlantParams {
     ip: String,
     period: f64,
@@ -36,6 +40,7 @@ impl GripperPlant {
             name,
             state: GripperPlantState {
                 width: 0.0,
+                #[cfg(unix)]
                 gripper: None,
             },
             params,
@@ -59,9 +64,11 @@ impl Node<na::DVector<f64>> for GripperPlant {
 }
 
 impl NodeBehavior for GripperPlant {
+    #[cfg(unix)]
     fn start(&mut self) {
         self.state.gripper = Some(franka::Gripper::new(&self.params.ip).unwrap());
     }
+    #[cfg(unix)]
     fn update(&mut self) {
         let width = if let Some(gripper) = self.gripper.as_ref() {
             gripper.read().unwrap().width()
