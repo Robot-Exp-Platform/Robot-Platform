@@ -69,6 +69,10 @@ impl NodeBehavior for GripperPlant {
             return;
         };
 
+        if self.gripper.as_ref().unwrap().read().unwrap().homing {
+            self.state.gripper.as_mut().unwrap().homing().unwrap();
+        }
+
         if width != self.state.width {
             if width > self.state.width {
                 self.state.gripper.as_mut().unwrap().homing().unwrap();
@@ -79,8 +83,9 @@ impl NodeBehavior for GripperPlant {
                 .gripper
                 .as_mut()
                 .unwrap()
-                .grasp(width, 0.1, 60., None, None)
+                .grasp(width, 0.1, 20., None, None)
                 .unwrap();
+            self.state.gripper.as_mut().unwrap().homing()
         }
     }
 

@@ -1,6 +1,7 @@
 pub struct Gripper {
     name: String,
     wide: f64,
+    pub homing: bool,
 }
 
 impl Gripper {
@@ -8,6 +9,7 @@ impl Gripper {
         Self {
             name: name.to_string(),
             wide: 0.0,
+            homing: false,
         }
     }
 
@@ -23,6 +25,6 @@ impl Gripper {
     }
 
     pub fn home(&mut self) {
-        self.wide = 0.08;
+        self.homing = true;
     }
 }
