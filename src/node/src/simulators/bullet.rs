@@ -5,7 +5,6 @@ use std::sync::Arc;
 use std::thread;
 use std::{process::Command, sync::Mutex};
 use tracing::info;
-#[cfg(feature = "rszmq")]
 use zmq;
 
 use crate::{Node, NodeBehavior, NodeState};
@@ -19,7 +18,6 @@ pub type SBullet<const N: usize> = Bullet<RobotType>;
 #[derive(Default)]
 pub struct BulletState {
     pybullet_thread: Option<thread::JoinHandle<()>>,
-    #[cfg(feature = "rszmq")]
     responder: Option<Arc<Mutex<zmq::Socket>>>,
 }
 
@@ -61,7 +59,6 @@ impl NodeBehavior for DBullet {
         }));
 
         // 建立通讯
-        #[cfg(feature = "rszmq")]
         {
             // 使用zmq实现程序通信，通信协议暂定为TCP
             // 以下为responder端
@@ -101,7 +98,6 @@ impl NodeBehavior for DBullet {
             serde_json::to_string(&commands).unwrap(),
             serde_json::to_string(&collections_info).unwrap()
         );
-        #[cfg(feature = "rszmq")]
         {
             // 获取 responder 并接受 RobotState 消息
             let responder = self.state.responder.as_ref().unwrap().lock().unwrap();

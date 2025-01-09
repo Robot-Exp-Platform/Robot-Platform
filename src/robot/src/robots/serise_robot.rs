@@ -125,7 +125,7 @@ impl DRobot for DSeriseRobot {
 
             let isometry_increment = na::Isometry3::from_parts(transform, rotation);
 
-            isometry *= isometry_increment;
+            isometry = isometry * isometry_increment;
         }
         isometry
     }

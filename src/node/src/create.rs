@@ -4,7 +4,7 @@ use serde_json::Value;
 use crate::{
     example::{ExController, ExPlanner},
     Cfs, DBullet, DImpedence, DImpedenceDiag, DPandaPlant, DPid, DPosition, GripperPlant, Interp,
-    NodeBehavior, NodeExt, ObstacleReleaser,
+    NodeBehavior, NodeExt, ObstacleReleaser, ZmqComm,
 };
 
 pub trait NodeExtBehavior: NodeExt<na::DVector<f64>> + NodeBehavior {}
@@ -26,6 +26,8 @@ pub fn create_node(node_type: &str, robot_name: String, params: Value) -> Box<dy
 
         "bullet" => Box::new(DBullet::from_params(name, params)),
         "obstacle_releaser" => Box::new(ObstacleReleaser::from_params(name, params)),
+
+        "zmq_comm" => Box::new(ZmqComm::from_params(name, params)),
 
         "panda_plant" => Box::new(DPandaPlant::from_params(name, params)),
         "gripper_plant" => Box::new(GripperPlant::from_params(name, params)),
