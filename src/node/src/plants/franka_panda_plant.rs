@@ -1,13 +1,8 @@
 use nalgebra as na;
-use sensor::Sensor;
 use serde::Deserialize;
-use serde_json::{from_value, Value};
-use std::sync::{Arc, RwLock};
 
 use crate::{Node, NodeBehavior};
-use generate_tools::{get_fn, set_fn};
-use message::{DNodeMessageQueue, NodeMessageQueue};
-use robot::{Panda, RobotType};
+use robot::{DSeriseRobot, RobotLock};
 
 #[cfg(unix)]
 use message::DNodeMessage;
@@ -20,15 +15,7 @@ use std::{
     time::Duration,
 };
 
-#[allow(dead_code)]
-pub struct PandaPlant<V> {
-    name: String,
-    state: PandaPlantState,
-    params: PandaPlantParams,
-    node: PandaPlantNode<V>,
-    robot: Option<Arc<RwLock<Panda<V>>>>,
-}
-
+pub type PandaPlant<V> = Node<PandaPlantState, PandaPlantParams, RobotLock<DSeriseRobot>, V>;
 pub type DPandaPlant = PandaPlant<na::DVector<f64>>;
 
 #[derive(Default)]
@@ -44,43 +31,6 @@ pub struct PandaPlantParams {
     ip: String,
     control_mode: String,
     is_realtime: bool,
-}
-
-#[derive(Default)]
-struct PandaPlantNode<V> {
-    input_queue: NodeMessageQueue<V>,
-    output_queue: NodeMessageQueue<V>,
-}
-
-impl DPandaPlant {
-    pub fn from_json(name: String, json: Value) -> DPandaPlant {
-        DPandaPlant::from_params(name, from_value(json).unwrap())
-    }
-    pub fn from_params(name: String, params: PandaPlantParams) -> DPandaPlant {
-        DPandaPlant {
-            name,
-            state: PandaPlantState::default(),
-            params,
-            node: PandaPlantNode::default(),
-            robot: None,
-        }
-    }
-}
-
-impl Node<na::DVector<f64>> for DPandaPlant {
-    get_fn!((name: String));
-    set_fn!((set_input_queue, input_queue: DNodeMessageQueue, node),
-            (set_output_queue, output_queue: DNodeMessageQueue, node));
-    fn set_robot(&mut self, robot: RobotType) {
-        if let RobotType::DSeriseRobot(robot) = robot {
-            self.robot = Some(robot);
-        }
-    }
-    fn set_params(&mut self, params: Value) {
-        self.params = from_value(params).unwrap();
-    }
-    fn is_end(&mut self) {}
-    fn set_sensor(&mut self, _sensor: Arc<RwLock<Sensor>>) {}
 }
 
 impl NodeBehavior for DPandaPlant {

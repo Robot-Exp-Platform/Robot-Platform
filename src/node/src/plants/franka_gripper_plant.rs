@@ -1,66 +1,25 @@
-use generate_tools::{get_fn, todo_fn};
 use nalgebra as na;
 use serde::Deserialize;
-use serde_json::{from_value, Value};
-use std::sync::{Arc, RwLock};
 
 use crate::{Node, NodeBehavior};
-use message::DNodeMessageQueue;
-use robot::{Gripper, RobotType};
-use sensor::Sensor;
+use robot::{Gripper, RobotLock};
 
-#[allow(dead_code)]
-pub struct GripperPlant {
-    name: String,
-    state: GripperPlantState,
-    params: GripperPlantParams,
-    gripper: Option<Arc<RwLock<Gripper>>>,
-}
+pub type GripperPlant =
+    Node<GripperPlantState, GripperPlantParams, RobotLock<Gripper>, na::DVector<f64>>;
 
-#[allow(dead_code)]
+#[derive(Default)]
 pub struct GripperPlantState {
+    #[cfg(unix)]
     width: f64,
     #[cfg(unix)]
     gripper: Option<franka::Gripper>,
 }
 
 #[derive(Deserialize)]
-#[allow(dead_code)]
 pub struct GripperPlantParams {
+    #[cfg(unix)]
     ip: String,
     period: f64,
-}
-
-impl GripperPlant {
-    pub fn from_json(name: String, json: Value) -> GripperPlant {
-        GripperPlant::from_params(name, from_value(json).unwrap())
-    }
-    pub fn from_params(name: String, params: GripperPlantParams) -> GripperPlant {
-        GripperPlant {
-            name,
-            state: GripperPlantState {
-                width: 0.0,
-                #[cfg(unix)]
-                gripper: None,
-            },
-            params,
-            gripper: None,
-        }
-    }
-}
-
-impl Node<na::DVector<f64>> for GripperPlant {
-    get_fn!((name: String));
-    todo_fn!((set_input_queue, input_queue: DNodeMessageQueue, node),
-            (set_output_queue, output_queue: DNodeMessageQueue, node));
-    todo_fn!((set_sensor, sensor: Arc<RwLock<Sensor>>),
-            (set_params, params: Value));
-
-    fn set_robot(&mut self, robot: robot::RobotType) {
-        if let RobotType::FrankaGripper(gripper) = robot {
-            self.gripper = Some(gripper);
-        }
-    }
 }
 
 impl NodeBehavior for GripperPlant {

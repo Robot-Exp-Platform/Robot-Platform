@@ -124,7 +124,8 @@ impl Exp {
             }
             if edge_config.1 == 0 {
                 // 如果是结束节点，就被确认为是系统末端
-                node_list[edge_config.0 - 1].is_end();
+                // TODO 机器人末端总线行为
+                println!("{} 是系统末端", node_list[edge_config.0 - 1].name());
                 continue;
             }
             // 如果是中间节点，就将彼此连接起来

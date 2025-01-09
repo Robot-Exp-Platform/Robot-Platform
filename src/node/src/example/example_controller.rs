@@ -1,23 +1,13 @@
 use nalgebra as na;
 use serde::Deserialize;
-use serde_json::{from_value, Value};
-use std::sync::{Arc, RwLock};
 use std::time::Duration;
 
 use crate::{Node, NodeBehavior};
-use generate_tools::{get_fn, set_fn};
-use message::{DNodeMessage, DNodeMessageQueue};
+use message::DNodeMessage;
+use robot::{DSeriseRobot, Robot, RobotLock};
 
-use robot::{DSeriseRobot, Robot, RobotType};
-use sensor::Sensor;
-
-pub struct ExController {
-    name: String,
-    state: ExControllerState,
-    params: ExControllerParams,
-    node: ExControllerNode,
-    robot: Option<Arc<RwLock<DSeriseRobot>>>,
-}
+pub type ExController =
+    Node<ExControllerState, ExControllerParams, RobotLock<DSeriseRobot>, na::DVector<f64>>;
 
 #[derive(Default)]
 pub struct ExControllerState {
@@ -34,59 +24,13 @@ pub struct ExControllerParams {
     b: na::DVector<f64>,
 }
 
-#[derive(Default)]
-pub struct ExControllerNode {
-    input_queue: DNodeMessageQueue,
-    output_queue: DNodeMessageQueue,
-}
-
-impl ExControllerState {
-    pub fn new(dof: usize) -> ExControllerState {
-        ExControllerState {
-            is_end: false,
-            ref_q: na::DVector::zeros(dof),
-            ref_q_dot: na::DVector::zeros(dof),
-            ref_q_ddot: na::DVector::zeros(dof),
-        }
-    }
-}
-
-impl ExController {
-    pub fn from_json(name: String, json: Value) -> ExController {
-        ExController::from_params(name, from_value(json).unwrap())
-    }
-    pub fn from_params(name: String, params: ExControllerParams) -> ExController {
-        ExController {
-            name,
-            state: ExControllerState::default(),
-            params,
-            node: ExControllerNode::default(),
-            robot: None,
-        }
-    }
-}
-
-impl Node<na::DVector<f64>> for ExController {
-    get_fn!((name: String));
-    set_fn!((set_input_queue, input_queue: DNodeMessageQueue, node),
-            (set_output_queue, output_queue: DNodeMessageQueue, node));
-
-    fn is_end(&mut self) {
-        self.state.is_end = true;
-    }
-    fn set_robot(&mut self, robot: RobotType) {
-        if let RobotType::DSeriseRobot(robot) = robot {
-            self.state = ExControllerState::new(robot.read().unwrap().dof());
-            self.robot = Some(robot);
-        }
-    }
-    fn set_sensor(&mut self, _: Arc<RwLock<Sensor>>) {}
-    fn set_params(&mut self, params: Value) {
-        self.params = from_value(params).unwrap();
-    }
-}
-
 impl NodeBehavior for ExController {
+    fn init(&mut self) {
+        let dof = self.robot.as_ref().unwrap().read().unwrap().dof();
+        self.state.ref_q = na::DVector::from_element(dof, 0.0);
+        self.state.ref_q_dot = na::DVector::from_element(dof, 0.0);
+        self.state.ref_q_ddot = na::DVector::from_element(dof, 0.0);
+    }
     fn update(&mut self) {
         // Demo begin
         {
@@ -95,7 +39,7 @@ impl NodeBehavior for ExController {
             let q = robot_read.q();
             let q_dot = robot_read.q_dot();
 
-            match self.node.input_queue.pop() {
+            match self.input_queue.pop() {
                 Some(DNodeMessage::Joint(ref_q)) => {
                     self.state.ref_q = ref_q;
                 }
@@ -128,7 +72,7 @@ impl NodeBehavior for ExController {
                     .unwrap()
                     .set_control_message(control_message);
             } else {
-                self.node.output_queue.push(control_message);
+                self.output_queue.push(control_message);
             }
         }
         // Demo end

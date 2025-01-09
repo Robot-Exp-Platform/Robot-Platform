@@ -1,123 +1,32 @@
 use nalgebra as na;
-use robot::{DSeriseRobot, Robot, RobotType};
+use robot::{DSeriseRobot, Robot, RobotLock, RobotType};
 use serde::Deserialize;
-use serde_json::{from_value, Value};
-// use serde_yaml::Value;
-use crossbeam::queue::SegQueue;
-use std::process::Command;
-#[cfg(feature = "rszmq")]
-use std::sync::Mutex;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 use std::thread;
+use std::{process::Command, sync::Mutex};
 use tracing::info;
 #[cfg(feature = "rszmq")]
 use zmq;
 
 use crate::{Node, NodeBehavior, NodeState};
-use generate_tools::*;
 use message::RobotState;
-use sensor::Sensor;
 
-// bullet 结构体声明，包含其名称，路径，消息节点，以及机器人
-#[allow(dead_code)]
-pub struct Bullet<R> {
-    /// The name of the simulator.
-    name: String,
-    /// The state of the simulator.
-    state: BulletState,
-    /// The parameters of the simulator.
-    params: BulletParams,
-    /// The path of the simulator.
-    node: BulletNode,
-    /// The robot that the simulator is controlling.
-    robot: Vec<Arc<RwLock<R>>>,
-    /// The sensor that the simulator is using.
-    sensor: Vec<Arc<RwLock<Sensor>>>,
-}
+pub type Bullet<R> = Node<BulletState, BulletParams, RobotLock<R>, na::DVector<f64>>;
 
 pub type DBullet = Bullet<DSeriseRobot>;
 pub type SBullet<const N: usize> = Bullet<RobotType>;
 
-struct BulletState {
-    is_end: bool,
-    node_state: NodeState,
+#[derive(Default)]
+pub struct BulletState {
     pybullet_thread: Option<thread::JoinHandle<()>>,
+    #[cfg(feature = "rszmq")]
+    responder: Option<Arc<Mutex<zmq::Socket>>>,
 }
 
 #[derive(Deserialize)]
 pub struct BulletParams {
     period: f64,
     config_path: String,
-}
-
-// 消息节点结构体声明，随条件编译的不同而不同，条件编译将决定其使用什么通讯方式
-struct BulletNode {
-    #[cfg(feature = "rszmq")]
-    responder: Arc<Mutex<zmq::Socket>>,
-}
-
-// 为结构体 Bullet 实现方法，这里主要是初始化方法
-impl DBullet {
-    pub fn new(name: String) -> DBullet {
-        DBullet::from_params(
-            name,
-            BulletParams {
-                period: 0.0,
-                config_path: String::new(),
-            },
-        )
-    }
-
-    pub fn from_json(name: String, params: Value) -> DBullet {
-        DBullet::from_params(name, serde_json::from_value(params).unwrap())
-    }
-
-    pub fn from_params(name: String, params: BulletParams) -> DBullet {
-        #[cfg(feature = "rszmq")]
-        let context = Arc::new(zmq::Context::new());
-        #[cfg(feature = "rszmq")]
-        let responder = context.socket(zmq::REP).unwrap();
-
-        DBullet {
-            name,
-            state: BulletState {
-                is_end: false,
-                node_state: NodeState::RelyRelease,
-                pybullet_thread: None,
-            },
-            params,
-            node: BulletNode {
-                #[cfg(feature = "rszmq")]
-                responder: Arc::new(Mutex::new(responder)),
-                #[cfg(feature = "ros")]
-                sub_list: Vec::new(),
-            },
-            robot: Vec::new(),
-            sensor: Vec::new(),
-        }
-    }
-}
-
-impl Node<na::DVector<f64>> for DBullet {
-    get_fn!((name: String));
-
-    fn set_input_queue(&mut self, _: Arc<SegQueue<message::NodeMessage<na::DVector<f64>>>>) {}
-    fn set_output_queue(&mut self, _: Arc<SegQueue<message::NodeMessage<na::DVector<f64>>>>) {}
-
-    fn is_end(&mut self) {
-        self.state.is_end = true;
-    }
-    fn set_robot(&mut self, robot: RobotType) {
-        if let RobotType::DSeriseRobot(robot) = robot {
-            self.robot.push(robot);
-        }
-    }
-    fn set_sensor(&mut self, sensor: Arc<RwLock<Sensor>>) {
-        self.sensor.push(sensor);
-    }
-    fn set_params(&mut self, params: Value) {
-        self.params = from_value(params).unwrap();
-    }
 }
 
 impl NodeBehavior for DBullet {
@@ -156,18 +65,18 @@ impl NodeBehavior for DBullet {
         {
             // 使用zmq实现程序通信，通信协议暂定为TCP
             // 以下为responder端
-            // 使用锁来访问 responder
-            let responder = self.node.responder.clone(); // 克隆 Arc 引用
-            let responder_lock = responder.lock().unwrap(); // 锁定 Mutex 并解锁获得可变引用
-                                                            // 绑定到TCP地址
-            match responder_lock.bind("tcp://*:5555") {
+            let context = Arc::new(zmq::Context::new());
+            let responder = context.socket(zmq::REP).unwrap();
+
+            match responder.bind("tcp://*:5555") {
                 Ok(_) => println!("Socket successfully bound to tcp://*:5555"),
                 Err(e) => eprintln!("Failed to bind socket: {}", e),
             }
+            self.state.responder = Some(Arc::new(Mutex::new(responder)));
         }
 
         // 初始化节点状态
-        self.state.node_state = NodeState::Init;
+        self.node_state = NodeState::Init;
     }
 
     fn update(&mut self) {
@@ -195,7 +104,7 @@ impl NodeBehavior for DBullet {
         #[cfg(feature = "rszmq")]
         {
             // 获取 responder 并接受 RobotState 消息
-            let responder = self.node.responder.lock().unwrap();
+            let responder = self.state.responder.as_ref().unwrap().lock().unwrap();
             let message = responder
                 .recv_string(0)
                 .expect("Received a message that is not a valid UTF-8 string.")
@@ -237,10 +146,10 @@ impl NodeBehavior for DBullet {
         }
 
         // 修改节点状态
-        if self.state.node_state == NodeState::Init {
-            self.state.node_state = NodeState::RelyRelease;
+        if self.node_state == NodeState::Init {
+            self.node_state = NodeState::RelyRelease;
         } else {
-            self.state.node_state = NodeState::Running;
+            self.node_state = NodeState::Running;
         }
     }
 
@@ -249,6 +158,6 @@ impl NodeBehavior for DBullet {
     }
 
     fn state(&mut self) -> crate::NodeState {
-        self.state.node_state
+        self.node_state
     }
 }

@@ -1,35 +1,14 @@
 use nalgebra as na;
 use serde::Deserialize;
-use serde_json::{from_value, Value};
-use tracing::info;
-// use serde_yaml::{from_value, Value};
-use std::sync::{Arc, RwLock};
 use std::time::Duration;
+use tracing::info;
 
 use crate::{utilities::*, Node, NodeBehavior, NodeState};
-use generate_tools::{get_fn, set_fn};
-use message::{
-    iso_to_vec, Constraint, DNodeMessage, DNodeMessageQueue, NodeMessage, NodeMessageQueue,
-    QuadraticProgramming,
-};
-use robot::{DRobot, DSeriseRobot, Robot, RobotType};
-use sensor::Sensor;
+use message::{iso_to_vec, Constraint, DNodeMessage, NodeMessage, QuadraticProgramming};
+use robot::{DRobot, DSeriseRobot, Robot, RobotLock};
 use solver::{OsqpSolver, Solver};
 
-pub struct Cfs<R, V> {
-    /// The name of the planner.
-    name: String,
-    /// The state of the planner.
-    state: CfsState<V>,
-    /// The parameters of the planner.
-    params: CfsParams,
-    /// The node of the planner.
-    node: CfsNode<V>,
-    /// The robot that the planner is controlling.
-    robot: Option<Arc<RwLock<R>>>,
-    /// The sensor that the planner is using.
-    sensor: Option<Arc<RwLock<Sensor>>>,
-}
+pub type Cfs<R, V> = Node<CfsState<V>, CfsParams, RobotLock<R>, V>;
 
 pub type DCfs = Cfs<DSeriseRobot, na::DVector<f64>>;
 pub type SCfs<R, const N: usize> = Cfs<R, na::SVector<f64, N>>;
@@ -37,61 +16,15 @@ pub type SCfs<R, const N: usize> = Cfs<R, na::SVector<f64, N>>;
 #[derive(Default)]
 pub struct CfsState<V> {
     target: Option<NodeMessage<V>>,
-    node_state: NodeState,
 }
 
-#[derive(Deserialize, Default)]
+#[derive(Deserialize)]
 pub struct CfsParams {
     period: f64,
     ninterp: usize,
     niter: usize,
     cost_weight: Vec<f64>,
     solver: String,
-}
-
-#[derive(Default)]
-pub struct CfsNode<V> {
-    input_queue: NodeMessageQueue<V>,
-    output_queue: NodeMessageQueue<V>,
-}
-
-impl DCfs {
-    pub fn new(name: String) -> DCfs {
-        DCfs::from_params(name, CfsParams::default())
-    }
-
-    pub fn from_json(name: String, json: Value) -> DCfs {
-        DCfs::from_params(name, from_value(json).unwrap())
-    }
-
-    pub fn from_params(name: String, params: CfsParams) -> DCfs {
-        DCfs {
-            name,
-            state: CfsState::default(),
-            params,
-            node: CfsNode::default(),
-            robot: None,
-            sensor: None,
-        }
-    }
-}
-
-impl Node<na::DVector<f64>> for DCfs {
-    get_fn!((name: String));
-    set_fn!((set_input_queue, input_queue: DNodeMessageQueue, node),
-            (set_output_queue, output_queue: DNodeMessageQueue, node));
-
-    fn set_robot(&mut self, robot: RobotType) {
-        if let RobotType::DSeriseRobot(robot) = robot {
-            self.robot = Some(robot);
-        }
-    }
-    fn set_sensor(&mut self, sensor: Arc<RwLock<Sensor>>) {
-        self.sensor = Some(sensor);
-    }
-    fn set_params(&mut self, params: Value) {
-        self.params = from_value(params).unwrap();
-    }
 }
 
 impl NodeBehavior for DCfs {
@@ -116,13 +49,9 @@ impl NodeBehavior for DCfs {
 
         // 获取 target, 如果两侧都没有消息那就说明任务完成了，皆大欢喜
         // 这里的策略是完成当前任务优先
-        let target = self
-            .state
-            .target
-            .clone()
-            .or_else(|| self.node.input_queue.pop());
+        let target = self.state.target.clone().or_else(|| self.input_queue.pop());
         if target.is_none() {
-            self.state.node_state = NodeState::Finished;
+            self.node_state = NodeState::Finished;
             return;
         }
         let target = target.unwrap();
@@ -247,21 +176,19 @@ impl NodeBehavior for DCfs {
             )));
         }
         // 发送 track
-        while self.node.output_queue.pop().is_some() {}
+        while self.output_queue.pop().is_some() {}
         for track in track_list {
-            self.node.output_queue.push(track);
+            self.output_queue.push(track);
         }
     }
 
     fn period(&self) -> Duration {
         Duration::from_secs_f64(self.params.period)
     }
-
     fn node_name(&self) -> String {
         self.name.clone()
     }
-
     fn state(&mut self) -> NodeState {
-        self.state.node_state
+        self.node_state
     }
 }

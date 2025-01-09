@@ -1,108 +1,31 @@
 use nalgebra as na;
 use serde::Deserialize;
-use serde_json::{from_value, Value};
+use std::{
+    sync::{Arc, RwLock},
+    time::Duration,
+};
 use tracing::info;
-// use serde_yaml::{from_value, Value};
-use std::sync::{Arc, RwLock};
-use std::time::Duration;
 
 use crate::{utilities::*, Node, NodeBehavior, NodeState};
-use generate_tools::{get_fn, set_fn};
-use message::{
-    iso_to_vec, Constraint, DNodeMessage, DNodeMessageQueue, NodeMessage, NodeMessageQueue, Pose,
-    QuadraticProgramming,
-};
-use robot::{DRobot, DSeriseRobot, Robot, RobotBranch, RobotType};
-use sensor::Sensor;
+use message::{iso_to_vec, Constraint, DNodeMessage, NodeMessage, Pose, QuadraticProgramming};
+use robot::{DRobot, DSeriseRobot, Robot, RobotBranch};
 use solver::{OsqpSolver, Solver};
 
-pub struct CfsBranch<R, V> {
-    /// The name of the planner.
-    name: String,
-    /// The state of the planner.
-    state: CfsBranchState<V>,
-    /// The parameters of the planner.
-    params: CfsBranchParams,
-    /// The node of the planner.
-    node: CfsBranchNode<V>,
-    /// The robot that the planner is controlling.
-    robot: RobotBranch<R>,
-    // fake_robot: RobotBranch<FaekPoseRobot>,
-    /// The sensor that the planner is using.
-    sensor: Option<Arc<RwLock<Sensor>>>,
-}
-
+pub type CfsBranch<R, V> = Node<CfsBranchState<V>, CfsBranchParams, RobotBranch<R>, V>;
 pub type DCfsBranch = CfsBranch<DSeriseRobot, na::DVector<f64>>;
 
 #[derive(Default)]
 pub struct CfsBranchState<V> {
     target: Option<NodeMessage<V>>,
-    node_state: NodeState,
 }
 
-#[derive(Deserialize, Default)]
+#[derive(Deserialize)]
 pub struct CfsBranchParams {
     period: f64,
     ninterp: usize,
     niter: usize,
     cost_weight: Vec<f64>,
     solver: String,
-}
-
-#[derive(Default)]
-pub struct CfsBranchNode<V> {
-    input_queue: NodeMessageQueue<V>,
-    output_queue: Vec<NodeMessageQueue<V>>,
-}
-
-impl DCfsBranch {
-    pub fn new(name: String) -> DCfsBranch {
-        DCfsBranch::from_params(name, CfsBranchParams::default())
-    }
-
-    pub fn from_json(name: String, json: Value) -> DCfsBranch {
-        Self::from_params(name, from_value(json).unwrap())
-    }
-
-    pub fn from_params(name: String, params: CfsBranchParams) -> DCfsBranch {
-        let node = CfsBranchNode::default();
-        let state = CfsBranchState::default();
-        let robot = RobotBranch::new();
-        // let fake_robot = RobotBranch::new();
-        DCfsBranch {
-            name,
-            state,
-            params,
-            node,
-            robot,
-            // fake_robot,
-            sensor: None,
-        }
-    }
-}
-
-impl Node<na::DVector<f64>> for DCfsBranch {
-    get_fn!((name: String));
-    set_fn!((set_input_queue, input_queue: DNodeMessageQueue, node));
-
-    fn set_output_queue(
-        &mut self,
-        output_queue: Arc<crossbeam::queue::SegQueue<NodeMessage<na::DVector<f64>>>>,
-    ) {
-        self.node.output_queue.push(output_queue);
-    }
-
-    fn set_robot(&mut self, robot: RobotType) {
-        if let RobotType::DSeriseRobot(robot) = robot {
-            self.robot.push(robot);
-        }
-    }
-    fn set_sensor(&mut self, sensor: Arc<RwLock<Sensor>>) {
-        self.sensor = Some(sensor);
-    }
-    fn set_params(&mut self, params: Value) {
-        self.params = from_value(params).unwrap();
-    }
 }
 
 impl NodeBehavior for DCfsBranch {
@@ -129,13 +52,9 @@ impl NodeBehavior for DCfsBranch {
         }
 
         // 获取 target
-        let target = self
-            .state
-            .target
-            .clone()
-            .or_else(|| self.node.input_queue.pop());
+        let target = self.state.target.clone().or_else(|| self.input_queue.pop());
         if target.is_none() {
-            self.state.node_state = NodeState::RelyRelease;
+            self.node_state = NodeState::RelyRelease;
             return;
         }
         let target = target.unwrap();
@@ -255,14 +174,14 @@ impl NodeBehavior for DCfsBranch {
         // 根据分割 发送 track
 
         // 清空输出队列
-        for output_queue in self.node.output_queue.iter() {
+        for output_queue in self.output_queue.iter() {
             while output_queue.pop().is_some() {}
         }
 
         // 发送轨迹
         for track in track_list {
             let tracks = self.robot.split(track);
-            for (track, output_queue) in tracks.iter().zip(self.node.output_queue.iter()) {
+            for (track, output_queue) in tracks.iter().zip(self.output_queue.iter()) {
                 output_queue.push(NodeMessage::Joint(track.clone()));
             }
         }
@@ -277,6 +196,6 @@ impl NodeBehavior for DCfsBranch {
     }
 
     fn state(&mut self) -> NodeState {
-        self.state.node_state
+        self.node_state
     }
 }
