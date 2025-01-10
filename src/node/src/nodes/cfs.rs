@@ -117,9 +117,8 @@ impl NodeBehavior for DCfs {
                     // test_pose_constraint(ref_pose, &q_end_ref, &robot_read);
 
                     let func = |q: &na::DVector<f64>| iso_to_vec(robot_read.cul_end_pose(q));
-
                     let (value, grad) = robot_read.cul_func(&q_end_ref, &func);
-                    // let grad = robot_read.cul_end_pose_grad(&q_end_ref);
+
                     let b_bar = iso_to_vec(ref_pose) - value + &grad * q_end_ref;
                     end_constraint += Constraint::Hyperplane(
                         grad.nrows(),

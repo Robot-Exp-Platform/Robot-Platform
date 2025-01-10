@@ -50,7 +50,7 @@ mod tests {
             // 当前关节的变换
             let current_transform = isometry_increment;
             // println!("current_transform: {}", current_transform.to_homogeneous());
-            transform = current_transform * transform;
+            transform *= current_transform;
             // println!("transform: {}", transform.to_homogeneous());
         }
 

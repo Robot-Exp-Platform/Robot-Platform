@@ -103,19 +103,6 @@ where
     }
 }
 
-// impl<S, P, R, V> NodeBehavior for Node<S, P, R, V>
-// where
-//     S: Default,
-//     P: Default + DeserializeOwned,
-// {
-//     fn node_name(&self) -> String {
-//         self.name.clone()
-//     }
-//     fn state(&mut self) -> NodeState {
-//         self.node_state
-//     }
-// }
-
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub enum NodeState {
     Init,
