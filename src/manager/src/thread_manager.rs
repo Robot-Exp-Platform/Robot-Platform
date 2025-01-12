@@ -48,7 +48,6 @@ impl ThreadManager {
                 let mut node = node; // 将 node 声明为可变的
                 println!("{} 向您问好. {} says hello.", name, name);
                 node.init();
-                node.start();
 
                 let period = node.period();
 
@@ -90,7 +89,6 @@ impl ThreadManager {
                 let mut node = node.lock().unwrap();
                 println!("{} 向您问好. {} says hello.", name, name);
                 node.init();
-                node.start();
 
                 let period = node.period();
 
@@ -128,7 +126,6 @@ impl ThreadManager {
                 let mut node = node.write().unwrap();
                 println!("{} 向您问好. {} says hello.", name, name);
                 node.init();
-                node.start();
 
                 let period = node.period();
 

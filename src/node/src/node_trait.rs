@@ -22,7 +22,6 @@ pub trait NodeExt<V> {
 // TODO consider using state machine to manage the node
 pub trait NodeBehavior: Send + Sync {
     fn init(&mut self) {}
-    fn start(&mut self) {}
     fn update(&mut self) {}
     fn finalize(&mut self) {}
 
