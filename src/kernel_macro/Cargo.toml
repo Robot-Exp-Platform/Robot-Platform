@@ -1,0 +1,15 @@
+[package]
+name = "kernel_macro"
+version = "0.1.0"
+edition = "2024"
+repository.workspace = true
+
+[lib]
+proc-macro = true
+
+[dependencies]
+syn = "*"
+quote = "*"
+inventory = "*"
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true

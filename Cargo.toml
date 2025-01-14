@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "src/generate_tools",
+    "src/kernel_macro",
     "src/manager",
     "src/message",
     "src/node",

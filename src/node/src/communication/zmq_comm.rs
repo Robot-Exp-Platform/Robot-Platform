@@ -15,6 +15,8 @@ pub struct ZmqCommState {
 #[derive(Deserialize)]
 pub struct ZmqCommParams {
     pub period: f64,
+    pub ip: String,
+    pub port: u16,
 }
 
 impl NodeBehavior for ZmqComm {
@@ -25,8 +27,9 @@ impl NodeBehavior for ZmqComm {
         let context = Arc::new(zmq::Context::new());
         let responder = context.socket(zmq::REP).unwrap();
 
-        match responder.bind("tcp://*:5555") {
-            Ok(_) => println!("Socket successfully bound to tcp://*:5555"),
+        let address = format!("tcp://{}:{}", self.params.ip, self.params.port);
+        match responder.bind(&address) {
+            Ok(_) => println!("Socket successfully bound to {}", address),
             Err(e) => eprintln!("Failed to bind socket: {}", e),
         }
         self.state.responder = Some(Arc::new(Mutex::new(responder)));
