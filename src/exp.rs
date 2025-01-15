@@ -1,7 +1,6 @@
 use chrono::Local;
 use crossbeam::queue::SegQueue;
 use message::TaskState;
-use node::create_node;
 use serde_json::from_reader;
 use std::{
     fs,
@@ -9,7 +8,7 @@ use std::{
 };
 
 use manager::{Config, Task, TaskManager, ThreadManager};
-use node::NodeBehavior;
+use node::{NodeBehavior, factory};
 use robot::{self, RobotType};
 use sensor::Sensor;
 
@@ -95,7 +94,7 @@ impl Exp {
         // 创建节点
         for node_config in task.nodes.clone() {
             // 创建节点
-            let mut node = create_node(&node_config.0, node_config.1.join("+"), node_config.3);
+            let mut node = factory(&node_config.0, &node_config.1.join("+"), node_config.3);
             // 为新创建的节点赋予机器人
             for robot_name in node_config.1 {
                 if let Some(robot) = self.get_robot_from_name(&robot_name) {

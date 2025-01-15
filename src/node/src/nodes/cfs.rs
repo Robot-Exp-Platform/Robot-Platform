@@ -1,15 +1,17 @@
+use kernel_macro::node_registration;
 use nalgebra as na;
 use serde::Deserialize;
 use std::time::Duration;
 use tracing::info;
 
-use crate::{utilities::*, Node, NodeBehavior, NodeState};
+use crate::{utilities::*, Node, NodeBehavior, NodeExtBehavior, NodeRegister, NodeState};
 use message::{iso_to_vec, Constraint, DNodeMessage, NodeMessage, QuadraticProgramming};
 use robot::{DRobot, DSeriseRobot, Robot, RobotLock};
 use solver::{OsqpSolver, Solver};
 
 pub type Cfs<R, V> = Node<CfsState<V>, CfsParams, RobotLock<R>, V>;
 
+#[node_registration("cfs")]
 pub type DCfs = Cfs<DSeriseRobot, na::DVector<f64>>;
 pub type SCfs<R, const N: usize> = Cfs<R, na::SVector<f64, N>>;
 

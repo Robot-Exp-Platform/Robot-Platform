@@ -1,8 +1,10 @@
+use kernel_macro::node_registration;
 use message::NodeMessage;
 use serde::Deserialize;
 
-use crate::{Node, NodeBehavior};
+use crate::{Node, NodeBehavior, NodeExtBehavior, NodeRegister};
 
+#[node_registration("example_node")]
 type ExNode = Node<ExNodeState, ExNodeParams, (), f64>;
 
 #[derive(Default)]

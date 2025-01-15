@@ -1,11 +1,13 @@
+use kernel_macro::node_registration;
 use nalgebra as na;
 use serde::Deserialize;
 use std::time::Duration;
 
-use crate::{Node, NodeBehavior};
+use crate::{Node, NodeBehavior, NodeExtBehavior, NodeRegister};
 use message::DNodeMessage;
 use robot::{DSeriseRobot, Robot, RobotLock};
 
+#[node_registration("ex_controller")]
 pub type ExController =
     Node<ExControllerState, ExControllerParams, RobotLock<DSeriseRobot>, na::DVector<f64>>;
 

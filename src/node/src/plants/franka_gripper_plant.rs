@@ -1,9 +1,11 @@
+use kernel_macro::node_registration;
 use nalgebra as na;
 use serde::Deserialize;
 
-use crate::{Node, NodeBehavior};
+use crate::{Node, NodeBehavior, NodeExtBehavior, NodeRegister};
 use robot::{Gripper, RobotLock};
 
+#[node_registration("gripper_plant")]
 pub type GripperPlant =
     Node<GripperPlantState, GripperPlantParams, RobotLock<Gripper>, na::DVector<f64>>;
 

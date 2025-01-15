@@ -1,16 +1,18 @@
+use kernel_macro::node_registration;
 use nalgebra as na;
 use serde::Deserialize;
 use std::time::Duration;
 use tracing::info;
 
-use crate::{Node, NodeBehavior};
+use crate::{Node, NodeBehavior, NodeExtBehavior, NodeRegister};
 use message::DNodeMessage;
 
 use robot::{DSeriseRobot, Robot, RobotLock};
-pub type Impedence<R, V, M> = Node<ImpedenceState<V>, ImpedenceParams<M>, RobotLock<R>, V>;
+pub type Impedence<R, M, V> = Node<ImpedenceState<V>, ImpedenceParams<M>, RobotLock<R>, V>;
 
-pub type DImpedence = Impedence<DSeriseRobot, na::DVector<f64>, na::DMatrix<f64>>;
-pub type SImpedence<R, const N: usize> = Impedence<R, na::SVector<f64, N>, na::SMatrix<f64, N, N>>;
+#[node_registration("impedence")]
+pub type DImpedence = Impedence<DSeriseRobot, na::DMatrix<f64>, na::DVector<f64>>;
+pub type SImpedence<R, const N: usize> = Impedence<R, na::SMatrix<f64, N, N>, na::SVector<f64, N>>;
 pub type DImpedenceDiag = Impedence<DSeriseRobot, na::DVector<f64>, na::DVector<f64>>;
 
 #[derive(Default)]

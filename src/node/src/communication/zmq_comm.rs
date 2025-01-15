@@ -1,10 +1,12 @@
+use kernel_macro::node_registration;
 use message::NodeMessage;
 use nalgebra as na;
 use serde::Deserialize;
 use std::sync::{Arc, Mutex};
 
-use crate::{Node, NodeBehavior};
+use crate::{Node, NodeBehavior, NodeExtBehavior, NodeRegister};
 
+#[node_registration("zmq_comm")]
 pub type ZmqComm = Node<ZmqCommState, ZmqCommParams, (), na::DVector<f64>>;
 
 #[derive(Default)]

@@ -1,4 +1,5 @@
 use generate_tools::{get_fn, set_fn};
+use nalgebra as na;
 use sensor::Sensor;
 use serde::de::DeserializeOwned;
 use serde_json::{from_value, Value};
@@ -37,6 +38,19 @@ pub trait NodeBehavior: Send + Sync {
     fn node_type(&self) -> String {
         String::from("unnamed_type")
     }
+}
+
+pub trait NodeExtBehavior<V>: NodeExt<V> + NodeBehavior {}
+
+// impl<T, V> NodeExtBehavior<V> for T where T: NodeExt<V> + NodeBehavior {}
+
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub enum NodeState {
+    Init,
+    #[default]
+    Running,
+    RelyRelease,
+    Finished,
 }
 
 pub struct Node<S, P, R, V>
@@ -102,11 +116,25 @@ where
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Default)]
-pub enum NodeState {
-    Init,
-    #[default]
-    Running,
-    RelyRelease,
-    Finished,
+pub struct NodeRegister<V> {
+    pub node_type: &'static str,
+    pub node_creator: fn(String, Value) -> Box<dyn NodeExtBehavior<V>>,
+}
+
+inventory::collect!(NodeRegister<na::DVector<f64>>);
+inventory::collect!(NodeRegister<f64>);
+
+pub fn factory(
+    node_type: &str,
+    robot_name: &str,
+    params: Value,
+) -> Box<dyn NodeExtBehavior<na::DVector<f64>>> {
+    let name = format!("{}:{}", node_type, robot_name);
+    for reg in inventory::iter::<NodeRegister<na::DVector<f64>>> {
+        if reg.node_type == node_type {
+            return (reg.node_creator)(name, params);
+        }
+    }
+    // 未注册的节点类型会导致 panic
+    panic!("Unknown or unregisted node type: {}", node_type);
 }

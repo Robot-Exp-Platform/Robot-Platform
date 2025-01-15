@@ -1,15 +1,17 @@
+use kernel_macro::node_registration;
 use nalgebra as na;
 use serde::Deserialize;
 use std::{f64, time::Duration};
 
-use crate::{Node, NodeBehavior};
+use crate::{Node, NodeBehavior, NodeExtBehavior, NodeRegister};
 use message::DNodeMessage;
 use robot::{DSeriseRobot, Robot, RobotLock};
 
-pub type Pid<R, V, M> = Node<PidState<V>, PidParams<M>, RobotLock<R>, V>;
+pub type Pid<R, M, V> = Node<PidState<V>, PidParams<M>, RobotLock<R>, V>;
 
-pub type DPid = Pid<DSeriseRobot, na::DVector<f64>, na::DMatrix<f64>>;
-pub type SPid<R, const N: usize> = Pid<R, na::SVector<f64, N>, na::SMatrix<f64, N, N>>;
+#[node_registration("pid")]
+pub type DPid = Pid<DSeriseRobot, na::DMatrix<f64>, na::DVector<f64>>;
+pub type SPid<R, const N: usize> = Pid<R, na::SMatrix<f64, N, N>, na::SVector<f64, N>>;
 pub type DPidDiag = Pid<DSeriseRobot, na::DVector<f64>, na::DVector<f64>>;
 
 #[derive(Default)]

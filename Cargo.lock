@@ -1015,6 +1015,7 @@ name = "kernel_macro"
 version = "0.1.0"
 dependencies = [
  "inventory",
+ "proc-macro2",
  "quote",
  "serde",
  "serde_json",
@@ -1430,6 +1431,8 @@ version = "0.1.0"
 dependencies = [
  "crossbeam",
  "generate_tools",
+ "inventory",
+ "kernel_macro",
  "libfranka-rs",
  "message",
  "nalgebra 0.33.2",

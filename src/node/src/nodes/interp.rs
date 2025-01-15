@@ -1,14 +1,16 @@
+use kernel_macro::node_registration;
 use nalgebra as na;
 use serde::Deserialize;
 use std::time::Duration;
 use tracing::info;
 
-use crate::{utilities::lerp, Node, NodeBehavior};
+use crate::{utilities::lerp, Node, NodeBehavior, NodeExtBehavior, NodeRegister};
 use message::{DNodeMessage, NodeMessage};
 use robot::{DSeriseRobot, Robot, RobotLock};
 
 pub type Interp<R, V> = Node<InterpState<V>, InterpParams, RobotLock<R>, V>;
 
+#[node_registration("interp")]
 pub type DInterp = Interp<DSeriseRobot, na::DVector<f64>>;
 pub type SInterp<R, const N: usize> = Interp<R, na::SVector<f64, N>>;
 

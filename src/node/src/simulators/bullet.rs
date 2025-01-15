@@ -1,5 +1,6 @@
+use kernel_macro::node_registration;
 use nalgebra as na;
-use robot::{DSeriseRobot, Robot, RobotLock, RobotType};
+use robot::{DSeriseRobot, Robot, RobotLock};
 use serde::Deserialize;
 use std::sync::Arc;
 use std::thread;
@@ -7,13 +8,11 @@ use std::{process::Command, sync::Mutex};
 use tracing::info;
 use zmq;
 
-use crate::{Node, NodeBehavior, NodeState};
+use crate::{Node, NodeBehavior, NodeExtBehavior, NodeRegister, NodeState};
 use message::RobotState;
 
-pub type Bullet<R> = Node<BulletState, BulletParams, RobotLock<R>, na::DVector<f64>>;
-
-pub type DBullet = Bullet<DSeriseRobot>;
-pub type SBullet<const N: usize> = Bullet<RobotType>;
+#[node_registration("bullet")]
+pub type Bullet = Node<BulletState, BulletParams, RobotLock<DSeriseRobot>, na::DVector<f64>>;
 
 #[derive(Default)]
 pub struct BulletState {
@@ -27,7 +26,7 @@ pub struct BulletParams {
     config_path: String,
 }
 
-impl NodeBehavior for DBullet {
+impl NodeBehavior for Bullet {
     fn init(&mut self) {
         println!("{} 向您问好. {} says hello.", self.name, self.name);
         // 使用命令行启动 pybullet， 告知 pybullet 所有的机器人信息

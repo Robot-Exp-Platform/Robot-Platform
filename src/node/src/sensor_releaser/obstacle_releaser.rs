@@ -1,13 +1,15 @@
 use crossbeam::queue::SegQueue;
+use kernel_macro::node_registration;
 use nalgebra as na;
 use tracing::info;
 
-use crate::{Node, NodeBehavior};
+use crate::{Node, NodeBehavior, NodeExtBehavior, NodeRegister};
 use message::{Pose, Target};
 use sensor::Sensor;
 use serde::Deserialize;
 
 pub type ObstacleReleaser<V> = Node<ObstacleReleaserState, ObstacleReleaserParams, (), V>;
+#[node_registration("obstacle_releaser")]
 pub type DObstacleReleaser = ObstacleReleaser<na::DVector<f64>>;
 
 #[derive(Default)]

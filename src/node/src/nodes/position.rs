@@ -1,12 +1,14 @@
+use kernel_macro::node_registration;
 use nalgebra as na;
 use serde::Deserialize;
 use std::f64;
 use std::time::Duration;
 
-use crate::{Node, NodeBehavior};
+use crate::{Node, NodeBehavior, NodeExtBehavior, NodeRegister};
 
 pub type Position<V> = Node<(), PositionParams, (), V>;
 
+#[node_registration("position")]
 pub type DPosition = Position<na::DVector<f64>>;
 pub type SPosition<const N: usize> = Position<na::SVector<f64, N>>;
 

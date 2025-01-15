@@ -1,7 +1,8 @@
+use kernel_macro::node_registration;
 use nalgebra as na;
 use serde::Deserialize;
 
-use crate::{Node, NodeBehavior};
+use crate::{Node, NodeBehavior, NodeExtBehavior, NodeRegister};
 use robot::{DSeriseRobot, RobotLock};
 
 #[cfg(unix)]
@@ -16,6 +17,7 @@ use std::{
 };
 
 pub type PandaPlant<V> = Node<PandaPlantState, PandaPlantParams, RobotLock<DSeriseRobot>, V>;
+#[node_registration("panda_plant")]
 pub type DPandaPlant = PandaPlant<na::DVector<f64>>;
 
 #[derive(Default)]

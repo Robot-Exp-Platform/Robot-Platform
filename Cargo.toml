@@ -39,6 +39,7 @@ log = "*"
 tracing = "*"
 tracing-subscriber = { version = "*", features = ["json"] }
 tracing-appender = { version = "*" }
+inventory = "*"
 
 message = { path = "src/message" }
 robot = { path = "src/robot" }
@@ -48,6 +49,7 @@ sensor = { path = "src/sensor" }
 solver = { path = "src/solver" }
 node = { path = "src/node" }
 libfranka-rs = { path = "crates/libfranka-rs" }
+kernel_macro = { path = "src/kernel_macro" }
 
 
 [dependencies]
