@@ -1,0 +1,3 @@
+[submodule "crates/libfranka-rs"]
+	path = crates/libfranka-rs
+	url = git@github.com:Robot-Exp-Platform/libfranka-rs.git
