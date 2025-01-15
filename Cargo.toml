@@ -1,15 +1,12 @@
-cargo-features = ["edition2024"]
-
 [workspace]
 members = [
     "src/generate_tools",
+    "src/kernel_macro",
     "src/manager",
     "src/message",
     "src/node",
-    "src/recoder",
     "src/robot",
     "src/sensor",
-    "src/simulator",
     "src/solver",
 ]
 
@@ -42,16 +39,17 @@ log = "*"
 tracing = "*"
 tracing-subscriber = { version = "*", features = ["json"] }
 tracing-appender = { version = "*" }
+inventory = "*"
 
 message = { path = "src/message" }
 robot = { path = "src/robot" }
 generate_tools = { path = "src/generate_tools" }
 manager = { path = "src/manager" }
-recoder = { path = "src/recoder" }
 sensor = { path = "src/sensor" }
-simulator = { path = "src/simulator" }
 solver = { path = "src/solver" }
 node = { path = "src/node" }
+libfranka-rs = { path = "crates/libfranka-rs" }
+kernel_macro = { path = "src/kernel_macro" }
 
 
 [dependencies]
@@ -75,9 +73,7 @@ message.workspace = true
 robot.workspace = true
 generate_tools.workspace = true
 manager.workspace = true
-recoder.workspace = true
 sensor.workspace = true
-simulator.workspace = true
 solver.workspace = true
 node.workspace = true
 
@@ -86,4 +82,3 @@ node.workspace = true
 ros = []
 ros2 = []
 rszmq = []
-recode = []

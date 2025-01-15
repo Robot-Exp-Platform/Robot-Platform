@@ -165,7 +165,7 @@ mod tests {
 
     #[test]
     fn cul_iso() {
-        let iso1 = na::Isometry3::from_parts(
+        let mut iso1 = na::Isometry3::from_parts(
             na::Translation3::new(1.0, 2.0, 3.0),
             na::UnitQuaternion::from_euler_angles(0.1, 0.2, 0.3),
         );
@@ -175,7 +175,8 @@ mod tests {
         );
 
         let iso3 = iso1 * iso2;
+        iso1 *= iso2;
 
-        println!("{:?}", iso3);
+        assert_eq!(iso3, iso1);
     }
 }

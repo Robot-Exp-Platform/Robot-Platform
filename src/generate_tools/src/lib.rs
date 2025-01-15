@@ -33,3 +33,35 @@ macro_rules! set_fn {
         )*
     };
 }
+
+#[macro_export]
+macro_rules! todo_fn {
+    ($(($name:ident : $T:ty)),*) =>{
+        $(
+            fn $name(&self) -> $T {
+                unimplemented!()
+            }
+        )*
+    };
+    ($(($name:ident : $T:ty, $field:ident)),*) =>{
+        $(
+            fn $name(&self) -> $T {
+                unimplemented!()
+            }
+        )*
+    };
+    ($(($fn_name:ident, $name:ident : $T:ty)),*) => {
+        $(
+            fn $fn_name(&mut self, _: $T) {
+                unimplemented!()
+            }
+        )*
+    };
+    ($(($fn_name:ident, $name:ident : $T:ty, $field:ident)),*) => {
+        $(
+            fn $fn_name(&mut self, _: $T) {
+                unimplemented!()
+            }
+        )*
+    };
+}

@@ -1,0 +1,34 @@
+{
+  "configurations": [
+    {
+      "browse": {
+        "databaseFilename": "${default}",
+        "limitSymbolsToIncludedHeaders": false
+      },
+      "includePath": [
+        "/home/robot-lab-user/catkin_ws_wy/devel/include/**",
+        "/home/robot-lab-user/ws_ros/src/dualarm_gazebo_simulation/devel/include/**",
+        "/opt/ros/noetic/include/**",
+        "/home/robot-lab-user/ws_ros/src/dualarm_gazebo_simulation/src/aruco_ros/aruco/include/**",
+        "/home/robot-lab-user/ws_ros/src/dualarm_gazebo_simulation/src/aruco_ros/aruco_ros/include/**",
+        "/home/robot-lab-user/ws_ros/src/dualarm_gazebo_simulation/src/Azure_Kinect_ROS_Driver/include/**",
+        "/home/robot-lab-user/ws_ros/src/dualarm_gazebo_simulation/src/cfs_lt/include/**",
+        "/home/robot-lab-user/ws_ros/src/dualarm_gazebo_simulation/src/easy_aruco/include/**",
+        "/home/robot-lab-user/catkin_ws_wy/src/franka_ros/franka_control/include/**",
+        "/home/robot-lab-user/catkin_ws_wy/src/franka_ros/franka_example_controllers/include/**",
+        "/home/robot-lab-user/catkin_ws_wy/src/franka_ros/franka_gazebo/include/**",
+        "/home/robot-lab-user/catkin_ws_wy/src/franka_ros/franka_gripper/include/**",
+        "/home/robot-lab-user/catkin_ws_wy/src/franka_ros/franka_hw/include/**",
+        "/home/robot-lab-user/ws_ros/src/dualarm_gazebo_simulation/src/ssa_st/include/**",
+        "/home/robot-lab-user/ws_ros/src/dualarm_gazebo_simulation/src/vision_visp/visp_bridge/include/**",
+        "/usr/include/**"
+      ],
+      "name": "ROS",
+      "intelliSenseMode": "gcc-x64",
+      "compilerPath": "/usr/bin/gcc",
+      "cStandard": "gnu11",
+      "cppStandard": "c++14"
+    }
+  ],
+  "version": 4
+}

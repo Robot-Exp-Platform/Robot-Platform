@@ -47,11 +47,17 @@ git clone git@github.com:Robot-Exp-Platform/Robot-Platform.git
 ```json
 // config.json
 {
-  "name": "panda_1",
-  "robot_type": "panda",
-  "controller": "pid",
-  "planner": "linear",
-  "simulator": "bullet"
+  "robots": [
+    { "name": "panda_1", "robot_type": "panda", "base_pose": { "rotation": [1.0, 0.0, 0.0, 0.0], "translation": [0.0, 0.0, 0.0] } },
+    { "name": "panda_2", "robot_type": "panda", "base_pose": { "rotation": [1.0, 0.0, 0.0, 0.0], "translation": [0.0, 1.0, 0.0] } }
+  ],
+  "sensors": [
+    {
+      "name": "obstacle_list_1",
+      "sensor_type": "obstacle_list",
+      "params": [{ "Sphere": { "id": 1, "pose": { "rotation": [1, 0, 0, 0], "translation": [0, 0, 0] }, "params": 0.1 } }]
+    }
+  ]
 }
 ```
 
@@ -62,40 +68,54 @@ git clone git@github.com:Robot-Exp-Platform/Robot-Platform.git
     "id": 0,
     "rely": [],
     "target": [],
-    "nodes": [["bullet", ["panda_1", "panda_2"], ["obstacle_releaser_1"], { "period": 0.0 }]],
+    "nodes": [["bullet", ["panda_1", "panda_2"], ["obstacle_list_1"], { "period": 0.0, "config_path": "./config/config.json" }]],
     "edges": [[1, 0]]
   },
   {
     "id": 1,
+    "rely": [],
+    "target": [
+      { "Transform": [1, { "rotation": [1, 0, 0, 0], "translation": [-1, 2, 1] }, { "rotation": [1, 0, 0, 0], "translation": [0.5, 1, 0.5] }] }
+    ],
+    "nodes": [["obstacle_releaser", [], ["obstacle_list_1"], { "period": 0.1, "interp": 10 }]],
+    "edges": [[0, 1]]
+  },
+  {
+    "id": 2,
     "rely": [0],
     "target": [
+      { "Joint": [[0.0124, -0.8838, 0.3749, -2.2172, 0.232, 1.7924, 1.3719], 7, null] },
+      { "Joint": [[0.2896, -1.0286, 0.6738, -2.0833, 0.551, 2.1874, 1.0705], 7, null] },
+      { "Joint": [[0.0592, -0.3941, 0.4692, -1.6001, 0.1456, 2.0968, 1.201], 7, null] },
+      { "Joint": [[0.1, -0.8292, 0.7548, -2.3791, 0.1615, 2.2308, 1.4292], 7, null] },
       {
         "Pose": {
-          "rotation": [0.44487006025329306, 0.4393172760212505, 0.7429380361257648, 0.23902726822915393],
-          "translation": [-1.1460398810258225, -1.7356547258067199, 0.47595076516399354]
+          "rotation": [-0.12855668591466213, -0.15700477626306164, -0.490559104312501, -0.847451735447714],
+          "translation": [0.22043052593419135, -0.1830444208109815, -0.778266001811583]
         }
       },
       {
         "Pose": {
-          "rotation": [0.5244360455311589, 0.5159014375179632, 0.6527893117189171, 0.18077238566795067],
-          "translation": [-1.0987197235666197, -1.7655184642142963, 0.5580931106558119]
+          "rotation": [-0.36610076564948413, -0.27304937723042694, -0.07558560120229914, -0.8863978135554177],
+          "translation": [-0.035407424860745586, -0.3185646453821069, -0.8141376676593793]
         }
       },
       {
         "Pose": {
-          "rotation": [0.3537809863733239, 0.50355871562177, 0.6850206492355589, 0.38989016879496174],
-          "translation": [-1.135079786345486, -1.4835708464803388, 1.2395160144702677]
+          "rotation": [-0.30461916487410634, -0.27677501069715693, -0.28556663744662825, -0.8654793200431868],
+          "translation": [0.2707971478614392, -0.2587929961421303, -0.916820013033415]
+        }
+      },
+      {
+        "Pose": {
+          "rotation": [-0.13546574916388018, -0.2835223923542693, -0.3175409259012247, -0.8946685666854371],
+          "translation": [0.1536826534442137, -0.3493401731427769, -0.662014982032004]
         }
       }
     ],
     "nodes": [
-      [
-        "cfs_end_pose",
-        ["panda_1"],
-        ["obstacle_releaser_1"],
-        { "period": 0.95, "ninterp": 7, "niter": 10, "cost_weight": [0, 10.0, 20.0], "solver": "osqp" }
-      ],
-      ["interp", ["panda_1"], ["obstacle_releaser_1"], { "period": 0.1, "interp_fn": "lerp", "ninter": 25 }],
+      ["cfs", ["panda_1"], ["obstacle_list_1"], { "period": 0.95, "ninterp": 7, "niter": 100, "cost_weight": [0, 10.0, 20.0], "solver": "osqp" }],
+      ["interp", ["panda_1"], ["obstacle_list_1"], { "period": 0.1, "interp_fn": "lerp", "ninter": 25 }],
       ["position", ["panda_1"], [], { "period": 0.004 }]
     ],
     "edges": [
@@ -106,17 +126,21 @@ git clone git@github.com:Robot-Exp-Platform/Robot-Platform.git
     ]
   },
   {
-    "id": 2,
+    "id": 3,
     "rely": [0],
     "target": [
+      { "Joint": [[0.0124, -0.8838, 0.3749, -2.2172, 0.232, 1.7924, 1.3719], 7, null] },
+      { "Joint": [[0.2896, -1.0286, 0.6738, -2.0833, 0.551, 2.1874, 1.0705], 7, null] },
+      { "Joint": [[0.0592, -0.3941, 0.4692, -1.6001, 0.1456, 2.0968, 1.201], 7, null] },
+      { "Joint": [[0.1, -0.8292, 0.7548, -2.3791, 0.1615, 2.2308, 1.4292], 7, null] },
       { "Joint": [[0.0124, -0.8838, 0.3749, -2.2172, 0.232, 1.7924, 1.3719], 7, null] },
       { "Joint": [[0.2896, -1.0286, 0.6738, -2.0833, 0.551, 2.1874, 1.0705], 7, null] },
       { "Joint": [[0.0592, -0.3941, 0.4692, -1.6001, 0.1456, 2.0968, 1.201], 7, null] },
       { "Joint": [[0.1, -0.8292, 0.7548, -2.3791, 0.1615, 2.2308, 1.4292], 7, null] }
     ],
     "nodes": [
-      ["cfs", ["panda_2"], ["obstacle_releaser_1"], { "period": 0.95, "ninterp": 7, "niter": 6, "cost_weight": [0, 10.0, 20.0], "solver": "osqp" }],
-      ["interp", ["panda_2"], ["obstacle_releaser_1"], { "period": 0.1, "interp_fn": "lerp", "ninter": 25 }],
+      ["cfs", ["panda_2"], ["obstacle_list_1"], { "period": 0.95, "ninterp": 7, "niter": 10, "cost_weight": [0, 10.0, 20.0], "solver": "osqp" }],
+      ["interp", ["panda_2"], ["obstacle_list_1"], { "period": 0.1, "interp_fn": "lerp", "ninter": 25 }],
       ["position", ["panda_2"], [], { "period": 0.004 }]
     ],
     "edges": [
@@ -127,7 +151,6 @@ git clone git@github.com:Robot-Exp-Platform/Robot-Platform.git
     ]
   }
 ]
-
 ```
 
 最简样例中采用了 Franka Emika Panda 机械臂，使用了 pid 控制器和 linear 规划器，使用 bullet 仿真器进行仿真。您可以根据自己的需求修改这两个文件。
@@ -318,13 +341,3 @@ impl ThreadManage {
 ```
 
 这里使用了 condvar 作为线程开关， 控制所有线程的同时启动和停止。
-
-### 节点通讯与实验流程
-
-节点之间的通讯是通过消息队列实现的，在创建节点的时候为对应节点设置消息队列，节点之间通过消息队列进行通讯。
-
-目前存在的通讯有：
-
-- task_manager/Exp --(Target)-> planner
-- planner --(Track)-> controller
-- controller --(ControlCommand)-> simulator

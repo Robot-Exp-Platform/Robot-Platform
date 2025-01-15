@@ -1,97 +1,32 @@
+use kernel_macro::node_registration;
 use nalgebra as na;
 use serde::Deserialize;
-use serde_json::{from_value, Value};
-use tracing::info;
-// use serde_yaml::{from_value, Value};
-use std::sync::{Arc, RwLock};
 use std::time::Duration;
+use tracing::info;
 
-use crate::{utilities::*, Node, NodeBehavior, NodeState};
-use generate_tools::{get_fn, set_fn};
-use message::{
-    iso_to_vec, Constraint, DNodeMessage, DNodeMessageQueue, NodeMessage, NodeMessageQueue,
-    QuadraticProgramming,
-};
-use robot::{DRobot, DSeriseRobot, Robot, RobotType};
-use sensor::Sensor;
+use crate::{utilities::*, Node, NodeBehavior, NodeExtBehavior, NodeRegister, NodeState};
+use message::{iso_to_vec, Constraint, DNodeMessage, NodeMessage, QuadraticProgramming};
+use robot::{DRobot, DSeriseRobot, Robot, RobotLock};
 use solver::{OsqpSolver, Solver};
 
-pub struct Cfs<R, V> {
-    /// The name of the planner.
-    name: String,
-    /// The state of the planner.
-    state: CfsState<V>,
-    /// The parameters of the planner.
-    params: CfsParams,
-    /// The node of the planner.
-    node: CfsNode<V>,
-    /// The robot that the planner is controlling.
-    robot: Option<Arc<RwLock<R>>>,
-    /// The sensor that the planner is using.
-    sensor: Option<Arc<RwLock<Sensor>>>,
-}
+pub type Cfs<R, V> = Node<CfsState<V>, CfsParams, RobotLock<R>, V>;
 
+#[node_registration("cfs")]
 pub type DCfs = Cfs<DSeriseRobot, na::DVector<f64>>;
 pub type SCfs<R, const N: usize> = Cfs<R, na::SVector<f64, N>>;
 
 #[derive(Default)]
 pub struct CfsState<V> {
     target: Option<NodeMessage<V>>,
-    node_state: NodeState,
 }
 
-#[derive(Deserialize, Default)]
+#[derive(Deserialize)]
 pub struct CfsParams {
     period: f64,
     ninterp: usize,
     niter: usize,
     cost_weight: Vec<f64>,
     solver: String,
-}
-
-#[derive(Default)]
-pub struct CfsNode<V> {
-    input_queue: NodeMessageQueue<V>,
-    output_queue: NodeMessageQueue<V>,
-}
-
-impl DCfs {
-    pub fn new(name: String) -> DCfs {
-        DCfs::from_params(name, CfsParams::default())
-    }
-
-    pub fn from_json(name: String, json: Value) -> DCfs {
-        DCfs::from_params(name, from_value(json).unwrap())
-    }
-
-    pub fn from_params(name: String, params: CfsParams) -> DCfs {
-        DCfs {
-            name,
-            state: CfsState::default(),
-            params,
-            node: CfsNode::default(),
-            robot: None,
-            sensor: None,
-        }
-    }
-}
-
-impl Node<na::DVector<f64>> for DCfs {
-    get_fn!((name: String));
-    set_fn!((set_input_queue, input_queue: DNodeMessageQueue, node),
-            (set_output_queue, output_queue: DNodeMessageQueue, node));
-
-    fn set_robot(&mut self, robot: RobotType) {
-        if let RobotType::DSeriseRobot(robot) = robot {
-            self.robot = Some(robot);
-        }
-    }
-    fn set_sensor(&mut self, sensor: Arc<RwLock<Sensor>>) {
-        self.sensor = Some(sensor);
-    }
-    fn set_params(&mut self, params: Value) {
-        self.params = from_value(params).unwrap();
-    }
 }
 
 impl NodeBehavior for DCfs {
@@ -104,8 +39,8 @@ impl NodeBehavior for DCfs {
         let q_max_bound = robot_read.q_max_bound().as_slice().to_vec();
 
         let currect_state = DNodeMessage::Joint(q.clone());
-        println!("{}: currect_pose: {:?}", self.name(), robot_read.end_pose());
-        println!("{}: currect_q: {:?}", self.name(), q);
+        // println!("{}: currect_pose: {:?}", self.name(), robot_read.end_pose());
+        // println!("{}: currect_q: {:?}", self.name(), q);
 
         // 检查当前状态是否达到储存的目标状态.
         if let Some(target) = self.state.target.clone() {
@@ -116,13 +51,9 @@ impl NodeBehavior for DCfs {
 
         // 获取 target, 如果两侧都没有消息那就说明任务完成了，皆大欢喜
         // 这里的策略是完成当前任务优先
-        let target = self
-            .state
-            .target
-            .clone()
-            .or_else(|| self.node.input_queue.pop());
+        let target = self.state.target.clone().or_else(|| self.input_queue.pop());
         if target.is_none() {
-            self.state.node_state = NodeState::Finished;
+            self.node_state = NodeState::Finished;
             return;
         }
         let target = target.unwrap();
@@ -188,9 +119,8 @@ impl NodeBehavior for DCfs {
                     // test_pose_constraint(ref_pose, &q_end_ref, &robot_read);
 
                     let func = |q: &na::DVector<f64>| iso_to_vec(robot_read.cul_end_pose(q));
-
                     let (value, grad) = robot_read.cul_func(&q_end_ref, &func);
-                    // let grad = robot_read.cul_end_pose_grad(&q_end_ref);
+
                     let b_bar = iso_to_vec(ref_pose) - value + &grad * q_end_ref;
                     end_constraint += Constraint::Hyperplane(
                         grad.nrows(),
@@ -203,7 +133,6 @@ impl NodeBehavior for DCfs {
                 }
                 _ => panic!("Cfs: Unsupported message type"),
             }
-            println!("迭代完成");
 
             // =======  优化  =======
             let h = get_optimize_function(dim, ndof, self.params.cost_weight.clone());
@@ -248,77 +177,19 @@ impl NodeBehavior for DCfs {
             )));
         }
         // 发送 track
-        while self.node.output_queue.pop().is_some() {}
+        while self.output_queue.pop().is_some() {}
         for track in track_list {
-            self.node.output_queue.push(track);
+            self.output_queue.push(track);
         }
     }
 
     fn period(&self) -> Duration {
         Duration::from_secs_f64(self.params.period)
     }
-
     fn node_name(&self) -> String {
         self.name.clone()
     }
-
     fn state(&mut self) -> NodeState {
-        self.state.node_state
+        self.node_state
     }
 }
-
-// fn test_pose_constraint(ref_pose: Pose, start_q: &na::DVector<f64>, robot: &DSeriseRobot) {
-//     let mut last = Vec::new();
-//     for _ in 0..6 {
-//         let func = |q: &na::DVector<f64>| iso_to_vec(robot.cul_end_pose(q));
-
-//         let (value, grad) = robot.cul_func(&start_q, &func);
-
-//         println!("ref  : {}", iso_to_vec(ref_pose));
-//         println!("value: {}", value);
-//         println!("grad : {}", grad);
-//         println!("start: {}", start_q);
-
-//         let b_bar = iso_to_vec(ref_pose) - value + &grad * start_q;
-//         let constraint = Constraint::Hyperplane(
-//             grad.nrows(),
-//             grad.ncols(),
-//             grad.as_slice().to_vec(),
-//             b_bar.as_slice().to_vec(),
-//         );
-
-//         let h = CscMatrix {
-//             nrows: 7,
-//             ncols: 7,
-//             indptr: Cow::Owned(vec![0, 1, 2, 3, 4, 5, 6, 7]),
-//             indices: Cow::Owned(vec![0, 1, 2, 3, 4, 5, 6]),
-//             data: Cow::Owned(vec![1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]),
-//         };
-//         let diff = -1.0 * start_q;
-//         let f = diff.as_slice();
-
-//         let problem = QuadraticProgramming {
-//             h: &h,
-//             f: f,
-//             constraints: constraint,
-//         };
-
-//         let mut osqp_solver = OsqpSolver::from_problem(problem);
-//         let result = osqp_solver.solve();
-
-//         if last.is_empty() {
-//             last = result.clone();
-//         } else {
-//             let diff: f64 = result
-//                 .iter()
-//                 .zip(last.iter())
-//                 .map(|(a, b)| (a - b).abs())
-//                 .sum();
-//             if diff.abs() < 1e-1 {
-//                 break;
-//             }
-//             last = result.clone();
-//         }
-//     }
-//     println!("result: {:?}", last);
-// }

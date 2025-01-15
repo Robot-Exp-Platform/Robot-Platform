@@ -1,15 +1,27 @@
 #![feature(trait_alias)]
 #![feature(trait_upcasting)]
 #![feature(more_float_constants)]
+#![feature(box_patterns)]
 
 mod config;
 mod exp;
 
 use tracing_appender::{non_blocking, rolling};
-use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, Registry};
+use tracing_subscriber::{Registry, fmt, layer::SubscriberExt, util::SubscriberInitExt};
 
 use exp::Exp;
 use node::NodeBehavior;
+
+// 正式运行时使用
+// const CONFIG_PATH: &str = "./config/config.json";
+// const TASK_PATH: &str = "./config/task.json";
+
+// 非实时指令样例
+const CONFIG_PATH: &str = "./example/explanner_plant_config.json";
+const TASK_PATH: &str = "./example/explanner_plant_task.json";
+// 实时指令样例
+// const CONFIG_PATH: &str = "./example/explanner_interp_excontroller_plant_config.json";
+// const TASK_PATH: &str = "./example/explanner_interp_excontroller_plant_task.json";
 
 fn main() {
     // 删除已有的日志文件
@@ -36,7 +48,7 @@ fn main() {
         .with(file_layer_json)
         .init();
 
-    let mut exp = Exp::from_json("./config.json", "./task.json");
+    let mut exp = Exp::from_json(CONFIG_PATH, TASK_PATH);
 
     exp.init();
 

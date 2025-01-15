@@ -18,7 +18,7 @@ impl DPanda {
             name,
             state: SeriseRobotState::<na::DVector<f64>> {
                 q: na::DVector::from_vec(vec![
-                    0.0, -FRAC_PI_4, 0.0, -2.3562, 0.0, FRAC_PI_2, FRAC_PI_4,
+                    0., -FRAC_PI_4, 0., -2.3562, 0., FRAC_PI_2, FRAC_PI_4,
                 ]),
                 q_dot: na::DVector::zeros(PANDA_DOF),
                 q_ddot: na::DVector::zeros(PANDA_DOF),
@@ -29,7 +29,7 @@ impl DPanda {
             params: SeriseRobotParams::<na::DVector<f64>> {
                 nlink: PANDA_DOF,
                 q_default: na::DVector::from_vec(vec![
-                    0.0, -FRAC_PI_4, 0.0, -2.3562, 0.0, FRAC_PI_2, FRAC_PI_4,
+                    0., -FRAC_PI_4, 0., -2.3562, 0., FRAC_PI_2, FRAC_PI_4,
                 ]),
                 q_min_bound: na::DVector::from_vec(vec![
                     -2.8973, -1.7628, -2.8973, -3.0718, -2.8973, -0.0175, -2.8973,
@@ -40,34 +40,34 @@ impl DPanda {
                 q_dot_bound: na::DVector::from_vec(vec![
                     2.1750, 2.1750, 2.1750, 2.1750, 2.6100, 2.6100, 2.6100,
                 ]),
-                q_ddot_bound: na::DVector::from_vec(vec![15.0, 7.5, 10.0, 12.5, 15.0, 20.0, 20.0]),
+                q_ddot_bound: na::DVector::from_vec(vec![15., 7.5, 10., 12.5, 15., 20., 20.]),
                 q_jerk_bound: na::DVector::from_vec(vec![
-                    7500.0, 3750.0, 5000.0, 6250.0, 7500.0, 10000.0, 10000.0,
+                    7500., 3750., 5000., 6250., 7500., 10000., 10000.,
                 ]),
-                tau_bound: na::DVector::from_vec(vec![87.0, 87.0, 87.0, 87.0, 12.0, 12.0, 12.0]),
+                tau_bound: na::DVector::from_vec(vec![87., 87., 87., 87., 12., 12., 12.]),
                 tau_dot_bound: na::DVector::from_vec(vec![
-                    1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0,
+                    1000., 1000., 1000., 1000., 1000., 1000., 1000.,
                 ]),
                 #[rustfmt::skip]
                 dh: na::DMatrix::from_row_slice(PANDA_DOF+1, 4, &[
-                    0.0,  0.333,  0.0,     0.0,
-                    0.0,  0.0,    0.0,     -FRAC_PI_2,
-                    0.0,  0.316,  0.0,     FRAC_PI_2,
-                    0.0,  0.0,    0.0825,  FRAC_PI_2,
-                    0.0,  0.384,  -0.0825, -FRAC_PI_2,
-                    0.0,  0.0,    0.0,     FRAC_PI_2,
-                    0.0,  0.0,    0.088,   FRAC_PI_2,
-                    0.0,  0.107,  0.0,     0.0,
+                    0.,  0.333,  0.,      0.,
+                    0.,  0.,     0.,      -FRAC_PI_2,
+                    0.,  0.316,  0.,      FRAC_PI_2,
+                    0.,  0.,     0.0825,  FRAC_PI_2,
+                    0.,  0.384,  -0.0825, -FRAC_PI_2,
+                    0.,  0.,     0.,      FRAC_PI_2,
+                    0.,  0.,     0.088,   FRAC_PI_2,
+                    0.,  0.107,  0.,      0.,
                     ]),
                 capsules: vec![
-                    Capsule::from_vec(vec![0.0, 0.0, 0.0, 0.0, 0.0, -0.333, 0.07]),
-                    Capsule::from_vec(vec![0.0, 0.0, -0.05, 0.0, 0.0, 0.0, 0.07]),
-                    Capsule::from_vec(vec![0.0, 0.0, 0.0, 0.0, 0.0, -0.316, 0.07]),
-                    Capsule::from_vec(vec![0.0, 0.0, -0.05, 0.0, 0.0, 0.055, 0.07]),
-                    Capsule::from_vec(vec![0.0, 0.0, 0.0, 0.0, 0.0, -0.0384, 0.07]),
-                    Capsule::from_vec(vec![0.0, 0.0, -0.088, 0.0, 0.0, 0.0, 0.07]),
-                    Capsule::from_vec(vec![0.0, 0.0, 0.0, 0.0, 0.0, 0.107, 0.07]),
-                    Capsule::from_vec(vec![0.0, -0.05, 0.0, 0.0, 0.05, 0.0, 0.1]),
+                    Capsule::from_vec(vec![0., 0., 0., 0., 0., -0.333, 0.07]),
+                    Capsule::from_vec(vec![0., 0., -0.05, 0., 0., 0., 0.07]),
+                    Capsule::from_vec(vec![0., 0., 0., 0., 0., -0.316, 0.07]),
+                    Capsule::from_vec(vec![0., 0., -0.05, 0., 0., 0.055, 0.07]),
+                    Capsule::from_vec(vec![0., 0., 0., 0., 0., -0.0384, 0.07]),
+                    Capsule::from_vec(vec![0., 0., -0.088, 0., 0., 0., 0.07]),
+                    Capsule::from_vec(vec![0., 0., 0., 0., 0., 0.107, 0.07]),
+                    Capsule::from_vec(vec![0., -0.05, 0., 0., 0.05, 0., 0.10]),
                 ],
             },
         }

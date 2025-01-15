@@ -1,15 +1,14 @@
 use chrono::Local;
 use crossbeam::queue::SegQueue;
 use message::TaskState;
-use node::create_node;
 use serde_json::from_reader;
 use std::{
     fs,
-    sync::{mpsc, Arc, RwLock},
+    sync::{Arc, RwLock, mpsc},
 };
 
 use manager::{Config, Task, TaskManager, ThreadManager};
-use node::NodeBehavior;
+use node::{NodeBehavior, factory};
 use robot::{self, RobotType};
 use sensor::Sensor;
 
@@ -37,11 +36,6 @@ impl Exp {
         // 加载配置文件
         let config_file = fs::File::open(config).expect("Failed to open config file");
         let config: Config = from_reader(config_file).expect("Failed to parse config file");
-        #[cfg(feature = "recode")]
-        {
-            fs::create_dir(format!("./data/{}", *EXP_NAME)).unwrap();
-            fs::copy(CONFIG_PATH, format!("./data/{}/config.json", *EXP_NAME)).unwrap();
-        }
         // 根据配置开始初始化，关键在于搭建通讯
         let (sender, receiver) = mpsc::channel();
 
@@ -100,12 +94,11 @@ impl Exp {
         // 创建节点
         for node_config in task.nodes.clone() {
             // 创建节点
-            let mut node = create_node(&node_config.0, node_config.1.join("+"), node_config.3);
+            let mut node = factory(&node_config.0, &node_config.1.join("+"), node_config.3);
             // 为新创建的节点赋予机器人
             for robot_name in node_config.1 {
-                if let Some(RobotType::DSeriseRobot(robot)) = self.get_robot_from_name(&robot_name)
-                {
-                    node.set_robot(RobotType::DSeriseRobot(robot));
+                if let Some(robot) = self.get_robot_from_name(&robot_name) {
+                    node.set_robot(robot);
                 }
             }
             // 为新创建的节点赋予传感器
@@ -130,7 +123,8 @@ impl Exp {
             }
             if edge_config.1 == 0 {
                 // 如果是结束节点，就被确认为是系统末端
-                node_list[edge_config.0 - 1].is_end();
+                // TODO 机器人末端总线行为
+                println!("{} 是系统末端", node_list[edge_config.0 - 1].name());
                 continue;
             }
             // 如果是中间节点，就将彼此连接起来

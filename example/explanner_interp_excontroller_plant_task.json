@@ -1,0 +1,43 @@
+[
+  {
+    "id": 2,
+    "rely": [],
+    "target": [],
+    "nodes": [
+      ["example_planner", ["panda_1"], [], { "period": 1.0 }],
+      [
+        "interp",
+        ["panda_1"],
+        [],
+        { "period": 0.1, "interp_fn": "lerp", "ninter": 100 }
+      ],
+      [
+        "example_controller",
+        ["panda_1"],
+        [],
+        {
+          "period": 0.001,
+          "k": [[60, 60, 60, 60, 25, 15, 5], 7, null],
+          "b": [[5, 5, 5, 2, 2, 2, 1], 7, null]
+        }
+      ],
+      [
+        "panda_plant",
+        ["panda_1"],
+        [],
+        {
+          "period": 0.001,
+          "ip": "172.16.0.2",
+          "control_mode": "torque",
+          "is_realtime": true
+        }
+      ]
+    ],
+    "edges": [
+      [0, 1],
+      [1, 2],
+      [2, 3],
+      [3, 4]
+    ]
+  }
+]

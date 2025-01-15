@@ -10,17 +10,18 @@ use crate::Pose;
 pub enum NodeMessage<V> {
     #[default]
     NoneNodeMessage,
+    KillNode,
+    NodeMessages(Vec<NodeMessage<V>>),
+    Process(Box<NodeMessage<V>>, Box<NodeMessage<V>>),
+    Period(f64, Box<NodeMessage<V>>),
+    Relative(usize, usize, Pose),
     Pose(Pose),
     Transform(usize, Pose, Pose),
     Joint(V),
     JointList(Vec<V>),
-    JointWithPeriod(f64, V),
     JointVel(V, V),
-    JointVelWithPeriod(f64, V, V),
     JointVelAcc(V, V, V),
-    JointVelAccWithPeriod(f64, V, V, V),
     Tau(V),
-    TauWithPeriod(f64, V),
 }
 
 pub type DNodeMessage = NodeMessage<na::DVector<f64>>;
@@ -33,15 +34,12 @@ pub type SNodeMessageQueue<const N: usize> = Arc<SegQueue<SNodeMessage<N>>>;
 impl NodeMessage<na::DVector<f64>> {
     pub fn as_slice(&self) -> &[f64] {
         match self {
+            Self::Period(_, msg) => msg.as_slice(),
             Self::Pose(pose) => pose.translation.vector.as_slice(),
             Self::Joint(joint) => joint.as_slice(),
-            Self::JointWithPeriod(_, joint) => joint.as_slice(),
             Self::JointVel(joint, _) => joint.as_slice(),
-            Self::JointVelWithPeriod(_, joint, _) => joint.as_slice(),
             Self::JointVelAcc(joint, _, _) => joint.as_slice(),
-            Self::JointVelAccWithPeriod(_, joint, _, _) => joint.as_slice(),
             Self::Tau(tau) => tau.as_slice(),
-            Self::TauWithPeriod(_, tau) => tau.as_slice(),
             _ => panic!("This type does not support as_slice"),
         }
     }

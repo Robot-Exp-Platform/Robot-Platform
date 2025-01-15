@@ -1,0 +1,5 @@
+{
+  "robots": [{ "name": "panda_1", "robot_type": "panda", "base_pose": { "rotation": [1.0, 0.0, 0.0, 0.0], "translation": [0.0, 0.0, 0.0] } },
+             { "name": "gripper_1", "robot_type": "franka_gripper", "base_pose": { "rotation": [1.0, 0.0, 0.0, 0.0], "translation": [0.0, 0.0, 0.0] }}],
+  "sensors": []
+}

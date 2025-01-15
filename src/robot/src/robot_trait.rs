@@ -2,7 +2,7 @@ use nalgebra as na;
 
 use message::{Capsule, CollisionObject, NodeMessage, Pose};
 
-pub trait Robot<V>: Send + Sync {
+pub trait Robot<V> {
     // get functions
     fn name(&self) -> String;
     fn dof(&self) -> usize;

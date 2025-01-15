@@ -1,33 +1,16 @@
+use kernel_macro::node_registration;
 use nalgebra as na;
 use serde::Deserialize;
-use serde_json::{from_value, Value};
-use tracing::info;
-// use serde_yaml::{from_value, Value};
-use std::sync::{Arc, RwLock};
 use std::time::Duration;
+use tracing::info;
 
-use crate::{utilities::lerp, Node, NodeBehavior};
-use generate_tools::{get_fn, set_fn};
-use message::{DNodeMessage, DNodeMessageQueue, NodeMessage, NodeMessageQueue};
-use robot::{DSeriseRobot, Robot, RobotType};
-use sensor::Sensor;
+use crate::{utilities::lerp, Node, NodeBehavior, NodeExtBehavior, NodeRegister};
+use message::{DNodeMessage, NodeMessage};
+use robot::{DSeriseRobot, Robot, RobotLock};
 
-/// 通过插值实现的路径规划器，在不考虑逆运动学的情况下实现轨迹插值。
-pub struct Interp<R, V> {
-    /// The name of the planner.
-    name: String,
-    /// The state of the planner.
-    state: InterpState<V>,
-    /// The parameters of the planner.
-    params: InterpParams,
-    /// The node of the planner.
-    node: InterpNode<V>,
-    /// The robot that the planner is controlling.
-    robot: Option<Arc<RwLock<R>>>,
-    /// The sensor that the planner is using.
-    sensor: Option<Arc<RwLock<Sensor>>>,
-}
+pub type Interp<R, V> = Node<InterpState<V>, InterpParams, RobotLock<R>, V>;
 
+#[node_registration("interp")]
 pub type DInterp = Interp<DSeriseRobot, na::DVector<f64>>;
 pub type SInterp<R, const N: usize> = Interp<R, na::SVector<f64, N>>;
 
@@ -35,60 +18,13 @@ pub type SInterp<R, const N: usize> = Interp<R, na::SVector<f64, N>>;
 pub struct InterpState<V> {
     /// The current target of the planner.
     target: Option<NodeMessage<V>>,
-    is_end: bool,
 }
 
-#[derive(Deserialize, Default)]
+#[derive(Deserialize)]
 pub struct InterpParams {
     period: f64,
     interp_fn: String,
     ninter: usize,
-}
-
-#[derive(Default)]
-pub struct InterpNode<V> {
-    input_queue: DNodeMessageQueue,
-    output_queue: NodeMessageQueue<V>,
-}
-
-impl DInterp {
-    pub fn new(name: String) -> DInterp {
-        DInterp::from_params(name, InterpParams::default())
-    }
-    pub fn from_json(name: String, json: Value) -> DInterp {
-        DInterp::from_params(name, from_value(json).unwrap())
-    }
-    pub fn from_params(name: String, params: InterpParams) -> DInterp {
-        DInterp {
-            name,
-            state: InterpState::default(),
-            params,
-            node: InterpNode::default(),
-            robot: None,
-            sensor: None,
-        }
-    }
-}
-
-impl Node<na::DVector<f64>> for DInterp {
-    get_fn!((name: String));
-    set_fn!((set_input_queue, input_queue: DNodeMessageQueue, node),
-            (set_output_queue, output_queue: DNodeMessageQueue, node));
-
-    fn is_end(&mut self) {
-        self.state.is_end = true;
-    }
-    fn set_robot(&mut self, robot: RobotType) {
-        if let RobotType::DSeriseRobot(robot) = robot {
-            self.robot = Some(robot);
-        }
-    }
-    fn set_sensor(&mut self, sensor: Arc<RwLock<Sensor>>) {
-        self.sensor = Some(sensor);
-    }
-    fn set_params(&mut self, params: Value) {
-        self.params = from_value(params).unwrap();
-    }
 }
 
 impl NodeBehavior for DInterp {
@@ -104,7 +40,7 @@ impl NodeBehavior for DInterp {
         };
 
         // 根据不同的Target生成插值轨迹，每两点之间的插值数量为 ninter
-        if let Some(target) = self.node.input_queue.pop() {
+        if let Some(target) = self.input_queue.pop() {
             self.state.target = Some(target);
         } else {
             return;
@@ -121,11 +57,11 @@ impl NodeBehavior for DInterp {
             _ => return,
         };
         // 将 track_list 中的轨迹放入 track_queue 中
-        while self.node.output_queue.pop().is_some() {}
+        while self.output_queue.pop().is_some() {}
         for track in track_list {
             let control_message = DNodeMessage::Joint(track);
 
-            self.node.output_queue.push(control_message);
+            self.output_queue.push(control_message);
         }
     }
 

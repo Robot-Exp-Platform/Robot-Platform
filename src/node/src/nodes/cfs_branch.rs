@@ -1,99 +1,31 @@
 use nalgebra as na;
 use serde::Deserialize;
-use serde_json::{from_value, Value};
+use std::{
+    sync::{Arc, RwLock},
+    time::Duration,
+};
 use tracing::info;
-// use serde_yaml::{from_value, Value};
-use std::sync::{Arc, RwLock};
-use std::time::Duration;
 
 use crate::{utilities::*, Node, NodeBehavior, NodeState};
-use generate_tools::{get_fn, set_fn};
-use message::{
-    Constraint, DNodeMessage, DNodeMessageQueue, NodeMessage, NodeMessageQueue,
-    QuadraticProgramming,
-};
-use robot::{DSeriseRobot, Robot, RobotBranch, RobotType};
-use sensor::Sensor;
+use message::{iso_to_vec, Constraint, DNodeMessage, NodeMessage, Pose, QuadraticProgramming};
+use robot::{DRobot, DSeriseRobot, Robot, RobotBranch};
 use solver::{OsqpSolver, Solver};
 
-pub struct CfsBranch<R, V> {
-    /// The name of the planner.
-    name: String,
-    /// The state of the planner.
-    state: CfsBranchState<V>,
-    /// The parameters of the planner.
-    params: CfsBranchParams,
-    /// The node of the planner.
-    node: CfsBranchNode<V>,
-    /// The robot that the planner is controlling.
-    robot: RobotBranch<R>,
-    /// The sensor that the planner is using.
-    sensor: Option<Arc<RwLock<Sensor>>>,
-}
-
+pub type CfsBranch<R, V> = Node<CfsBranchState<V>, CfsBranchParams, RobotBranch<R>, V>;
 pub type DCfsBranch = CfsBranch<DSeriseRobot, na::DVector<f64>>;
 
 #[derive(Default)]
 pub struct CfsBranchState<V> {
     target: Option<NodeMessage<V>>,
-    node_state: NodeState,
 }
 
-#[derive(Deserialize, Default)]
+#[derive(Deserialize)]
 pub struct CfsBranchParams {
     period: f64,
     ninterp: usize,
     niter: usize,
     cost_weight: Vec<f64>,
     solver: String,
-}
-
-#[derive(Default)]
-pub struct CfsBranchNode<V> {
-    input_queue: NodeMessageQueue<V>,
-    output_queue: NodeMessageQueue<V>,
-}
-
-impl DCfsBranch {
-    pub fn new(name: String) -> DCfsBranch {
-        DCfsBranch::from_params(name, CfsBranchParams::default())
-    }
-
-    pub fn from_json(name: String, json: Value) -> DCfsBranch {
-        Self::from_params(name, from_value(json).unwrap())
-    }
-
-    pub fn from_params(name: String, params: CfsBranchParams) -> DCfsBranch {
-        let node = CfsBranchNode::default();
-        let state = CfsBranchState::default();
-        let robot = RobotBranch::new();
-        DCfsBranch {
-            name,
-            state,
-            params,
-            node,
-            robot,
-            sensor: None,
-        }
-    }
-}
-
-impl Node<na::DVector<f64>> for DCfsBranch {
-    get_fn!((name: String));
-    set_fn!((set_input_queue, input_queue: DNodeMessageQueue, node),
-            (set_output_queue, output_queue: DNodeMessageQueue, node));
-
-    fn set_robot(&mut self, robot: RobotType) {
-        if let RobotType::DSeriseRobot(robot) = robot {
-            self.robot.push(robot);
-        }
-    }
-    fn set_sensor(&mut self, sensor: Arc<RwLock<Sensor>>) {
-        self.sensor = Some(sensor);
-    }
-    fn set_params(&mut self, params: Value) {
-        self.params = from_value(params).unwrap();
-    }
 }
 
 impl NodeBehavior for DCfsBranch {
@@ -120,24 +52,20 @@ impl NodeBehavior for DCfsBranch {
         }
 
         // 获取 target
-        let target = self
-            .state
-            .target
-            .clone()
-            .or_else(|| self.node.input_queue.pop());
+        let target = self.state.target.clone().or_else(|| self.input_queue.pop());
         if target.is_none() {
-            self.state.node_state = NodeState::RelyRelease;
+            self.node_state = NodeState::RelyRelease;
             return;
         }
         let target = target.unwrap();
         info!(node = self.name.as_str(), input = ?target.as_slice());
 
-        // 准备
+        // 初始化轨迹，一般来说用插值或者逆解，优秀的初始化轨迹应当是验证安全性之后就是最优的的轨迹，但是这似乎很难做到
         let q_ref_list = match &target {
             NodeMessage::Joint(q_target) => lerp(&q, &vec![q_target.clone()], self.params.ninterp),
-            NodeMessage::Pose(_) => lerp(&q, &vec![q.clone()], self.params.ninterp),
-            _ => panic!("Cfs: Unsupported message type"),
+            _ => lerp(&q, &vec![q.clone()], self.params.ninterp),
         };
+        let collision_objects = self.sensor.as_ref().unwrap().read().unwrap().collision();
         let mut last_result = Vec::new();
         let dim = (self.params.ninterp + 2) * ndof;
 
@@ -148,17 +76,49 @@ impl NodeBehavior for DCfsBranch {
             let mut constraints =
                 Constraint::CartesianProduct(0, 0, Vec::with_capacity(self.params.ninterp + 1));
 
-            // 起点位置的约束，这是绝对约束
+            // 起点位置的约束，一般来说就是当前位置，这是绝对约束
             constraints.push(Constraint::Equared(q.as_slice().to_vec()));
 
             // 中间过程的约束
-            // TODO 根据约束方程和避障不等式建立约束
             for q_ref in q_ref_list.iter() {
-                constraints.push(Constraint::Rectangle(
-                    q_min_bound.clone(),
-                    q_max_bound.clone(),
-                ));
-                constraints.push(Constraint::Equared(q_ref.as_slice().to_vec()));
+                // 边界约束，最最基础的约束
+                let mut process_constraint =
+                    Constraint::Rectangle(q_min_bound.clone(), q_max_bound.clone());
+
+                // 如果有障碍物的话，增加碰撞约束
+                for collision in &collision_objects {
+                    let func = |q: &na::DVector<f64>| self.robot.cul_dis_to_collision(q, collision);
+                    let (dis, grad) = self.robot.cul_func(q_ref, &func);
+                    // 过程中对每个障碍物的碰撞约束与关节角约束
+                    process_constraint += Constraint::Halfspace(
+                        (-&grad).as_slice().to_vec(),
+                        (dis - (&grad * q_ref))[(0, 0)],
+                    );
+                    // TODO 实际上虚构机器人也应该有碰撞检测，这代表约束实体的碰撞空间
+                    // TODO 机器人之间的碰撞检测
+                }
+
+                // 过程中的任务约束
+                match target {
+                    NodeMessage::Process(
+                        box NodeMessage::Relative(id_1, id_2, relative_pose),
+                        _,
+                    ) => {
+                        let func = |pose_1: Pose, pose_2: Pose| iso_to_vec(pose_1.inv_mul(&pose_2));
+                        let (velue, grad) =
+                            self.robot.cul_relative_func((id_1, id_2), q_ref, &func);
+                        let b_bar = iso_to_vec(relative_pose) - velue + &grad * q_ref;
+                        process_constraint += Constraint::Hyperplane(
+                            grad.nrows(),
+                            grad.ncols(),
+                            grad.as_slice().to_vec(),
+                            b_bar.as_slice().to_vec(),
+                        );
+                    }
+                    _ => (),
+                }
+
+                constraints.push(process_constraint);
             }
 
             // 终点位置的约束
@@ -202,19 +162,27 @@ impl NodeBehavior for DCfsBranch {
                 }
                 last_result = solver_result.clone();
             }
+        }
+        // =======  轨迹发送  =======
+        // 生成 track
+        let mut track_list = Vec::new();
+        for i in 1..self.params.ninterp + 2 {
+            track_list.push(na::DVector::from_column_slice(
+                &last_result[i * ndof..(i + 1) * ndof],
+            ));
+        }
+        // 根据分割 发送 track
 
-            // =======  轨迹发送  =======
-            // 生成 track
-            let mut track_list = Vec::new();
-            for i in 1..self.params.ninterp + 2 {
-                track_list.push(DNodeMessage::Joint(na::DVector::from_column_slice(
-                    &last_result[i * ndof..(i + 1) * ndof],
-                )));
-            }
-            // 发送 track
-            while self.node.output_queue.pop().is_some() {}
-            for track in track_list {
-                self.node.output_queue.push(track);
+        // 清空输出队列
+        for output_queue in self.output_queue.iter() {
+            while output_queue.pop().is_some() {}
+        }
+
+        // 发送轨迹
+        for track in track_list {
+            let tracks = self.robot.split(track);
+            for (track, output_queue) in tracks.iter().zip(self.output_queue.iter()) {
+                output_queue.push(NodeMessage::Joint(track.clone()));
             }
         }
     }
@@ -228,6 +196,6 @@ impl NodeBehavior for DCfsBranch {
     }
 
     fn state(&mut self) -> NodeState {
-        self.state.node_state
+        self.node_state
     }
 }
