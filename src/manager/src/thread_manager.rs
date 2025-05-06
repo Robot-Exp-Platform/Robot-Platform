@@ -5,7 +5,7 @@ use std::time::Instant;
 use tracing::info;
 
 use message::TaskState;
-use node::NodeBehavior;
+use node::{NodeBehavior, NodeState};
 
 #[derive(Default)]
 pub struct ThreadManager {
@@ -39,7 +39,7 @@ impl ThreadManager {
     /// 为节点开辟线程，节点符合 node 规范，是可以被线程管理器管理的线程
     /// 此时的 node 是裸漏的，不具备任何多线程能力，扔进线程之后不可被外部访问
     /// 我们要组一辈子的线程啊
-    pub fn add_node(&mut self, node: Box<dyn NodeBehavior>) {
+    pub fn add_node(&mut self, node: Box<dyn NodeBehavior>, task_id: usize) {
         let name = node.node_name();
         let sender = self.sender.clone().unwrap();
         let thread = thread::Builder::new()
@@ -50,16 +50,23 @@ impl ThreadManager {
                 node.init();
 
                 let period = node.period();
+                let mut node_state = node.state();
 
-                while node.state() != node::NodeState::Finished {
+                while node_state != NodeState::Finished {
                     info!(node = name.as_str(), begin = name.as_str());
                     if node::NodeState::RelyRelease == node.state() {
-                        sender.send(TaskState::RelyRelease(name.clone())).unwrap();
+                        sender.send(TaskState::RelyRelease(task_id)).unwrap();
                     }
 
                     let start_time = Instant::now();
 
-                    node.update();
+                    if node_state == NodeState::Suspend {
+                        node.suspend();
+                    } else {
+                        node.update();
+                    }
+
+                    node_state = node.state();
 
                     info!(node = name.as_str(), end = name.as_str());
                     let elapsed_time = start_time.elapsed();
@@ -69,14 +76,14 @@ impl ThreadManager {
                 }
                 node.finalize();
                 if "planner" == node.node_type().as_str() {
-                    sender.send(TaskState::PlanEnd(name)).unwrap();
+                    sender.send(TaskState::PlanEnd(task_id)).unwrap();
                 }
             })
             .unwrap();
         self.threads.push(thread);
     }
 
-    pub fn add_mutex_node(&mut self, node: Arc<Mutex<dyn NodeBehavior>>) {
+    pub fn add_mutex_node(&mut self, node: Arc<Mutex<dyn NodeBehavior>>, task_id: usize) {
         let node_lock = node.lock().unwrap();
         let name = node_lock.node_name();
         drop(node_lock);
@@ -106,14 +113,14 @@ impl ThreadManager {
                 }
                 node.finalize();
                 if "planner" == node.node_type().as_str() {
-                    sender.send(TaskState::PlanEnd(name)).unwrap();
+                    sender.send(TaskState::PlanEnd(task_id)).unwrap();
                 }
             })
             .unwrap();
         self.threads.push(thread);
     }
 
-    pub fn add_rwlock_node(&mut self, node: Arc<RwLock<dyn NodeBehavior>>) {
+    pub fn add_rwlock_node(&mut self, node: Arc<RwLock<dyn NodeBehavior>>, task_id: usize) {
         let node_lock = node.read().unwrap();
         let name = node_lock.node_name();
         drop(node_lock);
@@ -143,7 +150,7 @@ impl ThreadManager {
                 }
                 node.finalize();
                 if "planner" == node.node_type().as_str() {
-                    sender.send(TaskState::PlanEnd(name)).unwrap();
+                    sender.send(TaskState::PlanEnd(task_id)).unwrap();
                 }
             })
             .unwrap();

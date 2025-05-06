@@ -16,19 +16,23 @@ pub trait NodeExt<V> {
     fn set_input_queue(&mut self, input_queue: NodeMessageQueue<V>);
     fn set_output_queue(&mut self, output_queue: NodeMessageQueue<V>);
     fn set_params(&mut self, params: Value);
+    fn set_node_state(&mut self, robot_state: NodeState);
     fn set_sensor(&mut self, sensor: Arc<RwLock<Sensor>>);
     fn set_robot(&mut self, robot: RobotType);
 }
 
-// TODO consider using state machine to manage the node
 pub trait NodeBehavior: Send + Sync {
     fn init(&mut self) {}
     fn update(&mut self) {}
+    fn suspend(&mut self) {}
+    fn resume(&mut self) {}
+    fn error(&mut self) {}
     fn finalize(&mut self) {}
 
     fn state(&mut self) -> NodeState {
         NodeState::Running
     }
+    fn set_state(&mut self, _state: NodeState) {}
     fn period(&self) -> Duration {
         Duration::from_secs(0)
     }
@@ -50,6 +54,8 @@ pub enum NodeState {
     #[default]
     Running,
     RelyRelease,
+    Suspend,
+    Error,
     Finished,
 }
 
@@ -100,7 +106,8 @@ where
     get_fn!((name: String));
     set_fn!(
         (set_input_queue, input_queue: NodeMessageQueue<V>),
-        (set_output_queue, output_queue: NodeMessageQueue<V>)
+        (set_output_queue, output_queue: NodeMessageQueue<V>),
+        (set_node_state, node_state: NodeState)
     );
 
     fn set_params(&mut self, params: Value) {

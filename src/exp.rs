@@ -94,15 +94,19 @@ impl Exp {
         // 创建节点
         for node_config in task.nodes.clone() {
             // 创建节点
-            let mut node = factory(&node_config.0, &node_config.1.join("+"), node_config.3);
+            let mut node = factory(
+                &node_config.node_type,
+                &node_config.robots.join("+"),
+                node_config.params,
+            );
             // 为新创建的节点赋予机器人
-            for robot_name in node_config.1 {
+            for robot_name in node_config.robots {
                 if let Some(robot) = self.get_robot_from_name(&robot_name) {
                     node.set_robot(robot);
                 }
             }
             // 为新创建的节点赋予传感器
-            for sensor_name in node_config.2 {
+            for sensor_name in node_config.sensors {
                 if let Some(sensor) = self.get_sensor_from_name(&sensor_name) {
                     node.set_sensor(sensor);
                 }
@@ -135,7 +139,7 @@ impl Exp {
         // 将节点加入线程管理器
         // 你已经是一个成熟的节点了，该去自己打拼生活了
         for node in node_list {
-            self.thread_manager.add_node(node);
+            self.thread_manager.add_node(node, task.id);
         }
     }
 }
@@ -175,8 +179,8 @@ impl NodeBehavior for Exp {
                 drop(receiver_lock);
 
                 // 接收到任务反馈
-                if let TaskState::RelyRelease(name) = task_state {
-                    println!("{} 释放约束节点", name);
+                if let TaskState::RelyRelease(id) = task_state {
+                    println!("{} 释放约束节点", id);
                     self.task_manager.remove_task(0);
                 }
                 self.state = ExpState::TaskSorting;

@@ -16,6 +16,7 @@ tracing.workspace = true
 tracing-subscriber.workspace = true
 rand.workspace = true
 inventory.workspace = true
+tokio = { workspace = true, features = ["full"] }
 
 message.workspace = true
 generate_tools.workspace = true

@@ -34,8 +34,16 @@ pub struct Task {
     pub rely: Vec<TaskId>,
     pub target: Vec<Target>,
 
-    pub nodes: Vec<(String, Vec<String>, Vec<String>, Value)>,
+    pub nodes: Vec<NodeHelper>,
     pub edges: Vec<(usize, usize)>,
+}
+
+#[derive(Deserialize, Default, Clone)]
+pub struct NodeHelper {
+    pub node_type: String,
+    pub robots: Vec<String>,
+    pub sensors: Vec<String>,
+    pub params: Value,
 }
 
 impl TaskManager {
@@ -108,3 +116,6 @@ impl TaskManager {
         self.open_tasks.remove(&task_id);
     }
 }
+
+#[cfg(test)]
+mod tests {}

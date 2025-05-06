@@ -32,7 +32,7 @@
 
 环境要求：
 
-- rust nightly版本
+- rust 版本
 - python 3.10+
 - （可选）ros noetic 或者 ros2
 
